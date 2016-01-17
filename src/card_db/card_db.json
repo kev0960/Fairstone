@@ -1,0 +1,7 @@
+data = '{
+  "제왕 타우릿산" : {
+    "type" : "minion",
+    "level" : "legendary",
+    "info" : [6, 5, 5]
+  }
+}'
