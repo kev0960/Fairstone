@@ -80,7 +80,7 @@ function Engine() {
     else {
       // the card goes back to the hand if the user does not choice
       // appropriate target even though there are available one
-      if (!card.select_cond(user_choice)) { return }
+      if (!user_choice || !card.select_cond(user_choice)) { return }
     }
     if (!select_done && card.select_cond) {
       // If there are appropriate choice, then we have to select
@@ -228,6 +228,9 @@ function Engine() {
   function UserInterface() {}
   UserInterface.prototype.wait_user_input = function(f, that, args) {
     var user_input; // Get user input
+
+    // wait_user_input function gives 'user_input' as an additional argument to the callback function
+    args.push(user_input);
     f.apply(that, args);
   }
   var g_ui = new UserInterface();

@@ -1,10 +1,26 @@
 <!doctype html>
 <html>
-  <head>
-    <title>Hearthstone</title>
-  </head>
-  <body>
-    <button id='begin_match'>Begin Match </button>
-    
-  </body>
+
+<head>
+  <title>Hearthstone</title>
+</head>
+
+<body>
+  <form action='/login' method='post'>
+    <label>User ID</label>
+    <input name='user_id' type='text'></input>
+    <label>Password</label>
+    <input name='password' type='password'></input>
+    <div>
+      <input type='submit'>Login</input>
+    </div>
+  </form>
+
+  <button id='begin_match'>Begin Match </button>
+  <script src='/socket.io/socket.io.js'></script>
+  <script>
+    var socket = io();
+  </script>
+</body>
+
 </html>
