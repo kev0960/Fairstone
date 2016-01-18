@@ -8,27 +8,31 @@ var uuid = require('node-uuid');
 
 const hearth_game = require('./engine.js')
 
+app.set('view engine', 'jade');
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(body_parser.json());
 app.use(cookie_parser());
 
 app.get('/', function(req, res) {
-  res.sendFile('public/index.html', {root : __dirname})
+  //res.sendFile('public/index.html', {root : __dirname})
+  res.render('index.jade')
 })
-app.get('/match', function(req, res) {
+app.get('/info', function(req, res) {
   var data = req.cookies.hearth_auth;
   if(data && user_manager.chk_user_session(data.user_id, data.session_key)) {
-    res.send('match!')
+    res.render('info.jade', {user_id : data.user_id})
   }
-  res.send('fail')
+  else res.redirect('/')
 })
 app.post('/login', function(req, res) {
   var user_id = req.body.user_id;
   var password = req.body.password;
-
-  if(user_id == 'kev0960' && password == 'kev0960') {
+  console.log('post')
+  if(user_id == 'a' && password == 'a') {
     res.cookie('hearth_auth', {session_key : user_manager.set_user_session(user_id), user_id : user_id})
-    res.redirect('/match');
+    res.redirect('/match')
+  } else {
+    res.redirect('/')
   }
 
 })

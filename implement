@@ -1,1 +1,14 @@
 ** Implement Specifications **
+
+Playing minion
+
+1. Card is removed from hand and mana cost is deducted
+2. On play phase -- 'play_card' event is alerted.
+   Wat for play_card event to be resolved. Then, it calls spawn_card()
+3. Battlecry phase -- on_spawn() of played card is called
+   When everything is resolved that is created through battlecry of minion,
+   end_spawn_card() is called
+   (** on_spawn function takes end_spawn_card as a callback so that it can immediately
+   call end_spawn_card() as it finishes card spanwing. However, end_spawn_card postpones
+   alerting 'spawn' Event until everything is resolved)
+4. 'spawn' Event is alerted.

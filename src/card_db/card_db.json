@@ -3,5 +3,10 @@ data = '{
     "type" : "minion",
     "level" : "legendary",
     "info" : [6, 5, 5]
+  },
+  "발톱의 드루이드" : {
+    "type" : "minion",
+    "level" : "rare",
+    "info" : [5, 4, 4]
   }
 }'

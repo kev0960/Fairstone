@@ -73,14 +73,20 @@ function Engine() {
     this.hand = new Deck();
     this.field = new Deck();
   }
+  // [options] are the array of name of cards to choose
+  Player.prototype.choose_one = function(options) {
+
+  }
   // play a card from a hand
-  Player.prototype.play_card = function(c, at, select_done, user_choice) {
+  Player.prototype.play_minion = function(c, at, select_done, user_choice) {
     var card = card_manager.load_card[c.card_data.name];
     if (!select_done) select_done = false;
     else {
       // the card goes back to the hand if the user does not choice
       // appropriate target even though there are available one
-      if (!user_choice || !card.select_cond(user_choice)) { return }
+      if (!user_choice || !card.select_cond(user_choice)) {
+        return
+      }
     }
     if (!select_done && card.select_cond) {
       // If there are appropriate choice, then we have to select
@@ -98,7 +104,7 @@ function Engine() {
           break;
         }
       }
-      if(card.select_cond(this.hero) || card.select_cond(this.enemy.hero)) choice_available = true;
+      if (card.select_cond(this.hero) || card.select_cond(this.enemy.hero)) choice_available = true;
 
       // We have to wait until user selects
       if (choice_available) {
@@ -113,11 +119,23 @@ function Engine() {
     this.field.put_card(c, at);
 
     g_handler.add_event(new Event('play_card', [c, this]))
-    g_handler.add_callback(this.spawn_card, this, c);
+    g_handler.add_callback(this.spawn_card, this, [c, true, user_choice]);
   }
-  Player.prototype.spwan_card = function(c) {
-    var card = card_manager.load_card[c.card_data.name]
+  Player.prototype.spwan_card = function(c, is_user_play, target) {
+    var card = card_manager.load_card[c.card_data.name];
+    card.on_spawn(c, g_handler, is_user_play, true, this.end_spawn_card.bind(this, c, is_user_play));
+  }
+  Player.prototype.end_spawn_card = function(c, is_user_play, resolved) {
+    if(!resolved) resolved = false;
 
+    if(!resolved) {
+      g_handler.add_callback(this.end_spawn_card, this, [c, is_user_play, true]);
+      return;
+    }
+    if(resolved) {
+      g_handler.add_event(new Event('spawn', c, is_user_play))
+      return
+    }
   }
 
   function Event(event_type, args) {
@@ -137,6 +155,7 @@ function Engine() {
       this.attacker = args[1];
     } else if (e.event_type == 'spawn') {
       this.spawned = args[0];
+      this.is_user_play = args[1];
     } else if (e.event_type == 'draw_card') {
       this.card = args[0];
       this.who = args[1];
