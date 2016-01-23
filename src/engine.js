@@ -12,6 +12,9 @@ function Engine() {
   }
 
   var g_id = new UniqueId();
+  var g_when = new UniqueId(); // Object to give unique number to the events
+
+  var g_aura = []; // Aura that is (selectively) affecting entire minions on field
 
   function CardData(args) {
     this.name = args[0];
@@ -29,6 +32,59 @@ function Engine() {
   function Card(card_data, id) {
     this.id = 0;
     this.card_data = new CardData(card_data);
+    this.state = []; // Array of added states
+
+    this.field_summon_turn = 0;
+
+    this.is_frozen = false;
+    this.atk_info = {cnt : 0, turn : 0, did_action : 0}
+  }
+  Card.prototype.add_state = function(f, state, who) {
+    this.state.push({f : f, state : state, who : who, when : g_when.get_id()});
+  }
+  Card.prototype.chk_state = function(state) {
+    for(var i = 0; i < this.state.length; i ++) {
+      if(this.state.state === state) return true;
+    }
+    return false;
+  }
+  Card.prototype.calc_state = function(state, init_value) {
+    var x = init_value;
+    var modifiers = [];
+
+    for(var i = 0; i < this.state.length; i ++) {
+      if(this.state[i].state === state) modifiers.push({f : this.state[i].f, when : this.state[i].when});
+    }
+    for(var i = 0; i < g_aura.length; i ++) {
+      if(g_aura[i].who.is_good() && g_aura[i].state === state) {
+        modifiers.push({f : g_aura[i].f, when : g_aura[i].when})
+      }
+    }
+    // Sort by ascending order
+    modifiers.sort(function(a, b) {return a.when > b.when})
+
+    for(var i = 0; i < modifiers.length; i ++) {
+      x = modifiers[i].f(x);
+    }
+    return x ;
+  }
+  Card.prototype.update_atk_cnt = function() {
+    if(this.atk_info.turn == current_turn()) return;
+    var atk_num = this.calc_state('atk_num', 1)
+
+    this.atk_info.turn = current_turn();
+    this.atk_info.cnt = atk_num;
+    this.atk_info.did_action = 0;
+  }
+  Card.prototype.is_attackable = function() {
+    if(this.is_frozen) return false
+    this.update_atk_cnt();
+
+    if(this.atk_info.turn == 0) return false;
+    return true;
+  }
+  Card.prototype.make_charge = function(who) {
+    
   }
 
   function Deck() {
@@ -73,69 +129,33 @@ function Engine() {
     this.hand = new Deck();
     this.field = new Deck();
   }
+
+  // TODO :: Finish implementing this function using user io
   // [options] are the array of name of cards to choose
-  Player.prototype.choose_one = function(options) {
+  Player.prototype.choose_one = function(options, on_success) {
 
   }
-  // play a card from a hand
-  Player.prototype.play_minion = function(c, at, select_done, user_choice) {
-    var card = card_manager.load_card[c.card_data.name];
-    if (!select_done) select_done = false;
-    else {
-      // the card goes back to the hand if the user does not choice
-      // appropriate target even though there are available one
-      if (!user_choice || !card.select_cond(user_choice)) {
-        return
-      }
-    }
-    if (!select_done && card.select_cond) {
-      // If there are appropriate choice, then we have to select
-      // If there are no available choice, then we just spawn
-      var choice_available = false;
-      for (var i = 0; i < this.field.num_card(); i++) {
-        if (card.select_cond(this.field.card_list[i])) {
-          choice_available = true;
-          break;
-        }
-      }
-      for (var i = 0; i < this.enemy.field.num_card(); i++) {
-        if (card.select_cond(this.enemy.field.card_list[i])) {
-          choice_available = true;
-          break;
-        }
-      }
-      if (card.select_cond(this.hero) || card.select_cond(this.enemy.hero)) choice_available = true;
+  // Play a card from a hand
+  Player.prototype.play_minion = function(c, at) {
+    var card = card_manager.load_card(c.card_data.name)
+    card.on_play(c, true, true, at, g_handler);
+  }
+  Player.prototype.play_success = function(c, at, next) {
+    this.current_mana -= c.mana();
 
-      // We have to wait until user selects
-      if (choice_available) {
-        g_ui.wait_user_input(this.play_card, this.play_card, this, [c, at, true])
-      }
-    }
+    c.field_summon_turn = current_turn();
+    c.id = g_id.get_id();
 
-    if (c.calc_mana() < this.current_mana) {
-      this.current_mana -= c.calc_mana();
-    }
     this.hand.remove_card(c);
     this.field.put_card(c, at);
 
-    g_handler.add_event(new Event('play_card', [c, this]))
-    g_handler.add_callback(this.spawn_card, this, [c, true, user_choice]);
-  }
-  Player.prototype.spwan_card = function(c, is_user_play, target) {
-    var card = card_manager.load_card[c.card_data.name];
-    card.on_spawn(c, g_handler, is_user_play, true, this.end_spawn_card.bind(this, c, is_user_play));
-  }
-  Player.prototype.end_spawn_card = function(c, is_user_play, resolved) {
-    if(!resolved) resolved = false;
+    // play_done must be called AFTER next
+    g_handler.add_callback(this.play_done, this, [c]);
 
-    if(!resolved) {
-      g_handler.add_callback(this.end_spawn_card, this, [c, is_user_play, true]);
-      return;
-    }
-    if(resolved) {
-      g_handler.add_event(new Event('spawn', c, is_user_play))
-      return
-    }
+    if(next) g_handler.add_callback(next, this, [c, g_handler]);
+  }
+  Player.prototype.play_done = function(c) {
+    g_handler.add_event('summon', c);
   }
 
   function Event(event_type, args) {
@@ -153,7 +173,7 @@ function Engine() {
     } else if (e.event_type == 'destroyed') {
       this.destroyed = args[0];
       this.attacker = args[1];
-    } else if (e.event_type == 'spawn') {
+    } else if (e.event_type == 'summon') {
       this.spawned = args[0];
       this.is_user_play = args[1];
     } else if (e.event_type == 'draw_card') {
@@ -184,7 +204,7 @@ function Engine() {
     // List of waiting call backs
     this.queue_resolved_callback = []
 
-    var event_type_list = ['attack', 'damaged', 'destroyed', 'spawn', 'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle']
+    var event_type_list = ['attack', 'damaged', 'destroyed', 'summon', 'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle']
 
     // initialize event handler array
     for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = []

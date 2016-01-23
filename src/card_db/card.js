@@ -6,34 +6,36 @@
   }
   var card_do = {
     '제왕 타우릿산': {
-      on_spawn: function(me, listen, target, battlecry, normal, end_spawn) {
-        if (normal) {
-          listen.add_listener(function(e, me) {
-            if (e.turn_end == me.owner) {
-              for (var i = 0; i < me.owner.num_card_on_hand(); i++) {
-                me.owner.card_on_hand.card_list[i].add_buff(inc(-1), 'mana', me);
-              }
+      on_play = function(me, battlecry, user_play, at, g_h) {
+        me.owner.play_success(me, at, function(me, g_h) {
+          g_h.add_handler(function(e, me) { if(e.turn_end == me.owner) {
+            for(var i = 0; i < me.owner.hand.num_card(); i ++) {
+              me.owner.hand[i].add_state(inc(-1), 'mana', me);
             }
-          }, 'turn_end', me);
-        }
-        end_spawn();
+          }})
+        });
       }
     },
     '발톱의 드루이드' : {
-      on_spawn : function(me, listen, target, battlecry, normal, end_spawn) {
-        if(battlecry) {
-          me.owner.choose_one(['표범 변신', '곰 변신'], function(choice) {
-            if(choice == 0) {
-              me.state.add_state(inc(2), 'dmg', me);
-            } else {
-              me.state.add_state(inc(2), 'life', me); me.current_life += 2;
-              me.state.add_state(null, 'taunt', me);
+      on_spawn : function(me, battlecry, user_play, at, g_h) {
+        if(user_play) {
+          me.owner.choose_one (['표범 변환', '곰 변환'], function(me, at) { return function(choice) {
+            if(choice == 1) { // 곰 변환
+              me.owner.play_success(me, at, function(me, g_h) {
+                me.add_state(inc(2), 'life', me);
+                me.current_life += 2;
             }
-            end_spawn();
-          })
-        } else {
-          end_spawn();
-        }
+            else {
+              me.owner.play_success(me, at, function(me, g_h) {
+                
+              })
+            }
+          });
+         }
+        } (me, at));
+      }
+      else {
+        me.owner.play_success(me, at);
       }
     }
   }
