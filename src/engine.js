@@ -38,11 +38,17 @@ function Engine() {
 
     this.field_summon_turn = 0;
 
-    this.is_frozen = {until : turn};
+    this.is_frozen = {until : -1};
+    this.is_stealth = {until : -1};
+    this.is_shielded = {until : -1};
+
     this.atk_info = {cnt : 0, turn : 0, did : 0};
 
     // Proposed attack target during combat phase (can be changed)
     this.atk_target = null;
+
+    // Proposed damage that may be given to the target (can be changed)
+    this.dmg_given = 0;
   }
   Card.prototype.add_state = function(f, state, who) {
     this.state.push({f : f, state : state, who : who, when : g_when.get_id()});
@@ -69,7 +75,7 @@ function Engine() {
     modifiers.sort(function(a, b) {return a.when > b.when})
 
     for(var i = 0; i < modifiers.length; i ++) {
-      x = modifiers[i].f(x);
+      x = modifiers[i].f(x, this);
     }
     return x ;
   }
@@ -196,12 +202,22 @@ function Engine() {
     }
     return true;
   }
+  Player.prototype.chk_invincible = function (target) {
+    for(var i = 0; i < g_aura.length; i ++) {
+      if(g_aura[i].state === 'invincible' && g_aura[i].who.is_good() && g_aura[i].f(target)) {
+        return true;
+      }
+    }
+    return false;
+  }
   Player.prototype.combat_start = function(c, target) {
     if(!c.is_attackable()  // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
-    || target.owner == c.owner) return false; // chks whether the attacker is not attacker our own teammates
+    || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
+    || this.chk_invincible (target)) return false; // chks whether the attacker is attacking invincible target
 
     c.atk_target = target;
+    c.is_stealth.until = -1; // stealth is gone!
 
     // propose_attack event can change the target of the attacker
     g_handler.add_event('propose_attack', [c, target]);
@@ -213,11 +229,42 @@ function Engine() {
 
     // attack event does not change the target of an attacker
     g_handler.add_event('attack', [c, c.target]);
-    g_handler.add_callback(this.combat, this, [])
+    g_handler.add_callback(this.pre_combat, this, [])
+  }
+  Player.prototype.pre_combat = function(c) {
+    var target = c.target;
+
+    c.dmg_given = c.dmg();
+    target.dmg_given = target.dmg();
+
+    g_handler.add_event('pre_dmg', [c, target, c.dmg_given]);
+    g_handler.add_event('pre_dmg', [target, c, target.dmg_given]);
+    g_handler.add_callback(this.combat, this, [c]);
   }
   Player.prototype.combat = function(c) {
     var target = c.target;
+
+    // checking for shields
+    if(target.dmg_given > 0 && c.is_shielded.until >= current_turn()) {
+      target.dmg_given = 0;
+      c.is_shielded.until = -1; // shield is GONE
+    }
+    if(c.dmg_given > 0 && target.is_shielded.until >= current_turn()) {
+      c.dmg_given = 0;
+      target.is_shielded.until = -1;
+    }
+
+    c.current_life -= target.dmg_given;
+    target.current_life -= c.dmg_given;
     
+    if(c.dmg_given > 0) {
+      g_handler.add_event('take_dmg', [target, c, c.dmg_given])
+      g_handler.add_event('deal_dmg', [c, target, c.dmg_given])
+    }
+    if(target.dmg_given > 0) {
+      g_handler.add_event('take_dmg', [c, target, target.dmg_given]);
+      g_handler.add_event('deal_dmg', [target, c, target.dmg_given]);
+    }
   }
 
   function Event(event_type, args) {
@@ -228,9 +275,17 @@ function Engine() {
       this.who = args[0];
       this.target = args[1];
       this.type = args[2];
-    } else if (e.event_type == 'damaged') {
-      this.damaged = args[0];
+    } else if (e.event_type == 'take_dmg') {
+      this.victim = args[0];
       this.attacker = args[1];
+      this.dmg = args[2];
+    } else if(e.event_type == 'deal_dmg') {
+      this.attacker = args[0];
+      this.victim = args[1];
+      this.dmg = args[2];
+    } else if(e.event_type == 'pre_dmg') {
+      this.attacker = args[0];
+      this.victim = args[1];
       this.dmg = args[2];
     } else if (e.event_type == 'destroyed') {
       this.destroyed = args[0];
@@ -268,9 +323,9 @@ function Engine() {
     // List of waiting call backs
     this.queue_resolved_callback = []
 
-    var event_type_list = ['attack', 'damaged', 'destroyed', 'summon',
+    var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon',
                            'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle',
-                           'propose_attack']
+                           'propose_attack', 'pre_dmg']
 
     // initialize event handler array
     for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = []
