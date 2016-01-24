@@ -44,7 +44,8 @@ function Engine() {
     this.status = 'deck';
     this.owner = owner;
 
-    this.field_summon_turn = 0;
+    this.field_summon_turn = -1;
+    this.summon_order = -1;
 
     this.is_frozen = {until : -1};
     this.is_stealth = {until : -1};
@@ -160,6 +161,8 @@ function Engine() {
 
     this.hand = new Deck();
     this.field = new Deck();
+
+    this.g_h = g_handler;
   }
 
   Player.prototype.chk_aura = function (aura) {
@@ -173,7 +176,11 @@ function Engine() {
   Player.prototype.choose_one = function(options, on_success) {
 
   }
-  Player.prototype.select_one = function(c, select_cond, success, fail) {
+  // We dont have to send 'target' as an argument to success function
+  // because the card itself stores the info of it in its target property
+  Player.prototype.select_one = function(c, select_cond, success, fail, forced_target) {
+    if(forced_target) {c.target = forced_target; success(c)}
+
     // chk with select_cond
 
     // if selection is success
@@ -184,13 +191,13 @@ function Engine() {
     if(this.current_mana < c.mana()) return; // Enough mana?
 
     var card = card_manager.load_card(c.card_data.name);
-    card.on_play(c, g_handler);
+    card.on_play(c);
   }
   Player.prototype.chk_target = function(c, next) {
     if(c.status == 'destroyed') return;
-    if(c.target) { g_handler.add_event('target', c); }
+    if(c.target) { g_handler.add_event(new Event('target', c)); }
 
-    g_handler.add_callback(next, this, [c, g_handler])
+    g_handler.add_callback(next, this, [c])
   }
   // Play a card from a hand
   Player.prototype.play_minion = function(c, at) {
@@ -198,7 +205,7 @@ function Engine() {
     if(this.current_mana < c.mana()) return; // Enough mana?
 
     var card = card_manager.load_card(c.card_data.name)
-    card.on_play(c, true, true, at, g_handler);
+    card.on_play(c, true, true, at);
   }
   Player.prototype.play_success = function(c, at, next) {
     // if the status of card is already specified as 'field',
@@ -207,7 +214,7 @@ function Engine() {
       g_handler.add_callback(this.play_done, this, [c]);
 
       // only turn on non-battlecry stuff
-      g_handler.add_callback(next, this, [c, g_handler, true, false]);
+      g_handler.add_callback(next, this, [c, true, false]);
       return;
     }
 
@@ -215,10 +222,11 @@ function Engine() {
     this.current_mana -= c.mana();
     c.field_summon_turn = current_turn();
     c.id = g_id.get_id();
+    c.summon_order = g_when.get_id();
 
     this.hand.remove_card(c);
 
-    g_handler.add_event('play_card', c, this);
+    g_handler.add_event(new Event('play_card', c, this));
 
     if(c.card_data.type == 'minion') {
       this.field.put_card(c, at);
@@ -227,10 +235,10 @@ function Engine() {
       g_handler.add_callback(this.play_done, this, [c]);
 
       if(next) {
-        g_handler.add_callback(next, this, [c, g_handler, true, true]);
+        g_handler.add_callback(next, this, [c, true, true]);
         if(this.chk_aura('bran_bronzebeard')) {
           // Turn Off non-battlecry stuff
-          g_handler.add_callback(next, this, [c, g_handler, false, true])
+          g_handler.add_callback(next, this, [c, false, true])
         }
       }
     }
@@ -241,7 +249,7 @@ function Engine() {
     }
   }
   Player.prototype.play_done = function(c) {
-    g_handler.add_event('summon', c);
+    g_handler.add_event(new Event('summon', c));
   }
   Player.prototype.summon_card = function(name, at, after_summon) {
     var c = create_card(name);
@@ -250,14 +258,15 @@ function Engine() {
     c.id = g_id.get_id();
     c.status = 'field';
     c.owner = this;
-    
+    c.summon_order = g_when.get_id();
+
     this.field.put_card(c, at)
     var card = card_manager.load_card(c.card_data.name);
 
     // Optional argument - after_summon; which is called after the card is summoned
     if(after_summon) g_handler.add_callback(after_summon, this, [c]);
 
-    card.on_play(c, false, false, at, g_handler);
+    card.on_play(c, false, false, at);
   }
   Player.prototype.chk_enemy_taunt = function (target) {
     if(target.chk_state('taunt')) return true;
@@ -274,7 +283,7 @@ function Engine() {
     }
     return false;
   }
-  Player.prototype.combat_start = function(c, target) {
+  Player.prototype.combat = function(c, target) {
     if(!c.is_attackable()  // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
     || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
@@ -284,7 +293,7 @@ function Engine() {
     c.is_stealth.until = -1; // stealth is gone!
 
     // propose_attack event can change the target of the attacker
-    g_handler.add_event('propose_attack', [c, target]);
+    g_handler.add_event(new Event('propose_attack', [c, target]));
     g_handler.add_callback(this.atack, this, []);
   }
   Player.prototype.attack = function (c) {
@@ -292,7 +301,7 @@ function Engine() {
     if(c.current_life <= 0 || c.status != 'field') return;
 
     // attack event does not change the target of an attacker
-    g_handler.add_event('attack', [c, c.target]);
+    g_handler.add_event(new Event('attack', [c, c.target]));
     g_handler.add_callback(this.pre_combat, this, [])
   }
   Player.prototype.pre_combat = function(c) {
@@ -301,11 +310,11 @@ function Engine() {
     c.dmg_given = c.dmg();
     target.dmg_given = target.dmg();
 
-    g_handler.add_event('pre_dmg', [c, target, c.dmg_given]);
-    g_handler.add_event('pre_dmg', [target, c, target.dmg_given]);
-    g_handler.add_callback(this.combat, this, [c]);
+    g_handler.add_event(new Event('pre_dmg', [c, target, c.dmg_given]));
+    g_handler.add_event(new Event('pre_dmg', [target, c, target.dmg_given]));
+    g_handler.add_callback(this.actual_combat, this, [c]);
   }
-  Player.prototype.combat = function(c) {
+  Player.prototype.actual_combat = function(c) {
     var target = c.target;
 
     // checking for shields
@@ -322,13 +331,45 @@ function Engine() {
     target.current_life -= c.dmg_given;
 
     if(c.dmg_given > 0) {
-      g_handler.add_event('take_dmg', [target, c, c.dmg_given])
-      g_handler.add_event('deal_dmg', [c, target, c.dmg_given])
+      g_handler.add_event(new Event('take_dmg', [target, c, c.dmg_given]))
+      g_handler.add_event(new Event('deal_dmg', [c, target, c.dmg_given]))
     }
     if(target.dmg_given > 0) {
-      g_handler.add_event('take_dmg', [c, target, target.dmg_given]);
-      g_handler.add_event('deal_dmg', [target, c, target.dmg_given]);
+      g_handler.add_event(new Event('take_dmg', [c, target, target.dmg_given]));
+      g_handler.add_event(new Event('deal_dmg', [target, c, target.dmg_given]));
     }
+
+    var first = c.summon_order > target.summon_order ? target.summon_order : c.summon_order;
+    var second = c.summon_order > target.summon_order ? c.summon_order : target.summon_order;
+
+    // Minion must be alive before this attack in order to invoke destroyed event!
+    // (DESTROYED EVENT IS NOT CREATED TWICE)
+    if(first.currnet_life <= 0 && first.current_life + first.dmg_given > 0)
+      g_handler.add_event(new Event('destroyed', first, second));
+
+    if(second.currnet_life <= 0 && second.current_life + second.dmg_given > 0)
+      g_handler.add_event(new Event('destroyed', second, first));
+  }
+
+  Player.prototype.deal_dmg = function(dmg, from, to) {
+    from.dmg_given = dmg;
+    g_handler.add_event(new Event('pre_dmg', [from, to, dmg]));
+    g_handler.add_callback(this.actual_dmg_deal, this, [from, to]);
+  }
+  Player.prototype.actual_dmg_deal = function(from, to) {
+    var dmg = from.dmg_given;
+    if(dmg > 0 && to.is_shielded.until >= current_turn()) {
+      dmg = 0; to.is_shielded.until = -1;
+    }
+    if(dmg == 0) return; // May be we should at least create an animation for this too..
+
+    to.current_life -= dmg;
+
+    g_handler.add_event(new Event('take_dmg', [to, from, dmg]));
+    g_handler.add_event(new Event('deal_dmg', [from, to, dmg]));
+
+    if(to.current_life <= 0 && to.current_life + dmg > 0)
+      g_handler.add_event(new Event('destroyed', to, from))
   }
 
   function Event(event_type, args) {
@@ -385,6 +426,7 @@ function Engine() {
 
     // Queue of destroyed cards
     this.destroyed_queue = []
+    this.destroyed_queue_length = 0;
 
     // List of waiting call backs
     this.queue_resolved_callback = []
@@ -448,6 +490,19 @@ function Engine() {
     var handler_arr = this.event_handler_arr[e.event_type];
     for (var i = 0; i < handler_num; i++) {
       if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.destroyed)) handler_arr[i].f(e, handler_arr[i].me);
+    }
+  }
+  Handler.prototype.death_creation = function() {
+    this.destroyed_queue_length = this.destroyed_queue.length;
+    var dq = this.destroyed_queue;
+
+    // Mark mortally wounded ones to 'destroy' and remove it from the field
+    for(var i = 0; i < this.destroyed_queue_length; i ++) {
+      var dead = dq[i].destroyed;
+      if(dead.current_life <= 0 || dead.status == 'destroyed') {
+        dead.status = 'destroyed' // Mark it as destroyed
+        dead.owner.field.remove_card(dead); // Remove card from the field
+      }
     }
   }
 
