@@ -19,7 +19,7 @@
       }
     },
     '발톱의 드루이드' : {
-      on_spawn : function(me, bc, user_play, at, g_h) {
+      on_play : function(me, bc, user_play, at, g_h) {
         if(user_play) {
           me.owner.choose_one (['표범 변환', '곰 변환'], function(me, at) { return function(choice) {
             if(choice == 1) { // 곰 변환
@@ -41,6 +41,11 @@
       }
       else {
         me.owner.play_success(me, at);
+      }
+    },
+    '고귀한 희생' : {
+      on_play : function(me, bc, user_play, at, g_h) {
+        
       }
     }
   }

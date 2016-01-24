@@ -165,6 +165,10 @@ function Engine() {
   Player.prototype.choose_one = function(options, on_success) {
 
   }
+  Player.prototype.play_spell = function (c) {
+    var card = card_manager.load_card(c.card_data.name);
+    card.on_play(c, g_handler);
+  }
   // Play a card from a hand
   Player.prototype.play_minion = function(c, at) {
     var card = card_manager.load_card(c.card_data.name)
@@ -179,6 +183,8 @@ function Engine() {
 
     this.hand.remove_card(c);
     this.field.put_card(c, at);
+
+    g_handler.add_event('play_card', c, this);
 
     // play_done must be called AFTER next
     g_handler.add_callback(this.play_done, this, [c]);
@@ -256,7 +262,7 @@ function Engine() {
 
     c.current_life -= target.dmg_given;
     target.current_life -= c.dmg_given;
-    
+
     if(c.dmg_given > 0) {
       g_handler.add_event('take_dmg', [target, c, c.dmg_given])
       g_handler.add_event('deal_dmg', [c, target, c.dmg_given])
