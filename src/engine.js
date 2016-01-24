@@ -29,15 +29,20 @@ function Engine() {
     var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life];
   }
 
-  function Card(card_data, id) {
+  function Card(card_data, id, owner) {
     this.id = 0;
     this.card_data = new CardData(card_data);
     this.state = []; // Array of added states
+    this.status = 'deck';
+    this.owner = owner;
 
     this.field_summon_turn = 0;
 
-    this.is_frozen = false;
-    this.atk_info = {cnt : 0, turn : 0, did_action : 0}
+    this.is_frozen = {until : turn};
+    this.atk_info = {cnt : 0, turn : 0, did : 0};
+
+    // Proposed attack target during combat phase (can be changed)
+    this.atk_target = null;
   }
   Card.prototype.add_state = function(f, state, who) {
     this.state.push({f : f, state : state, who : who, when : g_when.get_id()});
@@ -74,17 +79,30 @@ function Engine() {
 
     this.atk_info.turn = current_turn();
     this.atk_info.cnt = atk_num;
-    this.atk_info.did_action = 0;
+    this.atk_info.did = 0;
   }
   Card.prototype.is_attackable = function() {
-    if(this.is_frozen) return false
+    if(this.is_frozen.until >= current_turn()) return false
     this.update_atk_cnt();
 
-    if(this.atk_info.turn == 0) return false;
+    if(this.atk_info.cnt <= this.atk_info.did) return false;
     return true;
   }
   Card.prototype.make_charge = function(who) {
-    
+    this.add_state(null, 'charge', who);
+    this.update_atk_cnt();
+    this.atk_info.cnt = this.calc_state('atk_num', 1);
+  }
+  Card.prototype.make_windfury = function(who) {
+    // For minions which are not able to attack (e.g Ancient watcher),
+    // We should not give windfury to those
+    if(this.calc_state('atk_num', 1) == 0) return;
+
+    this.add_state(function() { return 2; }, 'atk_num', who);
+    this.update_atk_cnt();
+
+    if(this.atk_info.turn == this.atk_info.field_summon_turn && !this.chk_state('charge')) return;
+    this.atk_info.cnt = 2;
   }
 
   function Deck() {
@@ -122,7 +140,7 @@ function Engine() {
 
     // this.enemy <- 정의할것!!
 
-    this.hero = new Card([player_name], g_id.get_id());
+    this.hero = new Card([player_name], g_id.get_id(), this);
 
     this.current_mana = 1;
 
@@ -130,6 +148,12 @@ function Engine() {
     this.field = new Deck();
   }
 
+  Player.prototype.chk_aura = function (aura) {
+    for(var i = 0; i < g_aura.length; i ++) {
+      if(g_aura[i].state == aura && g_aura[i].who.is_good()) return true;
+    }
+    return false;
+  }
   // TODO :: Finish implementing this function using user io
   // [options] are the array of name of cards to choose
   Player.prototype.choose_one = function(options, on_success) {
@@ -145,6 +169,7 @@ function Engine() {
 
     c.field_summon_turn = current_turn();
     c.id = g_id.get_id();
+    c.status = 'field';
 
     this.hand.remove_card(c);
     this.field.put_card(c, at);
@@ -152,10 +177,47 @@ function Engine() {
     // play_done must be called AFTER next
     g_handler.add_callback(this.play_done, this, [c]);
 
-    if(next) g_handler.add_callback(next, this, [c, g_handler]);
+    if(next) {
+      g_handler.add_callback(next, this, [c, g_handler, true]);
+      if(this.chk_aura('bran_bronzebeard')) {
+        // Turn Off non-battlecry stuff
+        g_handler.add_callback(next, this, [c, g_handler, false])
+      }
+    }
   }
   Player.prototype.play_done = function(c) {
     g_handler.add_event('summon', c);
+  }
+
+  Player.prototype.chk_enemy_taunt = function (target) {
+    if(target.chk_state('taunt')) return true;
+    for(var i = 0; i < this.enemy.field.num_card(); i ++) {
+      if(this.enemy.field.card_list[i].chk_state('taunt')) return false;
+    }
+    return true;
+  }
+  Player.prototype.combat_start = function(c, target) {
+    if(!c.is_attackable()  // chks whether the attacker has not exhausted its attack chances
+    || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
+    || target.owner == c.owner) return false; // chks whether the attacker is not attacker our own teammates
+
+    c.atk_target = target;
+
+    // propose_attack event can change the target of the attacker
+    g_handler.add_event('propose_attack', [c, target]);
+    g_handler.add_callback(this.atack, this, []);
+  }
+  Player.prototype.attack = function (c) {
+    // If the attacker is mortally wounded or out of play, then combat event is closed
+    if(c.current_life <= 0 || c.status != 'field') return;
+
+    // attack event does not change the target of an attacker
+    g_handler.add_event('attack', [c, c.target]);
+    g_handler.add_callback(this.combat, this, [])
+  }
+  Player.prototype.combat = function(c) {
+    var target = c.target;
+    
   }
 
   function Event(event_type, args) {
@@ -188,6 +250,8 @@ function Engine() {
       this.who = args[0];
     } else if (e.event_type == 'deathrattle') {
       this.who = args[0];
+    } else if (e.event_type == 'propose_attack') {
+      this.who = args[0]; this.target = args[1];
     }
   }
 
@@ -204,7 +268,9 @@ function Engine() {
     // List of waiting call backs
     this.queue_resolved_callback = []
 
-    var event_type_list = ['attack', 'damaged', 'destroyed', 'summon', 'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle']
+    var event_type_list = ['attack', 'damaged', 'destroyed', 'summon',
+                           'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle',
+                           'propose_attack']
 
     // initialize event handler array
     for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = []
