@@ -1,4 +1,5 @@
 const card_manager = require('./card_db/card');
+const card_db = require('./card_db/card_db');
 
 function Engine() {
   // Returns current turn
@@ -15,6 +16,13 @@ function Engine() {
   var g_when = new UniqueId(); // Object to give unique number to the events
 
   var g_aura = []; // Aura that is (selectively) affecting entire minions on field
+
+  function create_card(name) {
+    var cd = card_db.load_card(name);
+    var card_data = new CardData(cd)
+
+    return new Card(card_data, 0, null);
+  }
 
   function CardData(args) {
     this.name = args[0];
@@ -45,7 +53,7 @@ function Engine() {
     this.atk_info = {cnt : 0, turn : 0, did : 0};
 
     // Proposed attack target during combat phase (can be changed)
-    this.atk_target = null;
+    this.target = null;
 
     // Proposed damage that may be given to the target (can be changed)
     this.dmg_given = 0;
@@ -165,42 +173,92 @@ function Engine() {
   Player.prototype.choose_one = function(options, on_success) {
 
   }
+  Player.prototype.select_one = function(c, select_cond, success, fail) {
+    // chk with select_cond
+
+    // if selection is success
+    c.target = selected;
+    success(c)
+  }
   Player.prototype.play_spell = function (c) {
+    if(this.current_mana < c.mana()) return; // Enough mana?
+
     var card = card_manager.load_card(c.card_data.name);
     card.on_play(c, g_handler);
   }
+  Player.prototype.chk_target = function(c, next) {
+    if(c.status == 'destroyed') return;
+    if(c.target) { g_handler.add_event('target', c); }
+
+    g_handler.add_callback(next, this, [c, g_handler])
+  }
   // Play a card from a hand
   Player.prototype.play_minion = function(c, at) {
+    if(this.field.num_card() >= 7) return; // Is space available for a minion?
+    if(this.current_mana < c.mana()) return; // Enough mana?
+
     var card = card_manager.load_card(c.card_data.name)
     card.on_play(c, true, true, at, g_handler);
   }
   Player.prototype.play_success = function(c, at, next) {
-    this.current_mana -= c.mana();
+    // if the status of card is already specified as 'field',
+    // then this means that the minion is not summoning by user card play
+    if(c.status == 'field') {
+      g_handler.add_callback(this.play_done, this, [c]);
 
+      // only turn on non-battlecry stuff
+      g_handler.add_callback(next, this, [c, g_handler, true, false]);
+      return;
+    }
+
+    c.status = 'field';
+    this.current_mana -= c.mana();
     c.field_summon_turn = current_turn();
     c.id = g_id.get_id();
-    c.status = 'field';
 
     this.hand.remove_card(c);
-    this.field.put_card(c, at);
 
     g_handler.add_event('play_card', c, this);
 
-    // play_done must be called AFTER next
-    g_handler.add_callback(this.play_done, this, [c]);
+    if(c.card_data.type == 'minion') {
+      this.field.put_card(c, at);
 
-    if(next) {
-      g_handler.add_callback(next, this, [c, g_handler, true]);
-      if(this.chk_aura('bran_bronzebeard')) {
-        // Turn Off non-battlecry stuff
-        g_handler.add_callback(next, this, [c, g_handler, false])
+      // play_done must be called AFTER next
+      g_handler.add_callback(this.play_done, this, [c]);
+
+      if(next) {
+        g_handler.add_callback(next, this, [c, g_handler, true, true]);
+        if(this.chk_aura('bran_bronzebeard')) {
+          // Turn Off non-battlecry stuff
+          g_handler.add_callback(next, this, [c, g_handler, false, true])
+        }
       }
+    }
+    else if(c.card_data.type == 'spell') {
+      // play_done must be called at LAST
+      g_handler.add_callback(this.play_done, this, [c]);
+      g_handler.add_callback(this.chk_target, this, [c, next])
     }
   }
   Player.prototype.play_done = function(c) {
     g_handler.add_event('summon', c);
   }
+  Player.prototype.summon_card = function(name, at, after_summon) {
+    var c = create_card(name);
 
+    c.field_summon_turn = current_turn();
+    c.id = g_id.get_id();
+    c.status = 'field';
+    c.owner = this;
+    
+    this.field.put_card(c, at)
+    var card = card_manager.load_card(c.card_data.name);
+
+    // Optional argument - after_summon; which is called after the card is summoned
+    if(after_summon) g_handler.add_callback(after_summon, this, [c]);
+
+    card.on_play(c, false, false, at, g_handler);
+  }
   Player.prototype.chk_enemy_taunt = function (target) {
     if(target.chk_state('taunt')) return true;
     for(var i = 0; i < this.enemy.field.num_card(); i ++) {
@@ -222,7 +280,7 @@ function Engine() {
     || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
     || this.chk_invincible (target)) return false; // chks whether the attacker is attacking invincible target
 
-    c.atk_target = target;
+    c.target = target;
     c.is_stealth.until = -1; // stealth is gone!
 
     // propose_attack event can change the target of the attacker
@@ -313,6 +371,8 @@ function Engine() {
       this.who = args[0];
     } else if (e.event_type == 'propose_attack') {
       this.who = args[0]; this.target = args[1];
+    } else if(e.event_type == 'target') {
+      this.who = args[0];
     }
   }
 
