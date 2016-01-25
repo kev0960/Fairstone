@@ -6,7 +6,7 @@ var http = require('http').Server(app)
 var io = require('socket.io')(http)
 var uuid = require('node-uuid');
 
-const hearth_game = require('./engine.js')
+//const hearth_game = require('./engine.js')
 
 app.set('view engine', 'jade');
 app.use(body_parser.urlencoded({ extended: false }));
@@ -17,14 +17,16 @@ app.get('/', function(req, res) {
   //res.sendFile('public/index.html', {root : __dirname})
   res.render('index.jade')
   console.log('Connected!')
-})
+});
+
 app.get('/info', function(req, res) {
   var data = req.cookies.hearth_auth;
   if(data && user_manager.chk_user_session(data.user_id, data.session_key)) {
     res.render('info.jade', {user_id : data.user_id})
   }
   else res.redirect('/')
-})
+});
+
 app.post('/login', function(req, res) {
   var user_id = req.body.user_id;
   var password = req.body.password;
@@ -47,7 +49,7 @@ io.on('connection', function(socket) {
     match_maker.delete_client(socket)
   });
 
-})
+});
 
 function UserManager() {
   this.user_list = [{name : 'kev0960'}];

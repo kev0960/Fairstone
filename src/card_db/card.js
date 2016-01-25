@@ -7,7 +7,7 @@
     }
     var card_do = {
       '제왕 타우릿산': {
-        on_play = function(me, bc, user_play, at) {
+        on_play : function(me, bc, user_play, at) {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             if(non_bc) {
               me.owner.g_h.add_handler(function(e, me) { if(e.turn_end == me.owner) {
