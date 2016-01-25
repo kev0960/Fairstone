@@ -13,7 +13,7 @@
   },
   "author": "Jaebum Lee <jblee94@stanford.edu>",
   "version": "0.0.1",
-  "name" : "Hearth Server",
+  "name" : "hearthserver",
   "engines" : {
     "node" : "4.x.x"
   }
