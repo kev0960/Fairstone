@@ -18,5 +18,8 @@
   "name" : "hearthserver",
   "engines" : {
     "node" : "4.x.x"
+  },
+  "scripts" : {
+    "start" : "/src/server.js"
   }
 }
