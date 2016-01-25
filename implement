@@ -1,14 +1,42 @@
 ** Implement Specifications **
 
-Playing minion
+하수인 카드 내기 - play_minion Function
 
-1. Card is removed from hand and mana cost is deducted
-2. On play phase -- 'play_card' event is alerted.
-   Wat for play_card event to be resolved. Then, it calls spawn_card()
-3. Battlecry phase -- on_spawn() of played card is called
-   When everything is resolved that is created through battlecry of minion,
-   end_spawn_card() is called
-   (** on_spawn function takes end_spawn_card as a callback so that it can immediately
-   call end_spawn_card() as it finishes card spanwing. However, end_spawn_card postpones
-   alerting 'spawn' Event until everything is resolved)
-4. 'spawn' Event is alerted.
+#1. 일단 필드에 하수인 카드가 들어갈 자리가 있는지 확인한다. 또한, 하수인 카드를 내기 위한 마나가 충분한지 확인한다.
+    확인 되었다면, 해당하는 카드의 on_play 함수를 호출한다
+
+#2. on_play 함수는 만일 유저로 부터 받아야 할 정보들이 있다면 이를 추합한 뒤에, 없다면 바로 play_success 함수를 호출한다
+    play_success 함수에는 인자로 next 가 들어가는데 이 next 에는 카드가 무엇을 수행하는지 정보를 포함하고 있다. (즉 카드의 text)
+    play_success 함수는 실질적으로 카드를 핸드에서 빼고 필드에 소환하며, 마나를 감소시키고 여러가지 카드에 대한 초기화 설정을
+    수행하는 역할을 한다. 또한 'play_card' 이벤트를 발생시킨다. play_card 이벤트가 발생되고 처리된다면 이제 next() 가 호출된다
+
+    play_card 이벤트에 핸들러를 가지는 카드들 : 밥통고블린, 지옥절단기, 땅굴 트로그 등
+
+#3. next 함수는 앞에서도 말했듯이 카드의 전반적인 내용들이 처리되는 부분이다. next 함수가 종료되면 play_done() 가 호출된다
+
+#4. play_done 함수는 summon 이벤트를 발생시킨다.
+
+    summon 이벤트에 핸들러를 가지는 카드들 : 거울상, 참회, 저격, 신성한 시험 등 (<- 우선권을 가짐), 함포, 단검 곡예사 등
+
+하수인이 다른 하수인/영웅을 공격시에 - combat Function
+
+#1. 일단 상대방(target) 이 적합한 목표물인지 확인한 후 (다른 도발카드들은 없는지, 이 카드가 현재 턴에 공격 가능한지 등등)
+    이 카드에 target 을 지정해준 뒤에 propose_attack 이벤트를 발생시킨다. propose_attack 이벤트가 끝나면 attack 함수를
+    호출한다.
+
+    propose_attack 이벤트에 핸들러를 가지는 카드들 : 빙결의 덫, 폭발의 덫, 눈속임, 뱀 덫, 고귀한 희생, 증발시키기, 모고르
+
+#2. attack 함수에서는 공격을 한 카드의 상태를 확인한 이후에 괜찮다면 attack 이벤트를 발생시킨다. attack 이벤트가 끝나면
+    pre_combat 함수를 호출한다.
+
+    attack 이벤트에 핸들러를 가지는 카드들 : 용사의 진은검, 얼음 보호막, 신의 권능 : 영광, 지혜의 축복
+
+#3. pre_combat 함수에 도달하였다면 더 이상 공격 target 이 바뀔일은 없게 된다. 따라서 공격 카드의 dmg_given 에 자신의
+    공격 dmg 를, target 의 dmg_given 에 자신의 dmg 을 써준다. (영웅을 제외하면 서로 데미지를 주고받기 때문) 그 후에
+    pre_dmg 이벤트를 발생시킨다. pre_dmg 이벤트가 끝나면 actual_combat 함수를 호출한다.
+
+    pre_dmg 이벤트에 핸들러를 가지는 카드들 : 얼음 방패, 볼프 램쉴드, 지휘관의 외침
+
+#4. actual_combat 함수에서 실제 공격을 수행한다. 이를 바탕으로 주고 받은 데미지가 0 보다 크면 take_dmg, deal_dmg 이벤트가 발생하며
+    파괴된 하수인이 있다면 그 하수인에 대한 destroyed 이벤트가 발생하게 된다. 참고로, 이벤트가 발생하는 순서는 take_dmg 는 언제나
+    target 이 먼저 발동하며, deal_dmg 는 공격자의 것이 먼저 발생된다.

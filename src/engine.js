@@ -126,7 +126,7 @@ function Engine() {
     this.card_data = c.card_data;
     this.status = c.status;
 
-    this.is_fronzen.until = c.is_fronzen.until;
+    this.is_frozen.until = c.is_frozen.until;
     this.is_shielded.until = c.is_shielded.until;
 
     this.atk_info = {cnt : c.atk_info.cnt, turn : c.atk_info.turn, did : c.atk_info.did};
@@ -183,7 +183,7 @@ function Engine() {
 
   Player.prototype.chk_aura = function (aura) {
     for(var i = 0; i < g_aura.length; i ++) {
-      if(g_aura[i].state == aura && g_aura[i].who.is_good()) return true;
+      if(g_aura[i].state == aura && g_aura[i].who.is_good() && g_aura[i].who.owner == this) return true;
     }
     return false;
   }
@@ -312,7 +312,7 @@ function Engine() {
 
     // propose_attack event can change the target of the attacker
     g_handler.add_event(new Event('propose_attack', [c, target]));
-    g_handler.add_callback(this.atack, this, []);
+    g_handler.add_callback(this.attack, this, []);
   }
   Player.prototype.attack = function (c) {
     // If the attacker is mortally wounded or out of play, then combat event is closed
@@ -368,6 +368,17 @@ function Engine() {
     if(second.currnet_life <= 0 && second.current_life + second.dmg_given > 0 && second.status != 'destroyed')
       g_handler.add_event(new Event('destroyed', second, first));
   }
+  Player.prototype.spell_dmg = function(c, dmg) {
+    for(var i = 0; i < g_aura.length; i ++) {
+      if(g_aura[i].state == 'spell_dmg' && g_aura[i].who.is_good()) {
+        dmg = g_aura[i].f(dmg, c);
+      }
+    }
+    if(this.chk_aura('prophet_velen')) {
+      dmg *= 2;
+    }
+    return dmg;
+  }
 
   Player.prototype.deal_dmg = function(dmg, from, to) {
     from.dmg_given = dmg;
@@ -393,12 +404,35 @@ function Engine() {
       g_handler.add_event(new Event('destroyed', to, from))
   }
 
+  // Do not specify increased healling amount into 'heal'
+  Player.prototype.heal = function(heal, from, to) {
+    if(this.chk_aura('auchenai_soulpriest')) {
+      this.deal_dmg(this.spell_dmg(from, heal), from, to); return;
+    }
+    if(this.chk_aura('prophet_velen')) {
+      heal *= 2;
+    }
+  }
+
   // Deals damage to many targets
   Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
     if(!done) {
       done = 0;
+
+      // sort the list of targes in order of play
+      var temp_arr = []
+      for(var i = 0; i < dmg_arr.length; i ++) {
+        temp_arr.push({d : dmg_arr[i], to : to_arr[i]});
+      }
+      temp_arr.sort(function(a, b) { return a.to.summon_order > b.to.summon_order })
+
+      // Rearrange dmg_arr and to_arr according to the summon_order
+      for(var i = 0; i < temp_arr.length; i ++) {
+        dmg_arr[i] = temp_arr[i].d;
+        to_arr[i] = temp_arr[i].to;
+      }
     }
-    if(done < dmg_arr.length)
+    if(done < dmg_arr.length) {
       if(done >= 1) dmg_arr[done - 1] = from.dmg_given;
 
       from.dmg_given = dmg_arr[done];
@@ -410,8 +444,50 @@ function Engine() {
     else { // Now pre_dmg events are done
       dmg_arr[done - 1] = from.dmg_given;
 
-      for(var i = 0; i < )
+      for(var i = 0; i < from.length; i ++) {
+        // shield is dispelled
+        if(dmg_arr[i] > 0 && to_arr[i].is_shielded.until >= current_turn()) {
+          to_arr[i].is_shielded.until = -1;
+          dmg_arr[i] = 0;
+        }
+
+        // We only create dmg event when dmg is over 0
+        if(dmg_arr[i] > 0) {
+          to_arr[i].current_life -= dmg_arr[i];
+
+          g_handler.add_event(new Event('deal_dmg', [from, to_arr[i], dmg_arr[i]]));
+          g_handler.add_event(new Event('take_dmg', [to_arr[i], from, dmg_arr[i]]));
+
+          if(to_arr[i].current_life <= 0 && to_arr[i].current_life + dmg_arr[i] > 0 && to.status != 'destroyed')
+            g_handler.add_event(new Event('destroyed', to_arr[i], from));
+        }
+      }
     }
+  }
+
+  // Silence a minion
+  Player.prototype.silence = function(from, target) {
+    target.is_frozen.until = -1;
+    target.is_shielded.until = -1;
+    target.is_invincible = -1;
+
+    for(var i = 0; i < g_aura.length; i ++) {
+      if(g_aura[i].who == target) {
+        g_aura.splice(i, 1); i --;
+      }
+    }
+
+    target.state = [];
+
+    for(arr in g_handler.event_handler_arr) {
+      for(var i = 0; i < arr.length; i ++) {
+        if(arr[i].me == target) {
+          arr.splice(i , 1); i --;
+        }
+      }
+    }
+
+    g_msg.add_event(new Event('silenced', from, target));
   }
   function Event(event_type, args) {
     this.event_type = event_type
@@ -455,6 +531,9 @@ function Engine() {
       this.who = args[0]; this.target = args[1];
     } else if(e.event_type == 'target') {
       this.who = args[0];
+    } else if(e.event_type == 'silence') {
+      this.who = args[0];
+      this.target = args[1]
     }
   }
 
@@ -474,7 +553,7 @@ function Engine() {
 
     var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon',
                            'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle',
-                           'propose_attack', 'pre_dmg']
+                           'propose_attack', 'pre_dmg', 'heal', 'silence']
 
     // initialize event handler array
     for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = []
@@ -495,6 +574,9 @@ function Engine() {
       // Insert in front of all other events
       this.queue.splice(0, 0, e);
     }
+  }
+  Handler.prototype.add_handler = function(f, event, me, is_secret) {
+    this.event_handler_arr[event].push({f : f, me : me, is_secret : is_secret});
   }
   Handler.prototype.force_add_event = function(e) {
     e.turn = current_turn();

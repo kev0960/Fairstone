@@ -2,6 +2,8 @@ html
   head
     title Hearthstone
     body
-      p. 
+      p.
         YOU are logged in as #{user_id}!
       canvas(id="hearth")
+      script(src="/socket.io/sockiet.io.js")
+      script(src="match.js")
