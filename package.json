@@ -12,5 +12,9 @@
     "should": "~2.1.0",
   },
   "author": "Jaebum Lee <jblee94@stanford.edu>",
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "name" : "Hearth Server",
+  "engines" : {
+    "node" : "4.x.x",
+  }
 }
