@@ -37,8 +37,9 @@ app.post('/login', function(req, res) {
   }
 
 })
-http.listen(80, function() {
-  console.log('app is listening on port 80')
+var server_port = process.env.PORT || 80
+http.listen(server_port, function() {
+  console.log('app is listening on port ' + server_port)
 })
 io.on('connection', function(socket) {
   match_maker.add_client(socket);
