@@ -15,6 +15,6 @@
   "version": "0.0.1",
   "name" : "Hearth Server",
   "engines" : {
-    "node" : "4.x.x",
+    "node" : "4.x.x"
   }
 }
