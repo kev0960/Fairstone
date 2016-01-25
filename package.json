@@ -20,6 +20,6 @@
     "node" : "4.x.x"
   },
   "scripts" : {
-    "start" : "node /src/server.js"
+    "start" : "node ./src/server.js"
   }
 }
