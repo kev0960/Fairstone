@@ -47,9 +47,12 @@ function Engine() {
     this.field_summon_turn = -1;
     this.summon_order = -1;
 
+    this.current_life = this.card_data.info[1];
+
     this.is_frozen = {until : -1};
     this.is_stealth = {until : -1};
     this.is_shielded = {until : -1};
+    this.is_invincible = {until : -1};
 
     this.atk_info = {cnt : 0, turn : 0, did : 0};
 
@@ -118,6 +121,19 @@ function Engine() {
 
     if(this.atk_info.turn == this.atk_info.field_summon_turn && !this.chk_state('charge')) return;
     this.atk_info.cnt = 2;
+  }
+  Card.prototype.copy_to_other_card = function(c) {
+    this.card_data = c.card_data;
+    this.status = c.status;
+
+    this.is_fronzen.until = c.is_fronzen.until;
+    this.is_shielded.until = c.is_shielded.until;
+
+    this.atk_info = {cnt : c.atk_info.cnt, turn : c.atk_info.turn, did : c.atk_info.did};
+    this.state = [];
+    for(var i = 0; i < c.state.length; i ++) {
+      this.add_state(c.state[i].f, c.state[i].state, (c.state[i].who == c ? this : c.state[i].who));
+    }
   }
 
   function Deck() {
@@ -281,6 +297,8 @@ function Engine() {
         return true;
       }
     }
+    if(this.is_invincible.until >= current_turn()) return true;
+
     return false;
   }
   Player.prototype.combat = function(c, target) {
@@ -344,10 +362,10 @@ function Engine() {
 
     // Minion must be alive before this attack in order to invoke destroyed event!
     // (DESTROYED EVENT IS NOT CREATED TWICE)
-    if(first.currnet_life <= 0 && first.current_life + first.dmg_given > 0)
+    if(first.currnet_life <= 0 && first.current_life + first.dmg_given > 0 && first.status != 'destroyed')
       g_handler.add_event(new Event('destroyed', first, second));
 
-    if(second.currnet_life <= 0 && second.current_life + second.dmg_given > 0)
+    if(second.currnet_life <= 0 && second.current_life + second.dmg_given > 0 && second.status != 'destroyed')
       g_handler.add_event(new Event('destroyed', second, first));
   }
 
@@ -361,6 +379,9 @@ function Engine() {
     if(dmg > 0 && to.is_shielded.until >= current_turn()) {
       dmg = 0; to.is_shielded.until = -1;
     }
+    if(to.chk_invincible()) {
+      dmg = 0;
+    }
     if(dmg == 0) return; // May be we should at least create an animation for this too..
 
     to.current_life -= dmg;
@@ -368,10 +389,30 @@ function Engine() {
     g_handler.add_event(new Event('take_dmg', [to, from, dmg]));
     g_handler.add_event(new Event('deal_dmg', [from, to, dmg]));
 
-    if(to.current_life <= 0 && to.current_life + dmg > 0)
+    if(to.current_life <= 0 && to.current_life + dmg > 0 && to.status != 'destroyed')
       g_handler.add_event(new Event('destroyed', to, from))
   }
 
+  // Deals damage to many targets
+  Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
+    if(!done) {
+      done = 0;
+    }
+    if(done < dmg_arr.length)
+      if(done >= 1) dmg_arr[done - 1] = from.dmg_given;
+
+      from.dmg_given = dmg_arr[done];
+      // Create pre_dmg events and handle those
+      g_handler.add_event(new Event('pre_dmg', [from, to_arr[done], dmg_arr[done]]));
+      g_handler.add_callback(this.deal_dmg_many, this, [dmg_arr, from, to_arr, done + 1])
+      return;
+    }
+    else { // Now pre_dmg events are done
+      dmg_arr[done - 1] = from.dmg_given;
+
+      for(var i = 0; i < )
+    }
+  }
   function Event(event_type, args) {
     this.event_type = event_type
     this.turn = 0;
@@ -455,6 +496,11 @@ function Engine() {
       this.queue.splice(0, 0, e);
     }
   }
+  Handler.prototype.force_add_event = function(e) {
+    e.turn = current_turn();
+
+    this.queue.push(e);
+  }
   Handler.prototype.add_callback = function(f, that, args) {
     this.queue_resolved_callback.splice(0, 0, {
       f: f,
@@ -474,6 +520,11 @@ function Engine() {
 
         f.f.apply(f.that, f.args);
         return;
+      } else {
+        // If both destoryed queue and callback queues are empty, then we initiate
+        // death creation phase
+        this.death_creation();
+        return;
       }
     }
     var eve = this.queue[0];
@@ -482,7 +533,7 @@ function Engine() {
     // Handle the event here
     this.do_event(eve);
 
-    this.exec_lock = false;
+    // this.exec_lock = false;
   }
   Handler.prototype.do_event = function(e) {
     // Make sure not to use handlers that are added during the do_event process
@@ -491,6 +542,9 @@ function Engine() {
     for (var i = 0; i < handler_num; i++) {
       if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.destroyed)) handler_arr[i].f(e, handler_arr[i].me);
     }
+
+    this.exec_lock = false;
+    this.execute();
   }
   Handler.prototype.death_creation = function() {
     this.destroyed_queue_length = this.destroyed_queue.length;
@@ -503,6 +557,12 @@ function Engine() {
         dead.status = 'destroyed' // Mark it as destroyed
         dead.owner.field.remove_card(dead); // Remove card from the field
       }
+    }
+    // Since Event queue is already flushed out, we can comfortably
+    // force push events
+    for(var i = 0; i < this.destroyed_queue.length; i ++) {
+      this.force_add_event(new Event('destroyed', dq[i].destroyed, dq[i].attacker));
+      this.force_add_event(new Event('deathrattle', dq[i].destroyed))
     }
   }
 
