@@ -9,7 +9,9 @@
     "gen-uuid": "*",
     "jade": "^1.11.0",
     "serve-favicon": "^2.2.0",
-    "should": "~2.1.0"
+    "should": "~2.1.0",
+    "node-uuid" : "*",
+    "socket-io" : "*"
   },
   "author": "Jaebum Lee <jblee94@stanford.edu>",
   "version": "0.0.1",

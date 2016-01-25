@@ -16,6 +16,7 @@ app.use(cookie_parser());
 app.get('/', function(req, res) {
   //res.sendFile('public/index.html', {root : __dirname})
   res.render('index.jade')
+  console.log('Connected!')
 })
 app.get('/info', function(req, res) {
   var data = req.cookies.hearth_auth;
