@@ -1,4 +1,5 @@
-(function() {
+(
+  function() {
   function inc(n) {
     return function(x) {
       return x + n
