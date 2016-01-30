@@ -44,22 +44,16 @@ app.use(function(req, res, next) {
 });
 
 app.get('/', function(req, res) {
-  console.log(req.decoded);
+  console.log('Decoded :: ' + req.decoded);
 
   var token = req.flash('signed_token');
-  console.log(token);
+  console.log('Token :: ' + token);
 
   res.render('index.jade', { 'token' : token })
-
-  console.log('Connected!')
 });
 
 app.get('/info', function(req, res) {
-  var data = req.cookies.hearth_auth;
-  if(data && user_manager.chk_user_session(data.user_id, data.session_key)) {
-    res.render('info.jade', {user_id : data.user_id})
-  }
-  else res.redirect('/')
+  var decoded = req.decoded;
 });
 
 app.post('/login', function(req, res) {
@@ -114,24 +108,6 @@ UserManager.prototype.chk_user = function(user_id, password) {
     }
   }
   return {result : false, reason : 'not registered user'};
-}
-UserManager.prototype.set_user_session = function(user_id) {
-  for(var i = 0; i < this.user_list.length; i ++) {
-    if(this.user_list[i].name == user_id) {
-      this.user_list[i].session_key = uuid.v4();
-      return this.user_list[i].session_key;
-    }
-  }
-  return null;
-}
-UserManager.prototype.chk_user_session = function(user_id, key) {
-  for(var i = 0; i < this.user_list.length; i ++) {
-    if(this.user_list[i].name == user_id) {
-      if(this.user_list[i].session_key == key) return true;
-      return false;
-    }
-  }
-  return false;
 }
 var user_manager = new UserManager();
 
