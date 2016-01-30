@@ -75,7 +75,6 @@ app.post('/login', function(req, res) {
   console.log('post :: id : ' + id + ' / password : ' + password);
 
   if(user_manager.chk_user(id, password).result) {
-    console.log('passed!s')
     var token = jwt.sign({id : id}, hearth_secret, {expiresInMinutes : 1440});
 
     req.flash('signed_token', token);
@@ -91,21 +90,23 @@ app.get('/match', function (req, res) {
   }
   else res.redirect('/')
 });
-
+app.get('/match/:id', function (req, res, next) {
+  res.send('user :: ' + req.params.id)
+});
 var server_port = process.env.PORT || 80
 http.listen(server_port, function() {
   console.log('app is listening on port ' + server_port)
 })
+
 io.on('connection', function(socket) {
   match_maker.add_client(socket);
   socket.on('disconnect', function() {
     match_maker.delete_client(socket)
   });
-
 });
 
 function UserManager() {
-  this.user_list = [{id : 'a', password : 'a'}];
+  this.user_list = [{id : 'a', password : 'a'}, {id : 'Jaebum', password : 'test'}];
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
