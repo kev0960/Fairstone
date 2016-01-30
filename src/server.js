@@ -17,6 +17,7 @@ const hearth_secret = 'hearth-server-secret';
 app.set('view engine', 'jade');
 app.set('views', path.join(__dirname, '/views'));
 
+app.use(express.static(__dirname + '/public'));
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(body_parser.json());
 app.use(cookie_parser());

@@ -1,3 +1,10 @@
+** Heroku 설정 **
+
+1) heroku create
+2) git push heroku 하면 설정된 곳으로 push
+
+
+
 ** Implement Specifications **
 
 하수인 카드 내기 - play_minion Function
