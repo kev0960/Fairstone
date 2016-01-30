@@ -90,7 +90,7 @@ io.on('connection', function(socket) {
 function UserManager() {
   this.user_list = [{id : 'a', password : 'a'}];
 }
-UserManage.prototype.add_user = function(user_id, password) {
+UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
     if(this.user_list[i].id == user_id) {
       return {result : false, reason : 'Id is already taken'};
@@ -99,7 +99,7 @@ UserManage.prototype.add_user = function(user_id, password) {
   this.user_list.push({id : user_id, password : password});
   return {result : true};
 }
-UserManage.prototype.chk_user = function(user_id, password) {
+UserManager.prototype.chk_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
     if(this.user_list[i].id == user_id) {
       if(this.user_list[i].password == password) return {result : true};
