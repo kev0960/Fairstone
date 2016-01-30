@@ -5,6 +5,7 @@ var body_parser = require('body-parser')
 var http = require('http').Server(app)
 var io = require('socket.io')(http)
 var uuid = require('node-uuid');
+var path = require('path');
 
 //const hearth_game = require('./engine.js')
 
