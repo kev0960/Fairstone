@@ -47,6 +47,8 @@ app.get('/', function(req, res) {
   console.log(req.decoded);
 
   var token = req.flash('signed_token');
+  console.log(token);
+
   res.render('index.jade', { 'token' : token })
 
   console.log('Connected!')
@@ -66,7 +68,8 @@ app.post('/login', function(req, res) {
 
   console.log('post :: id : ' + id + ' / password : ' + password);
 
-  if(user_manager.chk_user(id, password)) {
+  if(user_manager.chk_user(id, password).result) {
+    console.log('passed!s')
     var token = jwt.sign({id : id, password : password}, hearth_secret, {expiresInMinutes : 1440});
 
     req.flash('signed_token', token);
