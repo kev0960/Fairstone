@@ -3,7 +3,6 @@ html
     title Hearthstone
     body
       p#show_token token HERE
-      script(type="text/javascript" src="index.js")
       form(method="post" action="/login")
         div
           label Id :
@@ -13,3 +12,6 @@ html
           input(type="password" name="password")
         div
           input(type="submit")
+
+    var token = "#{token}";
+    script(type="text/javascript" src="index.js")
