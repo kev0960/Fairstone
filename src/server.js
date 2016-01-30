@@ -30,7 +30,8 @@ app.use(flash());
 // Check whether the user has the authentication
 // If it has oned, then set requet.decoded
 app.use(function(req, res, next) {
-  var token = req.body.token || req.query.token || req.headers['x-access-token'];
+  console.log('cookie :: ' + req.cookies)
+  var token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies["hearth-server-token"];
   console.log('TOKEN RECEIVED ' + token)
   if(token) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
