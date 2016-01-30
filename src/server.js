@@ -19,6 +19,9 @@ app.set('views', path.join(__dirname, '/views'));
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(body_parser.json());
 app.use(cookie_parser());
+
+// settings for using flash
+app.use(express.session({cookie : {maxAge : 60000}}));
 app.use(flash());
 
 // Check whether the user has the authentication
