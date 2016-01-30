@@ -49,7 +49,7 @@ app.get('/', function(req, res) {
 
   var token = req.flash('signed_token');
 
-  var id = decoded.id;
+  var id = req.decoded;
   console.log('Token :: ' +  token);
 
   res.render('index.jade', { 'token' : token})
