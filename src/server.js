@@ -34,27 +34,35 @@ app.use(function(req, res, next) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
       console.log('decoded ID : ' + decoded.id)
       if(!err) {
-        req.decoded = decoded;
+        req.decoded = decoded.id;
       } else {
         req.decoded = '';
       }
+      next();
     })
   }
-  else { req.decoded = ''; }
-  next();
+  else { req.decoded = ''; next();}
 });
 
 app.get('/', function(req, res) {
   console.log('Decoded :: ' + req.decoded);
 
   var token = req.flash('signed_token');
+
+  var id = decoded.id;
   console.log('Token :: ' +  token);
 
-  res.render('index.jade', { 'token' : token })
+  res.render('index.jade', { 'token' : token})
 });
 
 app.get('/info', function(req, res) {
-  var decoded = req.decoded;
+  var id = req.decoded;
+  if(id) {
+    res.render('info.jade', {user_id : id});
+  }
+  else {
+    res.redirect('/');
+  }
 });
 
 app.post('/login', function(req, res) {
@@ -65,7 +73,7 @@ app.post('/login', function(req, res) {
 
   if(user_manager.chk_user(id, password).result) {
     console.log('passed!s')
-    var token = jwt.sign({id : id, password : password}, hearth_secret, {expiresInMinutes : 1440});
+    var token = jwt.sign({id : id}, hearth_secret, {expiresInMinutes : 1440});
 
     req.flash('signed_token', token);
     res.redirect('/')
