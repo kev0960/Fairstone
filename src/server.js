@@ -34,7 +34,7 @@ app.use(function(req, res, next) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
       console.log('decoded ID : ' + decoded.id)
       if(!err) {
-        req.decoded = decoded.;
+        req.decoded = decoded;
       } else {
         req.decoded = '';
       }
