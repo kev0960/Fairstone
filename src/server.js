@@ -22,7 +22,7 @@ app.use(body_parser.json());
 app.use(cookie_parser());
 
 // settings for using flash
-app.use(express.session({cookie : {maxAge : 60000}}));
+app.use(session({cookie : {maxAge : 60000}, secret : hearth_secret}));
 app.use(flash());
 
 // Check whether the user has the authentication
