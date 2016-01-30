@@ -12,7 +12,7 @@ var flash = require('connect-flash')
 
 const hearth_secret = 'hearth-server-secret';
 
-//const hearth_game = require('./engine.js')
+const hearth_game = require('./engine.js')
 
 app.set('view engine', 'jade');
 app.set('views', path.join(__dirname, '/views'));
