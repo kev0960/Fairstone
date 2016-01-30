@@ -91,7 +91,7 @@ app.get('/match', function (req, res) {
   else res.redirect('/')
 });
 app.get('/match/:id', function (req, res, next) {
-  res.send('user :: ' + req.params.id)
+
 });
 var server_port = process.env.PORT || 80
 http.listen(server_port, function() {
@@ -106,7 +106,8 @@ io.on('connection', function(socket) {
 });
 
 function UserManager() {
-  this.user_list = [{id : 'a', password : 'a'}, {id : 'Jaebum', password : 'test'}];
+  this.user_list = [{id : 'a', password : 'a', mmr : 1000},
+                    {id : 'Jaebum', password : 'test', mmr : 1000}];
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
@@ -131,15 +132,30 @@ var user_manager = new UserManager();
 function MatchMaker() {
   // current list of connected clients
   this.client_list = [];
+
+  // prioritized match queue
+  this.match_queue = [];
 }
-MatchMaker.prototype.add_client = function(soc) {
-  this.client_list.push(soc);
+MatchMaker.prototype.add_client = function(user_id, soc) {
   console.log('client Connected! - ' + soc.id);
-}
-MatchMaker.prototype.delete_client = function(soc) {
-  var idx = this.client_list.indexOf(soc);
-  if(idx != -1) {
-    this.client_list.splice(idx, 1);
+  for(var i = 0; i < this.client_list; i ++) {
+    if(this.client_list[i].id == user_id) {
+       this.client_list[i].soc = soc;
+       return;
+     }
   }
+  this.client_list.push({id : user_id, soc : soc});
+}
+MatchMaker.prototype.delete_client = function(user_id, soc) {
+  for(var i = 0; i < this.client_list; i ++) {
+    if(this.client_list[i].id == user_id) {
+       this.client_list[i].splice(i, 1); return;
+     }
+  }
+}
+
+// If the match is found, then it will broadcast the message
+MatchMaker.prototype.find_match = function(user_id) {
+  
 }
 var match_maker = new MatchMaker();
