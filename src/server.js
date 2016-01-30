@@ -6,6 +6,9 @@ var http = require('http').Server(app)
 var io = require('socket.io')(http)
 var uuid = require('node-uuid');
 var path = require('path');
+var jwt = requrie('jsonwebtoken');
+
+const hearth_secret = 'hearth-server-secret';
 
 //const hearth_game = require('./engine.js')
 
@@ -15,10 +18,32 @@ app.set('views', path.join(__dirname, '/views'));
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(body_parser.json());
 app.use(cookie_parser());
+app.use(flash());
+
+// Check whether the user has the authentication
+// If it has oned, then set requet.decoded
+app.use(function(req, res, next) {
+  var token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+  if(token) {
+    jwt.verify(token, hearth_secret, function(err, decoded) {
+      if(!err) {
+        req.decoded = decoded;
+      } else {
+        req.decoded = '';
+      }
+    })
+  }
+  else { req.decoded = ''; }
+  next();
+});
 
 app.get('/', function(req, res) {
-  //res.sendFile('public/index.html', {root : __dirname})
-  res.render('index.jade')
+  console.log(req.decoded);
+
+  var token = req.flash('signed_token');
+  res.render('index.jade', { 'token' : token })
+
   console.log('Connected!')
 });
 
@@ -31,15 +56,22 @@ app.get('/info', function(req, res) {
 });
 
 app.post('/login', function(req, res) {
-  var user_id = req.body.user_id;
+  var id = req.body.user_id;
   var password = req.body.password;
-  console.log('post')
-  if(user_id == 'a' && password == 'a') {
-    res.cookie('hearth_auth', {session_key : user_manager.set_user_session(user_id), user_id : user_id})
-    res.redirect('/match')
+
+  console.log('post :: id : ' + id + ' / password : ' + password);
+
+  if(user_manager.chk_user(id, password)) {
+    var token = jwt.sign({id : id, password : password}, hearth_secret, {expiresInMinutes : 1440});
+
+    req.flash('signed_token', token);
+    res.redirect('/')
   } else {
     res.redirect('/')
   }
+});
+
+app.get('/match', function (req, res) {
 });
 
 var server_port = process.env.PORT || 80
@@ -55,7 +87,25 @@ io.on('connection', function(socket) {
 });
 
 function UserManager() {
-  this.user_list = [{name : 'kev0960'}];
+  this.user_list = [{id : 'a', password : 'a'}];
+}
+UserManage.prototype.add_user = function(user_id, password) {
+  for(var i = 0; i < this.user_list.length; i ++) {
+    if(this.user_list[i].id == user_id) {
+      return {result : false, reason : 'Id is already taken'};
+    }
+  }
+  this.user_list.push({id : user_id, password : password});
+  return {result : true};
+}
+UserManage.prototype.chk_user = function(user_id, password) {
+  for(var i = 0; i < this.user_list.length; i ++) {
+    if(this.user_list[i].id == user_id) {
+      if(this.user_list[i].password == password) return {result : true};
+      return {result : false, reason : 'password is not matched'};
+    }
+  }
+  return {result : false, reason : 'not registered user'};
 }
 UserManager.prototype.set_user_session = function(user_id) {
   for(var i = 0; i < this.user_list.length; i ++) {
