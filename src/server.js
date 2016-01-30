@@ -32,6 +32,7 @@ app.use(function(req, res, next) {
 
   if(token) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
+      console.log('decoded : ' + decoded)
       if(!err) {
         req.decoded = decoded;
       } else {
@@ -47,7 +48,7 @@ app.get('/', function(req, res) {
   console.log('Decoded :: ' + req.decoded);
 
   var token = req.flash('signed_token');
-  console.log('Token :: ' + token);
+  console.log('Token :: ' +  token);
 
   res.render('index.jade', { 'token' : token })
 });
