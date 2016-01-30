@@ -6,7 +6,8 @@ var http = require('http').Server(app)
 var io = require('socket.io')(http)
 var uuid = require('node-uuid');
 var path = require('path');
-var jwt = requrie('jsonwebtoken');
+var jwt = require('jsonwebtoken');
+var flash = require('connect-flash')
 
 const hearth_secret = 'hearth-server-secret';
 
