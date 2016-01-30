@@ -86,6 +86,10 @@ app.post('/login', function(req, res) {
 });
 
 app.get('/match', function (req, res) {
+  if(req.decoded) {
+    res.render('match.jade', {user_id : req.decoded});
+  }
+  else res.redirect('/')
 });
 
 var server_port = process.env.PORT || 80

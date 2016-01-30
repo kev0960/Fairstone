@@ -2,4 +2,10 @@ html
   head
     title Welcome #{user_id}
     body
-      p#user_info. Your brief information goes here
+      p#user_info.
+       Hi #{user_id} !! Thank you for joining.
+      form(action='/match')
+        button#begin_match MATCH
+
+
+    script(type="text/javascript" src="match.js")
