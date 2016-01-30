@@ -9,6 +9,8 @@ var uuid = require('node-uuid');
 //const hearth_game = require('./engine.js')
 
 app.set('view engine', 'jade');
+app.set('views', path.join(__dirname, '/src/views'));
+
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(body_parser.json());
 app.use(cookie_parser());
