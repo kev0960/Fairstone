@@ -29,12 +29,12 @@ app.use(flash());
 // If it has oned, then set requet.decoded
 app.use(function(req, res, next) {
   var token = req.body.token || req.query.token || req.headers['x-access-token'];
-
+  console.log('TOKEN RECEIVED ' : token)
   if(token) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
-      console.log('decoded : ' + decoded)
+      console.log('decoded ID : ' + decoded.id)
       if(!err) {
-        req.decoded = decoded;
+        req.decoded = decoded.;
       } else {
         req.decoded = '';
       }
