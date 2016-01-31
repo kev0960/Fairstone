@@ -124,7 +124,7 @@ io.on('connection', function(socket) {
   });
   socket.on('find-match', function(data) {
     // Start the match finding QUEUE
-    jwt.verify(token, hearth_secret, return function(err, decoded) {
+    jwt.verify(token, hearth_secret, function(err, decoded) {
       match_maker.find_match(decoded.id);
     });
   });
