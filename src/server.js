@@ -225,13 +225,13 @@ MatchMaker.prototype.remove_from_match_queue = function (id) {
   return ;
 }
 MatchMaker.prototype.match_found = function (user1, user2) {
-  console.log('match is found!!')
+  console.log('match is found!! ' + user1 + ' vs ' + user2)
   this.found_match.push({p1 : user1, p2 : user2});
   var socket1 = this.get_socket(user1);
   var socket2 = this.get_socket(user2);
 
   if(socket1 && socket2) {
-
+    console.log('EMIT');
     socket1.emit('match-found', {with : user2});
     socket2.emit('match-found', {with : user1});
   }
