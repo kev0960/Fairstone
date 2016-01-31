@@ -235,9 +235,10 @@ MatchMaker.prototype.match_found = function (user1, user2) {
   }
 
 }
-MatchMaker.prototype.matching_queue = function(called_time) {
+MatchMaker.prototype.matching_queue = function() {
   console.log('chking matching queue...');
-
+  var called_time = Date.now();
+  
   for(var i = 0; i < this.match_queue.length; i ++) {
     for(var j = i + 1; j < this.match_queue.length; j ++) {
       if(this.match_queue[i].mmr > this.match_queue[j].mmr) {
