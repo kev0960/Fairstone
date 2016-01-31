@@ -4,7 +4,7 @@ var cookie_parser = require('cookie-parser')
 var body_parser = require('body-parser');
 var session = require('express-session')
 var http = require('http').Server(app)
-var io = require('socket.io')(http)
+var io = require('socket.io').listen(http)
 var uuid = require('node-uuid');
 var path = require('path');
 var jwt = require('jsonwebtoken');
@@ -67,6 +67,9 @@ app.get('/info', function(req, res) {
     res.redirect('/');
   }
 });
+app.get('/info/:id', function (req, res) {
+
+});
 
 app.post('/login', function(req, res) {
   var id = req.body.user_id;
@@ -90,9 +93,7 @@ app.get('/match', function (req, res) {
   }
   else res.redirect('/')
 });
-app.get('/info/:id', function (req, res, next) {
 
-});
 var server_port = process.env.PORT || 80
 http.listen(server_port, function() {
   console.log('app is listening on port ' + server_port)
@@ -111,7 +112,7 @@ function UserManager() {
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
-    if(this.user_list[i].id == user_id) {
+    if(this.user_list[i].id === user_id) {
       return {result : false, reason : 'Id is already taken'};
     }
   }
@@ -120,8 +121,8 @@ UserManager.prototype.add_user = function(user_id, password) {
 }
 UserManager.prototype.chk_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
-    if(this.user_list[i].id == user_id) {
-      if(this.user_list[i].password == password) return {result : true};
+    if(this.user_list[i].id === user_id) {
+      if(this.user_list[i].password === password) return {result : true};
       return {result : false, reason : 'password is not matched'};
     }
   }
