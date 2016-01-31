@@ -260,7 +260,7 @@ MatchMaker.prototype.matching_queue = function(called_time) {
 
   var next_chk = 1000 - (Date.now() - called_time);
   if(next_chk < 0) next_chk  = 0;
-  setTimeout(next_chk, this.matching_queue.bind(this));
+  setTimeout(this.matching_queue.bind(this), next_chk);
 }
 var match_maker = new MatchMaker();
-setTimeout(1000, match_maker.matching_queue.bind(match_maker));
+setTimeout(match_maker.matching_queue.bind(match_maker), 1000);
