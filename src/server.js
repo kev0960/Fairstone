@@ -124,7 +124,7 @@ io.on('connection', function(socket) {
   });
   socket.on('find-match', function(data) {
     // Start the match finding QUEUE
-    jwt.verify(token, hearth_secret, function(err, decoded) {
+    jwt.verify(data.token, hearth_secret, function(err, decoded) {
       match_maker.find_match(decoded.id);
     });
   });
@@ -214,6 +214,7 @@ function min(a , b) { return a > b ? b : a; }
 MatchMaker.prototype.find_match = function(user_id) {
   var user = user_manager.get_user(user_id);
   if(user) {
+    console.log(user_id + ' is added to QUEUE')
     this.match_queue.push({id : user_id, when : Date.now(), mmr : user.mmr});
   }
 }
