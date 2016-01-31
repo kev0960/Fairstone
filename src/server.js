@@ -94,6 +94,16 @@ app.get('/match', function (req, res) {
   else res.redirect('/')
 });
 
+io.of('/match').on('connection', function (socket) {
+
+})
+app.post('/match/start-match', function (req, res) {
+  var user_id = req.decoded;
+  if(user_id) {
+    match_maker.find_match(user_id);
+  }
+})
+
 var server_port = process.env.PORT || 80
 http.listen(server_port, function() {
   console.log('app is listening on port ' + server_port)
