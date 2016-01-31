@@ -112,7 +112,7 @@ http.listen(server_port, function() {
 io.on('connection', function(socket) {
   console.log('user is connected!');
   socket.on('send-token', function(data) {
-    var token = data.token; console.log('client sent ::: token');
+    var token = data.token; console.log('client sent :::' + token);
 
     // verify the sent token and if it is valid, then add it to the connected client list
     jwt.verify(token, hearth_secret, function(token) { return function(err, decoded) {
@@ -159,7 +159,7 @@ function MatchMaker() {
   this.match_queue = [];
 }
 MatchMaker.prototype.add_client = function(user_id, soc) {
-  //console.log('client Connected! - ' + soc.id);
+  console.log('client Connected! - ' + user_id);
   for(var i = 0; i < this.client_list; i ++) {
     if(this.client_list[i].id == user_id) {
        this.client_list[i].soc = soc;
