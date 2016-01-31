@@ -152,7 +152,7 @@ UserManager.prototype.chk_user = function(user_id, password) {
   }
   return {result : false, reason : 'not registered user'};
 }
-User.prototype.get_user = function(user_id) {
+UserManager.prototype.get_user = function(user_id) {
   for(var i = 0; i < this.user_list.length; i ++) {
     if(this.user_list[i].id === user_id) {
       return this.user_list[i];
