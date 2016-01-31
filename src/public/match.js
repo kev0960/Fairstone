@@ -18,7 +18,7 @@ socket.on('token-not-valid', function(data) {
   // return to Home page
 });
 socket.on('match-found', function(data) {
-
+  $('match-found').text("Match is found!!");
 });
 $('begin_match').click(function() {
   socket.emit('find-match', {token : readCookie('hearth-server-token')})

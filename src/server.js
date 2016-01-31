@@ -116,15 +116,18 @@ io.on('connection', function(socket) {
 
     // verify the sent token and if it is valid, then add it to the connected client list
     jwt.verify(token, hearth_secret, function(token) { return function(err, decoded) {
-      match_maker.add_client(decoded.id, token);
+      match_maker.add_client(decoded.id, socket);
     } } (token));
   })
   socket.on('disconnect', function(data) {
     match_maker.delete_client(socket)
   });
   socket.on('find-match', function(data) {
-    match_maker.find_match();
-  })
+    // Start the match finding QUEUE
+    jwt.verify(token, hearth_secret, return function(err, decoded) {
+      match_maker.find_match(decoded.id);
+    });
+  });
 });
 
 function UserManager() {
@@ -149,6 +152,14 @@ UserManager.prototype.chk_user = function(user_id, password) {
   }
   return {result : false, reason : 'not registered user'};
 }
+User.prototype.get_user = function(user_id) {
+  for(var i = 0; i < this.user_list.length; i ++) {
+    if(this.user_list[i].id === user_id) {
+      return this.user_list[i];
+    }
+  }
+  return null;
+}
 var user_manager = new UserManager();
 
 function MatchMaker() {
@@ -157,27 +168,99 @@ function MatchMaker() {
 
   // prioritized match queue
   this.match_queue = [];
+
+  // Found matches
+  this.found_match = [];
 }
 MatchMaker.prototype.add_client = function(user_id, soc) {
   console.log('client Connected! - ' + user_id);
   for(var i = 0; i < this.client_list; i ++) {
-    if(this.client_list[i].id == user_id) {
+    if(this.client_list[i].id === user_id) {
        this.client_list[i].soc = soc;
        return;
      }
   }
   this.client_list.push({id : user_id, soc : soc});
 }
-MatchMaker.prototype.delete_client = function(user_id, soc) {
+MatchMaker.prototype.is_connected = function (user_id, soc) {
   for(var i = 0; i < this.client_list; i ++) {
-    if(this.client_list[i].id == user_id) {
+    if(this.client_list[i].id === user_id) {
+       if(this.client_list[i].soc !== soc) return false;
+       return true;
+     }
+  }
+  return false;
+}
+MatchMaker.prototype.get_socket = function (user_id) {
+  for(var i = 0; i < this.client_list; i ++) {
+    if(this.client_list[i].id === user_id) {
+       return this.client_list[i].soc;
+     }
+  }
+  return null;
+}
+MatchMaker.prototype.delete_client = function(soc) {
+  for(var i = 0; i < this.client_list; i ++) {
+    if(this.client_list[i].soc == soc) {
+       this.remove_from_match_queue(this.clint_list[i].id);
        this.client_list[i].splice(i, 1); return;
      }
   }
 }
+function max(a , b) { return a > b ? a : b; }
+function min(a , b) { return a > b ? b : a; }
 
 // If the match is found, then it will broadcast the message
 MatchMaker.prototype.find_match = function(user_id) {
+  var user = user_manager.get_user(user_id);
+  if(user) {
+    this.match_queue.push({id : user_id, when : Date.now(), mmr : user.mmr});
+  }
+}
+MatchMaker.prototype.remove_from_match_queue = function (id) {
+  for(var i = 0; i < this.match_queue.length; i ++) {
+    if(this.match_queue[i].id === id) { this.match_queue.splice(i, 1); return }
+  }
+  return ;
+}
+MatchMaker.prototype.match_found = function (user1, user2) {
+  this.found_match.push({p1 : user1, p2 : user2});
+  var socket1 = this.get_socket(user1);
+  var socket2 = this.get_socket(user2);
+
+  if(socket1 && socket2) {
+    socket1.emit('match-found', {with : user2});
+    socket2.emit('match-found', {with : user1});
+  }
 
 }
+MatchMaker.prototype.matching_queue = function(called_time) {
+  for(var i = 0; i < this.match_queue.length; i ++) {
+    for(var j = i + 1; j < this.match_queue.length; j ++) {
+      if(this.match_queue[i].mmr > this.match_queue[j].mmr) {
+        if(this.match_queue[i].mmr - (Date.now() - this.match_queue[i].when) / 1000 < this.match_queue[j].mmr + (Date.now() - this.match_queue[j].when)) {
+          this.match_found(this.match_queue[i].id, this.match_queue[j].id);
+          this.match_queue.splice(j , 1);
+          this.match_queue.splice(i , 1);
+          i -= 2;
+          break;
+        }
+      }
+      else {
+        if(this.match_queue[j].mmr - (Date.now() - this.match_queue[j].when) / 1000 < this.match_queue[i].mmr + (Date.now() - this.match_queue[i].when)) {
+          this.match_found(this.match_queue[i].id, this.match_queue[j].id);
+          this.match_queue.splice(j , 1);
+          this.match_queue.splice(i , 1);
+          i -= 2;
+          break;
+        }
+      }
+    }
+  }
+
+  var next_chk = 1000 - (Date.now() - called_time);
+  if(next_chk < 0) next_chk  = 0;
+  setTimeout(next_chk, this.matching_queue.bind(this));
+}
 var match_maker = new MatchMaker();
+setTimeout(1000, match_maker.matching_queue.bind(match_maker));
