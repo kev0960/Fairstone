@@ -174,7 +174,7 @@ function MatchMaker() {
 }
 MatchMaker.prototype.add_client = function(user_id, soc) {
   console.log('client Connected! - ' + user_id);
-  for(var i = 0; i < this.client_list; i ++) {
+  for(var i = 0; i < this.client_list.length; i ++) {
     if(this.client_list[i].id === user_id) {
        this.client_list[i].soc = soc;
        return;
@@ -183,7 +183,7 @@ MatchMaker.prototype.add_client = function(user_id, soc) {
   this.client_list.push({id : user_id, soc : soc});
 }
 MatchMaker.prototype.is_connected = function (user_id, soc) {
-  for(var i = 0; i < this.client_list; i ++) {
+  for(var i = 0; i < this.client_list.length; i ++) {
     if(this.client_list[i].id === user_id) {
        if(this.client_list[i].soc !== soc) return false;
        return true;
@@ -192,7 +192,7 @@ MatchMaker.prototype.is_connected = function (user_id, soc) {
   return false;
 }
 MatchMaker.prototype.get_socket = function (user_id) {
-  for(var i = 0; i < this.client_list; i ++) {
+  for(var i = 0; i < this.client_list.length; i ++) {
     if(this.client_list[i].id === user_id) {
        return this.client_list[i].soc;
      }
@@ -200,7 +200,7 @@ MatchMaker.prototype.get_socket = function (user_id) {
   return null;
 }
 MatchMaker.prototype.delete_client = function(soc) {
-  for(var i = 0; i < this.client_list; i ++) {
+  for(var i = 0; i < this.client_list.length; i ++) {
     if(this.client_list[i].soc == soc) {
        this.remove_from_match_queue(this.clint_list[i].id);
        this.client_list[i].splice(i, 1); return;
