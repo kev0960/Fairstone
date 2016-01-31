@@ -229,12 +229,15 @@ MatchMaker.prototype.match_found = function (user1, user2) {
   var socket2 = this.get_socket(user2);
 
   if(socket1 && socket2) {
+    console.log('match is found!!')
     socket1.emit('match-found', {with : user2});
     socket2.emit('match-found', {with : user1});
   }
 
 }
 MatchMaker.prototype.matching_queue = function(called_time) {
+  console.log('chking matching queue...');
+
   for(var i = 0; i < this.match_queue.length; i ++) {
     for(var j = i + 1; j < this.match_queue.length; j ++) {
       if(this.match_queue[i].mmr > this.match_queue[j].mmr) {
