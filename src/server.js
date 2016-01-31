@@ -115,9 +115,9 @@ io.on('connection', function(socket) {
     var token = data.token; console.log('client sent :::' + token);
 
     // verify the sent token and if it is valid, then add it to the connected client list
-    jwt.verify(token, hearth_secret, function(token) { return function(err, decoded) {
+    jwt.verify(token, hearth_secret, function(token, socket) { return function(err, decoded) {
       match_maker.add_client(decoded.id, socket);
-    } } (token));
+    } } (token, socket));
   })
   socket.on('disconnect', function(data) {
     match_maker.delete_client(socket)
@@ -236,9 +236,8 @@ MatchMaker.prototype.match_found = function (user1, user2) {
 
 }
 MatchMaker.prototype.matching_queue = function() {
-  console.log('chking matching queue...');
   var called_time = Date.now();
-  
+
   for(var i = 0; i < this.match_queue.length; i ++) {
     for(var j = i + 1; j < this.match_queue.length; j ++) {
       if(this.match_queue[i].mmr > this.match_queue[j].mmr) {
