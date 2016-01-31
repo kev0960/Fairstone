@@ -90,7 +90,7 @@ app.get('/match', function (req, res) {
   }
   else res.redirect('/')
 });
-app.get('/match/:id', function (req, res, next) {
+app.get('/info/:id', function (req, res, next) {
 
 });
 var server_port = process.env.PORT || 80
@@ -156,6 +156,6 @@ MatchMaker.prototype.delete_client = function(user_id, soc) {
 
 // If the match is found, then it will broadcast the message
 MatchMaker.prototype.find_match = function(user_id) {
-  
+
 }
 var match_maker = new MatchMaker();
