@@ -71,6 +71,15 @@ app.get('/info/:id', function (req, res) {
 
 });
 
+app.post('/auth', function(req, res) {
+  var token = req.body.token;
+  jwt.verify(token, hearth_secret, function(err, decoded) {
+    if(err) {
+      decoded.user_id = '';
+    }
+    res.send(JSON.stringify({id : decoded.user_id}))
+  });
+})
 app.post('/login', function(req, res) {
   var id = req.body.user_id;
   var password = req.body.password;

@@ -1,0 +1,17 @@
+html
+  head
+    title Log in!
+    body
+      p Welcome
+      div
+        label Id :
+        input#user-id(type="text" name="user_id")
+      div
+        label Password :
+        input#password(type="password" name="password")
+      div
+        button#login-btn
+
+    script.
+      var token = "#{token}";
+    script(type="text/javascript" src="index.js")

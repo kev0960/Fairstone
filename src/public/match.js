@@ -10,9 +10,9 @@ function readCookie(name) {
 }
 
 var socket = io.connect();
-
+var token = localStorage.getItem('hearth-server-token')
 // Hi Server!
-socket.emit('send-token', {token : readCookie('hearth-server-token')});
+socket.emit('send-token', {token : token});
 
 socket.on('token-not-valid', function(data) {
   // return to Home page
