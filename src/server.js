@@ -65,7 +65,7 @@ app.post('/info', function(req, res) {
     }
     else {
       var user = user_manager.get_user(decoded.id);
-      res.send(JSON.stringify({id : user.id, user_mmr : user.mmr}))
+      res.send(JSON.stringify({id : user.id, mmr : user.mmr}))
     }
   });
 })
