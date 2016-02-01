@@ -74,9 +74,9 @@ app.post('/auth', function(req, res) {
   var token = req.body.token;
   jwt.verify(token, hearth_secret, function(err, decoded) {
     if(err) {
-      decoded.user_id = '';
+      res.send(JSON.stringify({id : ''}))
     }
-    res.send(JSON.stringify({id : decoded.user_id}))
+    else res.send(JSON.stringify({id : decoded.user_id}))
   });
 })
 
