@@ -38,6 +38,7 @@ $('#login-btn').click(function() {
     },
     type : 'POST'
   }).success (function (data) {
+    console.log('data ', data)
     var d = JSON.parse(data);
     if(d.token) {
       // Save the server issued token to local storage
