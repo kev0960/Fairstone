@@ -42,7 +42,7 @@ $('#login-btn').click(function() {
     var d = JSON.parse(data);
     if(d.token) {
       // Save the server issued token to local storage
-      localStorage.setItem('hearth-server-token', data.token);
+      localStorage.setItem('hearth-server-token', d.token);
 
       // redirect to Home
       $(location).attr('href', '/');
