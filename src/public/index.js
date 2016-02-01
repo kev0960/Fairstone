@@ -11,8 +11,8 @@ $(document).ready(function() {
       type : 'POST'
     }).success (function (data) {
       var d = JSON.parse(data);
-      if(d.user_id) {
-        $('#headerLeft').text('Hi,' + d.user_id);
+      if(d.id) {
+        $('#headerLeft').text('Hi,' + d.id);
         $('#headerLeft').attr('href', '/info');
         $('#headerRight').hide();
       } else {

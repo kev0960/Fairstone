@@ -2,6 +2,11 @@
 
 1) heroku create
 2) git push heroku 하면 설정된 곳으로 push
+3) heroku git:remote -a <project-address>
+
+** 서버 관련 알아야 될 사항들 **
+
+1) Json web token 의 경우 (id) 를 인자로 가진다 (user_id 가 아니다!!)
 
 
 
