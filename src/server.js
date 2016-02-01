@@ -72,6 +72,7 @@ app.get('/info/:id', function (req, res) {
 
 app.post('/auth', function(req, res) {
   var token = req.body.token;
+  console.log('token :: ', token)
   jwt.verify(token, hearth_secret, function(err, decoded) {
     if(err) {
       res.send(JSON.stringify({id : ''}))
