@@ -7,7 +7,7 @@ if(!token) {
 }
 else {
   $.ajax({
-    url : '/auth',
+    url : '/info',
     data  : {
       'token' : token
     },
@@ -15,8 +15,8 @@ else {
   }).success (function (data) {
     var d = JSON.parse(data);
     if(d.id) {
-      $('#user_id').val(d.id);
-      $('#user_mmr').val(d.mmr);
+      $('#user_id').text(d.id);
+      $('#user_mmr').text(d.mmr);
     } else {
       // Not a valid token!!
       // redirect to Home
