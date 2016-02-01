@@ -3,8 +3,11 @@ html
     title Welcome #{user_id}
     body
       p#user_info.
-       Hi #{user_id} !! Thank you for joining.
-       button#begin_match MATCH
+       Your brief info [
+       span#user_id Your name goes here
+       ] MMR ::
+       span#user_mmr Your mmr goes here
+     button#begin_match MATCH
 
-
-    script(type="text/javascript" src="match.js")
+    script(src="http://code.jquery.com/jquery-latest.min.js")
+    script(type="text/javascript" src="info.js")

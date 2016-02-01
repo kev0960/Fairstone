@@ -57,14 +57,20 @@ app.get('/', function(req, res) {
   res.render('index.jade', { 'token' : token})
 });
 
+app.post('/info', function(req, res) {
+  var token = req.body.token;
+  jwt.verify(token, hearth_secret, function(err, decoded) {
+    if(err) {
+      res.send(JSON.stringify({id : ''}))
+    }
+    else {
+      var user = user_manager.get_user(decoded.id);
+      res.send(JSON.stringify({id : user.id, user_mmr : user.mmr}))
+    }
+  });
+})
 app.get('/info', function(req, res) {
-  var id = req.decoded;
-  if(id) {
-    res.render('info.jade', {user_id : id});
-  }
-  else {
-    res.redirect('/');
-  }
+  res.render('info.jade');
 });
 app.get('/info/:id', function (req, res) {
 
