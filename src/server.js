@@ -80,20 +80,21 @@ app.post('/auth', function(req, res) {
     res.send(JSON.stringify({id : decoded.user_id}))
   });
 })
+
+app.get('/login', function(req, res) {
+  res.render('login.jade');
+})
 app.post('/login', function(req, res) {
   var id = req.body.user_id;
   var password = req.body.password;
 
   console.log('post :: id : ' + id + ' / password : ' + password);
 
+  var token = '';
   if(user_manager.chk_user(id, password).result) {
-    var token = jwt.sign({id : id}, hearth_secret, {expiresInMinutes : 1440});
-
-    req.flash('signed_token', token);
-    res.redirect('/')
-  } else {
-    res.redirect('/')
+    token = jwt.sign({id : id}, hearth_secret, {expiresInMinutes : 1440});
   }
+  res.send(JSON.stringify({'token' : token}));
 });
 
 app.get('/match', function (req, res) {

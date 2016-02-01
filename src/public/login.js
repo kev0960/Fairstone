@@ -38,7 +38,8 @@ $('#login-btn').click(function() {
     },
     type : 'POST'
   }).success (function (data) {
-    if(data.token) {
+    var d = JSON.parse(data);
+    if(d.token) {
       // Save the server issued token to local storage
       localStorage.setItem('hearth-server-token', data.token);
 
