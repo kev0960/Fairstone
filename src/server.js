@@ -77,7 +77,7 @@ app.post('/auth', function(req, res) {
     if(err) {
       res.send(JSON.stringify({id : ''}))
     }
-    else res.send(JSON.stringify({id : decoded.user_id}))
+    else res.send(JSON.stringify({id : decoded.id}))
   });
 })
 
