@@ -34,8 +34,6 @@ CardDraw.prototype.init = function() {
 
 	this.card.x = this.mouse.x - (this.card.o.offsetWidth / 2);
 	this.card.y = this.mouse.y - (this.card.o.offsetHeight / 2);
-
-	this.start();
 };
 
 CardDraw.prototype.bindClick = function() {
@@ -44,6 +42,8 @@ CardDraw.prototype.bindClick = function() {
 };
 
 CardDraw.prototype.bindMove = function(e) {
+	this.start();
+
 	this.mouse.cx = e.layerX;
 	this.mouse.cy = e.layerY;
 	this.mouse.x = e.clientX;
@@ -62,8 +62,9 @@ CardDraw.prototype.unbindMove = function() {
 	document.body.removeEventListener('mousemove', this.move);
 	document.body.removeEventListener('mouseup', this.stop);
   document.body.removeEventListener('mouseleave', this.stop);
-	
+
 	this.focus = false;
+	this.running = false;
 	this.card.tX = 0;
 	this.card.tY = 0;
 };
