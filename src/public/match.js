@@ -45,7 +45,7 @@ socket.on('match-found', function(data) {
   console.log('match is found!')
 });
 $('#begin_match').click(function() {
-  socket.emit('find-match', {token : readCookie('hearth-server-token')})
+  socket.emit('find-match', {token : token})
 });
 $('#my-deck-list').click(function() {
   var index = $('#my-deck-list').index(this);
