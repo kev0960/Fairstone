@@ -53,7 +53,7 @@ $('#my-deck-list').click(function() {
     url : '/match',
     data  : {
       'token' : token,
-      'req_deck_id' : index
+      'deck_id' : index
     },
     type : 'POST'
   }).success (function (data) {

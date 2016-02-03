@@ -126,11 +126,11 @@ app.post('/match', function(req, res) {
         for(var i = 0; i < deck_list.length; i ++) {
           deck_names.push({name : deck_list[i].name, job : deck_list[i].job})
         }
-        console.log(JSON.stringify({id : user.id, deck_list : deck_names}))
+        console.log('deck names :: ' + JSON.stringify({id : user.id, deck_list : deck_names}))
         res.send(JSON.stringify({id : user.id, deck_list : deck_names}))
       }
     }
-  }; });
+  }; }(req_deck_id));
 })
 app.get('/match', function (req, res) {
   res.render('match.jade');
