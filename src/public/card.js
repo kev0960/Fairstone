@@ -1,23 +1,27 @@
-var Card = function(obj, settings) {
+// (moving) Card is refreshed every 10ms
+
+function CardDraw (card, settings) {
 	this.card = {
-		o: obj,
-		rX: 0, // rotate x
-		rY: 0, // rotate y
-		tX: 0,
-		tY: 0,
-		scale: 1
+		o : card,
+		x : card.clientTop,
+		y : card.clientLeft,
+		rX : 0,
+		rY : 0,
+		tX, 0,
+		tY, 0,
+		scale : 1
 	};
 	this.mouse = {
-		cx: 0, //x click position
-		cy: 0, //y click position
-		x: (document.body.offsetWidth / 2) - (obj.offsetWidth / 2), //x position
-		y: (document.body.offsetHeight / 2) - (obj.offsetHeight / 2), //y position
-		py: 0, //previous y position
-		px: 0, //previous x position
-		vx: 0, //x velocity
-		vy: 0, //y velocity,
-		timer: null, // timer to detect stop moving
-		moving: false //is moving
+		cx : 0, // where in card has user clicked?
+		cy : 0,
+		x : 0, // current mouse position
+		y : 0
+		px : 0, // previous clicked location
+		py : 0,
+		vx : 0,
+		vy : 0,
+		is_moving : false,
+		chk_mouse : null; // chk mouse every 10 ms
 	};
 
 	this.speed = (settings && settings.speed) ? settings.speed : 6;
@@ -25,78 +29,67 @@ var Card = function(obj, settings) {
 	this.limit = (settings && settings.rotateLimit) ? settings.rotateLimit : 60;
 	this.sensibility = (settings && settings.sensibility) ? settings.sensibility : 6;
 	this.scaling = (settings && settings.scaling) ? settings.scaling : false;
-	this.focus = false;
 
-	this.binded_move = null;
+  this.binded_chk_mouse = null;
 	this.binded_stop = null;
 
-	this.init();
+	this.card.o.addEventListener('mousedown', this.mouse_down.bind(this));
 }
+// When the user holds the card
+CardDraw.prototype.mousedown = function(e) {
+	this.mouse.cx = e.offsetX;
+	this.mouse.cy = e.offsetY;
 
-Card.prototype.init = function() {
-	this.click();
+	this.mouse.x = e.screenX;
+	this.mouse.y = e.screenY;
 
-	this.card.x = this.mouse.x - (this.card.o.offsetWidth / 2);
-	this.card.y = this.mouse.y - (this.card.o.offsetHeight / 2);
+	this.binded_chk_mouse = this.chk_mouse.bind(this);
+	document.body.addEventListener('mousemove', this.binded_chk_mouse);
 
-	this.start();
-
-	this.card.o.addEventListener('mousedown', this.click.bind(this));
-};
-
-Card.prototype.click = function() {
-	this.binded_move = this.move.bind(this);
 	this.binded_stop = this.stop.bind(this);
+	document.body.addEventListener('mouseup', this.binded_stop);
+	document.body.addEventListener('mouseleave', this.binded_stop);
+}
+CardDraw.prototype.move = function (e) {
+	this.mouse.is_moving = true;
 
-	this.card.o.addEventListener('mouseup', this.binded_stop);
-	this.card.o.addEventListener('mouseleave', this.binded_stop);
-};
-
-Card.prototype.move = function(e) {
-	this.mouse.cx = e.layerX;
-	this.mouse.cy = e.layerY;
-	this.mouse.x = e.clientX;
-	this.mouse.y = e.clientY;
-
-	this.binded_move = this.getMouseVars.bind(this);
-	this.card.o.addEventListener('mousemove', this.binded_move);
-
-	this.focus = true;
-	this.running = true;
-};
-
-Card.prototype.stop = function() {
-	document.body.removeEventListener('mousemove', this.binded_move);
+	this.mouse.x = e.screenX;
+	this.mouse.y = e.screenY;
+}
+CardDraw.prototype.stop = function (e) {
+	document.body.removeEventListener('mousemove', this.binded_chk_mouse);
 	document.body.removeEventListener('mouseup', this.binded_stop);
 	document.body.removeEventListener('mouseleave', this.binded_stop);
 
 	this.focus = false;
-	this.running = false;
 	this.card.tX = 0;
 	this.card.tY = 0;
-};
-
-Card.prototype.getMouseVars = function(e) {
-	this.mouse.moving = true;
+}
+CardDraw.prototype.chk_mouse = function(e) {
+	this.mouse.is_moving = true;
 	this.mouse.py = this.mouse.y;
 	this.mouse.px = this.mouse.x;
-	this.mouse.y = e.pageY;
-	this.mouse.x = e.pageX;
+	this.mouse.x = e.clientX;
+	this.mouse.y = e.clientY;
 	this.mouse.vx = this.mouse.x - this.mouse.px;
 	this.mouse.vy = this.mouse.y - this.mouse.py;
 
-	this.mstop = this.mouseStop.bind(this);
+	this.bind_chk_mouse_stop = this.chk_mouse_stop.bind(this);
+
+	// clear currently enabled timer
 	clearTimeout(this.mouse.timer);
-	this.mouse.timer = setTimeout(this.mstop, 10);
+
+	// setup a new timer so that it can track whether the mouse has stopped for next 10 ms
+	this.mouse.timer = setTimeout(this.bind_chk_mouse_stop, 10);
 };
 
-Card.prototype.mouseStop = function() {
+CardDraw.prototype.chk_mouse_stop = function() {
 	this.mouse.moving = false;
 	this.mouse.vx = 0;
 	this.mouse.vy = 0;
 };
 
-Card.prototype.getRotation = function() {
+CardDraw.prototype.getRotation = function() {
 	this.card.tX = this.mouse.vx * this.sensibility;
 	this.card.tY = this.mouse.vy * this.sensibility;
 
@@ -114,8 +107,8 @@ Card.prototype.getRotation = function() {
 	this.card.y = this.mouse.y - this.mouse.cy;
 };
 
-Card.prototype.updateRotation = function() {
-	var speed = (this.mouse.moving) ? this.speed : this.offSpeed;
+CardDraw.prototype.updateRotation = function() {
+	var speed = (this.mouse.is_moving) ? this.speed : this.offSpeed;
 
 	if (this.card.rX > (this.card.tX + speed) || this.card.rX < (this.card.tX - speed))
 		this.card.rX += (this.card.rX > this.card.tX) ? -speed : speed;
@@ -128,7 +121,7 @@ Card.prototype.updateRotation = function() {
 		this.card.rY += (this.card.rY > this.card.tY) ? -(speed / 10) : (speed / 10);
 };
 
-Card.prototype.updateScale = function() {
+CardDraw.prototype.updateScale = function() {
 	if (this.focus && this.card.scale < 1.1) {
 		this.card.scale += 0.03;
 	} else if (!this.focus && this.card.scale > 1) {
@@ -136,7 +129,7 @@ Card.prototype.updateScale = function() {
 	}
 };
 
-Card.prototype.update = function() {
+CardDraw.prototype.update = function() {
 	if (this.scaling)
 		this.updateScale();
 
@@ -144,7 +137,7 @@ Card.prototype.update = function() {
 	this.updateRotation();
 };
 
-Card.prototype.draw = function() {
+CardDraw.prototype.draw = function() {
 	this.card.left = "left: " + this.card.x + "px; ";
 	this.card.top = "top: " + this.card.y + "px; ";
 	this.card.transform = "transform: ";
@@ -155,12 +148,12 @@ Card.prototype.draw = function() {
 	this.card.o.setAttribute('style', this.card.left + this.card.top + this.card.transform);
 };
 
-Card.prototype.start = function() {
+CardDraw.prototype.start = function() {
 	this.running = true;
 	this.run();
 }
 
-Card.prototype.run = function() {
+CardDraw.prototype.run = function() {
 	this.update();
 	this.draw();
 	loop = this.run.bind(this);
@@ -168,14 +161,14 @@ Card.prototype.run = function() {
 		requestAnimationFrame(loop);
 }
 var init = (function() {
-	var oCard = new Card(document.querySelectorAll('.card')[0], {
+	var oCard = new CardDraw(document.querySelectorAll('.card')[0], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
 		speed: 6, //card rotation speed
 		scaling: true
 	});
 
-	var oCard2 = new Card(document.querySelectorAll('.card')[1], {
+	var oCard2 = new CardDraw(document.querySelectorAll('.card')[1], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
 		speed: 6, //card rotation speed
