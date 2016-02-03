@@ -8,7 +8,7 @@ if(!token) {
 else {
   $(document).ready(function() {
     $.ajax({
-      url : '/info',
+      url : '/match',
       data  : {
         'token' : token
       },
