@@ -87,6 +87,9 @@ CardDraw.prototype.mouseStop = function() {
 	this.mouse.moving = false;
 	this.mouse.vx = 0;
 	this.mouse.vy = 0;
+
+	this.update();
+	this.draw();
 };
 
 CardDraw.prototype.getRotation = function() {
