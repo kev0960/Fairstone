@@ -171,7 +171,7 @@ $.ready(function() {
 		speed: 6, //card rotation speed
 		scaling: true
 	});
-
+	
 	var oCard2 = new Card(document.querySelectorAll('.card')[1], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
