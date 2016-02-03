@@ -57,6 +57,7 @@ Card.prototype.move = function(e) {
 	this.mouse.x = e.clientX;
 	this.mouse.y = e.clientY;
 	this.focus = true;
+	this.running = true;
 };
 
 Card.prototype.stop = function() {
