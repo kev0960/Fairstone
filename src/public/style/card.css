@@ -7,20 +7,6 @@
 	user-select: none;
 }
 
-html,
-body {
-	margin: 0;
-	padding: 0;
-	overflow: hidden;
-	height: 100%;
-	text-align: center;
-	background-color: #0F1119;
-	background: radial-gradient(ellipse at center, rgb(13, 70, 134) 4%, rgb(3, 24, 41) 90%);
-	perspective: 2000px;
-	perspective-origin: 50% 50%;
-	/*background: transparent url("http://eu.battle.net/hearthstone/static/images/body-content-bg.jpg") 50% 0 repeat-y;*/
-}
-
 .card {
 	position: absolute;
 	top: 50%;
