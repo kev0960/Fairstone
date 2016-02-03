@@ -126,6 +126,7 @@ app.post('/match', function(req, res) {
         for(var i = 0; i < deck_list.length; i ++) {
           deck_names.push({name : deck_list[i].name, job : deck_list[i].job})
         }
+        console.log(JSON.stringify({id : user.id, deck_list : deck_names}))
         res.send(JSON.stringify({id : user.id, deck_list : deck_names}))
       }
     }
