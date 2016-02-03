@@ -34,7 +34,7 @@ var Card = function(obj, settings) {
 }
 
 Card.prototype.init = function() {
-	this.bindClick();
+	this.click();
 
 	this.card.x = this.mouse.x - (this.card.o.offsetWidth / 2);
 	this.card.y = this.mouse.y - (this.card.o.offsetHeight / 2);
