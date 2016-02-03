@@ -7,10 +7,12 @@ html
 
       button#begin_match MATCH
       p#match-found Not found
-      canvas(id="hearth")
 
       script(src="http://code.jquery.com/jquery-latest.min.js")
       script(src="/socket.io/socket.io.js")
 
-      script var user_id = "#{user_id}";
       script(src="/match.js")
+      script(src="/card.js")
+      style(src="/card.css")
+
+      div#card.card
