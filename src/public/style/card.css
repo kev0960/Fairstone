@@ -5,8 +5,16 @@
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
+	pointer-events: none;
 }
-
+.world {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1000;
+	height: 1000;
+	z-index: 10;
+}
 .card {
 	position: absolute;
 	top: 50%;
