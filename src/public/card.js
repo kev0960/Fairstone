@@ -164,8 +164,8 @@ Card.prototype.run = function() {
 	if (this.running)
 		requestAnimationFrame(loop);
 }
-
-var oCard = new Card(document.querySelectorAll('.card')[0], {
+$.ready(function() {
+	var oCard = new Card(document.querySelectorAll('.card')[0], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
 		speed: 6, //card rotation speed
@@ -173,8 +173,9 @@ var oCard = new Card(document.querySelectorAll('.card')[0], {
 	});
 
 	var oCard2 = new Card(document.querySelectorAll('.card')[1], {
-			sensibility: 6, //sensibility to the mouse velocity
-			rotateLimit: 60, //card rotate limite
-			speed: 6, //card rotation speed
-			scaling: true
-		});
+		sensibility: 6, //sensibility to the mouse velocity
+		rotateLimit: 60, //card rotate limite
+		speed: 6, //card rotation speed
+		scaling: true
+	});
+});
