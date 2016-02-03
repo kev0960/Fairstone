@@ -40,7 +40,7 @@ Card.prototype.init = function() {
 	this.card.y = this.mouse.y - (this.card.o.offsetHeight / 2);
 
 	this.start();
-	
+
 	this.card.o.addEventListener('mousedown', this.click.bind(this));
 };
 
@@ -48,7 +48,6 @@ Card.prototype.click = function() {
 	this.binded_move = this.move.bind(this);
 	this.binded_stop = this.stop.bind(this);
 
-	this.card.o.addEventListener('mousemove', this.binded_move);
 	this.card.o.addEventListener('mouseup', this.binded_stop);
 	this.card.o.addEventListener('mouseleave', this.binded_stop);
 };
@@ -58,6 +57,10 @@ Card.prototype.move = function(e) {
 	this.mouse.cy = e.layerY;
 	this.mouse.x = e.clientX;
 	this.mouse.y = e.clientY;
+
+	this.binded_move = this.getMouseVars.bind(this);
+	this.card.o.addEventListener('mousemove', this.binded_move);
+
 	this.focus = true;
 	this.running = true;
 };
