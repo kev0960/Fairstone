@@ -21,7 +21,7 @@ function CardDraw (card, settings) {
 		vx : 0,
 		vy : 0,
 		is_moving : false,
-		chk_mouse : null; // chk mouse every 10 ms
+		chk_mouse : null // chk mouse every 10 ms
 	};
 
 	this.speed = (settings && settings.speed) ? settings.speed : 6;
