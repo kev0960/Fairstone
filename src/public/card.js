@@ -15,7 +15,7 @@ function CardDraw (card, settings) {
 		cx : 0, // where in card has user clicked?
 		cy : 0,
 		x : 0, // current mouse position
-		y : 0
+		y : 0,
 		px : 0, // previous clicked location
 		py : 0,
 		vx : 0,
