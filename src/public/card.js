@@ -7,8 +7,8 @@ function CardDraw (card, settings) {
 		y : card.clientLeft,
 		rX : 0,
 		rY : 0,
-		tX, 0,
-		tY, 0,
+		tX : 0,
+		tY : 0,
 		scale : 1
 	};
 	this.mouse = {
@@ -49,12 +49,6 @@ CardDraw.prototype.mousedown = function(e) {
 	this.binded_stop = this.stop.bind(this);
 	document.body.addEventListener('mouseup', this.binded_stop);
 	document.body.addEventListener('mouseleave', this.binded_stop);
-}
-CardDraw.prototype.move = function (e) {
-	this.mouse.is_moving = true;
-
-	this.mouse.x = e.screenX;
-	this.mouse.y = e.screenY;
 }
 CardDraw.prototype.stop = function (e) {
 	document.body.removeEventListener('mousemove', this.binded_chk_mouse);
