@@ -1,8 +1,12 @@
+function Card (obj) {
+
+}
+
 var Card = function(obj, settings) {
 	this.card = {
 		o: obj,
-		rX: 0,
-		rY: 0,
+		rX: 0, // rotate x
+		rY: 0, // rotate y
 		tX: 0,
 		tY: 0,
 		scale: 1
@@ -116,7 +120,6 @@ Card.prototype.updateRotation = function() {
 		this.card.rY += (this.card.rY > this.card.tY) ? -speed : speed;
 	else if (this.card.rY > (this.card.tY + (speed / 10)) || this.card.rY < (this.card.tY - (speed / 10)))
 		this.card.rY += (this.card.rY > this.card.tY) ? -(speed / 10) : (speed / 10);
-
 };
 
 Card.prototype.updateScale = function() {
@@ -125,7 +128,6 @@ Card.prototype.updateScale = function() {
 	} else if (!this.focus && this.card.scale > 1) {
 		this.card.scale -= 0.03;
 	}
-
 };
 
 Card.prototype.update = function() {
@@ -163,14 +165,16 @@ Card.prototype.run = function() {
 		requestAnimationFrame(loop);
 }
 
-var init = function() {
-	var oCard = new Card(document.querySelectorAll('.card')[0], {
+var oCard = new Card(document.querySelectorAll('.card')[0], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
 		speed: 6, //card rotation speed
 		scaling: true
 	});
 
-};
-
-window.onload = init;
+	var oCard2 = new Card(document.querySelectorAll('.card')[1], {
+			sensibility: 6, //sensibility to the mouse velocity
+			rotateLimit: 60, //card rotate limite
+			speed: 6, //card rotation speed
+			scaling: true
+		});
