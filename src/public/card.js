@@ -10,8 +10,8 @@ var CardDraw = function(obj, settings) {
 	this.mouse = {
 		cx: 0, //x click position
 		cy: 0, //y click position
-		x: (document.body.offsetWidth / 2) - (obj.offsetWidth / 2), //x position
-		y: (document.body.offsetHeight / 2) - (obj.offsetHeight / 2), //y position
+		x: obj.offsetLeft, //x position
+		y: obj.offsetTop, //y position
 		py: 0, //previous y position
 		px: 0, //previous x position
 		vx: 0, //x velocity
@@ -67,6 +67,11 @@ CardDraw.prototype.unbindMove = function() {
 	this.running = false;
 	this.card.tX = 0;
 	this.card.tY = 0;
+	this.card.rX = 0;
+	this.card.rY = 0;
+
+	this.update();
+	this.draw();
 };
 
 CardDraw.prototype.getMouseVars = function(e) {
@@ -87,9 +92,6 @@ CardDraw.prototype.mouseStop = function() {
 	this.mouse.moving = false;
 	this.mouse.vx = 0;
 	this.mouse.vy = 0;
-
-	this.update();
-	this.draw();
 };
 
 CardDraw.prototype.getRotation = function() {
