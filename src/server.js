@@ -172,8 +172,10 @@ io.on('connection', function(socket) {
 });
 
 function UserManager() {
-  this.user_list = [{id : 'a', password : 'a', mmr : 1000, deck_list : [{name : '법사 덱', job : 'mage', cards : ['미치광이 과학자', 2, '화염구', 2]}]},
-                    {id : 'Jaebum', password : 'test', mmr : 1000, deck_list : [{name : '전사 덱', job : 'warrior' cards : ['험상궂은 손님', 2, '이글거리는 도끼', 2]}]}];
+  this.user_list = [
+        {id : 'a', password : 'a', mmr : 1000, deck_list : [{name : '법사 덱', job : 'mage', cards : ['미치광이 과학자', 2, '화염구', 2]} ]},
+        {id : 'Jaebum', password : 'test', mmr : 1000, deck_list : [{name : '전사 덱', job : 'warrior', cards : ['험상궂은 손님', 2, '이글거리는 도끼', 2]}]} 
+      ];
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
