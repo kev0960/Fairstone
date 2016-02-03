@@ -103,11 +103,36 @@ app.post('/login', function(req, res) {
   res.send(JSON.stringify({'token' : token}));
 });
 
+app.post('/match', function(req, res) {
+  var token = req.body.token;
+  var req_deck_id = req.body.deck_id;
+
+  jwt.verify(token, hearth_secret, function (req_deck_id) { return function(err, decoded) {
+    if(err) {
+      res.send(JSON.stringify({id : ''}))
+    }
+    else {
+      var user = user_manager.get_user(decoded.id);
+      var deck_list = user.deck_list;
+      if(req_deck_id) {
+        var selected;
+        if(req_deck_id >= 0 && req_deck_id < deck_list.length) {
+          selected = deck_list[req_deck_id];
+        }
+        res.send(JSON.stringify({id : user.id, selected_deck : selected}));
+      }
+      else {
+        var deck_names = []
+        for(var i = 0; i < deck_list.length; i ++) {
+          deck_names.push({name : deck_list[i].name, job : deck_list[i].job})
+        }
+        res.send(JSON.stringify({id : user.id, deck_list : deck_names}))
+      }
+    }
+  }; });
+})
 app.get('/match', function (req, res) {
-  if(req.decoded) {
-    res.render('match.jade', {user_id : req.decoded});
-  }
-  else res.redirect('/')
+  res.render('match.jade');
 });
 
 io.of('/match').on('connection', function (socket) {
@@ -147,8 +172,8 @@ io.on('connection', function(socket) {
 });
 
 function UserManager() {
-  this.user_list = [{id : 'a', password : 'a', mmr : 1000},
-                    {id : 'Jaebum', password : 'test', mmr : 1000}];
+  this.user_list = [{id : 'a', password : 'a', mmr : 1000, deck_list : [{name : '법사 덱', job : 'mage', cards : ['미치광이 과학자', 2, '화염구', 2]}]},
+                    {id : 'Jaebum', password : 'test', mmr : 1000, deck_list : [{name : '전사 덱', job : 'warrior' cards : ['험상궂은 손님', 2, '이글거리는 도끼', 2]}]}];
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for(var i = 0; i < this.user_list.length; i ++) {
