@@ -33,7 +33,7 @@ function CardDraw (card, settings) {
   this.binded_chk_mouse = null;
 	this.binded_stop = null;
 
-	this.card.o.addEventListener('mousedown', this.mouse_down.bind(this));
+	this.card.o.addEventListener('mousedown', this.mousedown.bind(this));
 }
 // When the user holds the card
 CardDraw.prototype.mousedown = function(e) {
