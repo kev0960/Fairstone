@@ -246,7 +246,7 @@ MatchMaker.prototype.delete_client = function(soc) {
   for(var i = 0; i < this.client_list.length; i ++) {
     if(this.client_list[i].soc == soc) {
        this.remove_from_match_queue(this.client_list[i].id);
-       this.client_list[i].splice(i, 1); return;
+       this.client_list.splice(i, 1); return;
      }
   }
 }
