@@ -160,7 +160,7 @@ Card.prototype.run = function() {
 	if (this.running)
 		requestAnimationFrame(loop);
 }
-$.ready(function() {
+var init = (function() {
 	var oCard = new Card(document.querySelectorAll('.card')[0], {
 		sensibility: 6, //sensibility to the mouse velocity
 		rotateLimit: 60, //card rotate limite
@@ -175,3 +175,4 @@ $.ready(function() {
 		scaling: true
 	});
 });
+window.onload = init;
