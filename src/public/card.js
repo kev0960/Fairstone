@@ -26,6 +26,10 @@ var Card = function(obj, settings) {
 	this.sensibility = (settings && settings.sensibility) ? settings.sensibility : 6;
 	this.scaling = (settings && settings.scaling) ? settings.scaling : false;
 	this.focus = false;
+
+	this.binded_move = null;
+	this.binded_stop = null;
+
 	this.init();
 }
 
@@ -38,30 +42,30 @@ Card.prototype.init = function() {
 	this.start();
 };
 
-Card.prototype.bindClick = function() {
-	this.bindmove = this.bindMove.bind(this);
-	this.card.o.addEventListener('mousedown', this.bindmove);
+Card.prototype.click = function() {
+	this.binded_move = this.move.bind(this);
+	this.binded_stop = this.stop.bind(this);
+
+	this.card.o.addEventListener('mousedown', this.binded_move);
+	this.card.o.addEventListener('mouseup', this.binded_stop);
+	this.card.o.addEventListener('mouseleave', this.binded_stop);
 };
 
-Card.prototype.bindMove = function(e) {
+Card.prototype.move = function(e) {
 	this.mouse.cx = e.layerX;
 	this.mouse.cy = e.layerY;
 	this.mouse.x = e.clientX;
 	this.mouse.y = e.clientY;
-
-	this.move = this.getMouseVars.bind(this);
-	document.body.addEventListener('mousemove', this.move);
-	this.stop = this.unbindMove.bind(this);
-	document.body.addEventListener('mouseup', this.stop);
-
 	this.focus = true;
 };
 
-Card.prototype.unbindMove = function() {
-	document.body.removeEventListener('mousemove', this.move);
-	document.body.removeEventListener('mouseup', this.stop);
+Card.prototype.stop = function() {
+	document.body.removeEventListener('mousemove', this.binded_move);
+	document.body.removeEventListener('mouseup', this.binded_stop);
+	document.body.removeEventListener('mouseleave', this.binded_stop);
 
 	this.focus = false;
+	this.running = false;
 	this.card.tX = 0;
 	this.card.tY = 0;
 };
@@ -149,9 +153,6 @@ Card.prototype.start = function() {
 	this.running = true;
 	this.run();
 }
-Card.prototype.stop = function() {
-	this.running = false;
-};
 
 Card.prototype.run = function() {
 	this.update();
