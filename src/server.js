@@ -135,6 +135,14 @@ app.post('/match', function(req, res) {
 app.get('/match', function (req, res) {
   res.render('match.jade');
 });
+app.get('/match/:id', function (req, res) {
+  var match_id = req.param.id;
+
+  if(match_maker.is_valid_match(match_id)) {
+    res.render('hearth.jade')
+  }
+  else res.redirect('/')
+})
 
 io.of('/match').on('connection', function (socket) {
 
@@ -310,6 +318,11 @@ MatchMaker.prototype.matching_queue = function() {
   var next_chk = 1000 - (Date.now() - called_time);
   if(next_chk < 0) next_chk  = 0;
   setTimeout(this.matching_queue.bind(this), next_chk);
+}
+
+// TODO
+MatchMaker.prototype.is_valid_match = function (match_id) {
+  return true;
 }
 var match_maker = new MatchMaker();
 setTimeout(match_maker.matching_queue.bind(match_maker), 1000);
