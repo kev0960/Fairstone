@@ -6,3 +6,13 @@ body {
   background-size: cover;
   overflow: hidden;
 }
+
+#world {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1000;
+	height: 1000;
+	pointer-events: none;
+	z-index: 10;
+}

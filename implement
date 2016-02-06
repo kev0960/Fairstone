@@ -2,7 +2,7 @@
 
 1) heroku create
 2) git push heroku 하면 설정된 곳으로 push
-3) heroku git:remote -a <project-address>
+3) heroku git:remote -a sleepy-ravine-57378
 
 ** 서버 관련 알아야 될 사항들 **
 

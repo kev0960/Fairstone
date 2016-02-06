@@ -3,7 +3,10 @@ html
   script(src="/card.js")
   link(rel="stylesheet" type="text/css" href="/style/card.css")
   link(rel="stylesheet" type="text/css" href="/style/hearth.css")
-  
-  canvas.world
-  div#card.card(style="left:150px;right:150px;")
-  div#card.card(style="left:50px;right:50px;")
+
+  canvas#world
+
+  div.card-container#enemy-card-container
+  div.card-container#player-card-containter
+    div#card.card(style="left:150px;right:150px;")
+    div#card.card(style="left:50px;right:50px;")
