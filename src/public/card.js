@@ -168,20 +168,3 @@ CardDraw.prototype.run = function() {
 	if (this.running)
 		requestAnimationFrame(loop);
 }
-
-var init = (function() {
-	var oCard = new CardDraw(document.querySelectorAll('.card')[0], {
-		sensibility: 6, //sensibility to the mouse velocity
-		rotateLimit: 60, //card rotate limite
-		speed: 6, //card rotation speed
-		scaling: true
-	});
-
-	var oCard2 = new CardDraw(document.querySelectorAll('.card')[1], {
-		sensibility: 6, //sensibility to the mouse velocity
-		rotateLimit: 60, //card rotate limite
-		speed: 6, //card rotation speed
-		scaling: true
-	});
-});
-window.onload = init;

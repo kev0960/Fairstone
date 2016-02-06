@@ -16,3 +16,14 @@ body {
 	pointer-events: none;
 	z-index: 10;
 }
+
+#player-card-container {
+  position : absolute;
+  top : 1000;
+  left : 200;
+}
+#enemy-card-container {
+  position : absolute;
+  top : 10;
+  left : 200;
+}
