@@ -22,7 +22,7 @@
 	width: 160px;
 	height: 238px;
 	z-index: 1;
-	background-image: url('http://dev.graphiste-webdesign.fr/hearthstone/media/card.png');
+	background-image: url('http://wow.zamimg.com/images/hearthstone/cards/enus/original/CS2_188.png');
 	background-size: 100% 100%;
 	-webkit-transform-origin: 50% 50%;
 	-moz-transform-origin: 50% 50%;
@@ -34,62 +34,6 @@
 	transform: scale(1);
 }
 
-.card:after {
-	content: '';
-	background-image: url('http://dev.graphiste-webdesign.fr/hearthstone/media/cardround.png');
-	background-repeat: no-repeat;
-	background-size: 100%;
-	position: absolute;
-	width: 69px;
-	height: 69px;
-	border-radius: 100%;
-	box-shadow: 0 0 2px rgb(255, 255, 255) inset, 0 0 5px rgb(255, 235, 0), 0 0 10px rgb(255, 129, 0);
-	top: 1px;
-	bottom: 1px;
-	left: 2px;
-	right: 1px;
-	margin: auto;
-	opacity: 0;
-	-webkit-filter: saturate(1.6) brightness(150%);
-	-moz-filter: saturate(1.6) brightness(150%);
-	-ms-filter: saturate(1.6) brightness(150%);
-	filter: saturate(1.6) brightness(150%);
-	-webkit-animation: bright 1s infinite;
-	-moz-animation: bright 1s infinite;
-	animation: bright 1s infinite;
-	-webkit-animation-direction: alternate-reverse;
-	-moz-animation-direction: alternate-reverse;
-	animation-direction: alternate-reverse;
-}
-
 .card:hover {
 	cursor: pointer;
-}
-
-
-@-webkit-keyframes bright {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
-}
-
-@-moz-keyframes bright {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
-}
-
-@keyframes bright {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
 }
