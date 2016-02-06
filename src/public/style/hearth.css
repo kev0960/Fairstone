@@ -1,3 +1,7 @@
 body {
-  background: url(http://hydra-media.cursecdn.com/hearthstone.gamepedia.com/0/07/Battlefield_-_The_Hall_of_Explorers.png)
+  background: url(http://hydra-media.cursecdn.com/hearthstone.gamepedia.com/0/07/Battlefield_-_The_Hall_of_Explorers.png) no-repeat center center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
 }
