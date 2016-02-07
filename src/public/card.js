@@ -1,4 +1,4 @@
-var CardDraw = function(obj, settings) {
+var CardDraw = function(obj, settings, offset_x, offset_y, on_mouse_down, on_mouse_up) {
 	this.card = {
 		o: obj,
 		rX: 0,
@@ -10,8 +10,8 @@ var CardDraw = function(obj, settings) {
 	this.mouse = {
 		cx: 0, //x click position
 		cy: 0, //y click position
-		x: obj.offsetLeft, //x position
-		y: obj.offsetTop, //y position
+		x: 0, //x position
+		y: 0, //y position
 		py: 0, //previous y position
 		px: 0, //previous x position
 		vx: 0, //x velocity
@@ -19,6 +19,12 @@ var CardDraw = function(obj, settings) {
 		timer: null, // timer to detect stop moving
 		moving: false //is moving
 	};
+
+	this.offset_x = offset_x;
+	this.offset_y = offset_y;
+
+	this.on_mouse_down = on_mouse_down;
+	this.on_mouse_up = on_mouse_up;
 
 	this.speed = (settings && settings.speed) ? settings.speed : 6;
 	this.offSpeed = (settings && settings.offSpeed) ? settings.offSpeed : 5;
@@ -31,9 +37,6 @@ var CardDraw = function(obj, settings) {
 
 CardDraw.prototype.init = function() {
 	this.bindClick();
-
-	this.card.x = this.mouse.x - (this.card.o.offsetWidth / 2);
-	this.card.y = this.mouse.y - (this.card.o.offsetHeight / 2);
 };
 
 CardDraw.prototype.bindClick = function() {
@@ -42,7 +45,7 @@ CardDraw.prototype.bindClick = function() {
 };
 
 CardDraw.prototype.bindMove = function(e) {
-	this.start();
+	this.on_mouse_down(this.card.o);
 
 	this.mouse.cx = e.layerX;
 	this.mouse.cy = e.layerY;
@@ -53,15 +56,17 @@ CardDraw.prototype.bindMove = function(e) {
 	document.body.addEventListener('mousemove', this.move);
 	this.stop = this.unbindMove.bind(this);
 	document.body.addEventListener('mouseup', this.stop);
-  document.body.addEventListener('mouseleave', this.stop);
+	document.body.addEventListener('mouseleave', this.stop);
 
 	this.focus = true;
+
+	this.start();
 };
 
 CardDraw.prototype.unbindMove = function() {
 	document.body.removeEventListener('mousemove', this.move);
 	document.body.removeEventListener('mouseup', this.stop);
-  document.body.removeEventListener('mouseleave', this.stop);
+	document.body.removeEventListener('mouseleave', this.stop);
 
 	this.focus = false;
 	this.running = false;
@@ -72,6 +77,7 @@ CardDraw.prototype.unbindMove = function() {
 
 	this.update();
 	this.draw();
+	this.on_mouse_up(this.card.o);
 };
 
 CardDraw.prototype.getMouseVars = function(e) {
@@ -99,14 +105,14 @@ CardDraw.prototype.getRotation = function() {
 	this.card.tY = this.mouse.vy * this.sensibility;
 
 	if (this.card.tX > this.limit)
-		this.card.tX = this.limit;
+	this.card.tX = this.limit;
 	else if (this.card.tX < -this.limit)
-		this.card.tX = -this.limit;
+	this.card.tX = -this.limit;
 
 	if (this.card.tY > this.limit)
-		this.card.tY = this.limit;
+	this.card.tY = this.limit;
 	else if (this.card.tY < -this.limit)
-		this.card.tY = -this.limit;
+	this.card.tY = -this.limit;
 
 	this.card.x = this.mouse.x - this.mouse.cx;
 	this.card.y = this.mouse.y - this.mouse.cy;
@@ -116,14 +122,14 @@ CardDraw.prototype.updateRotation = function() {
 	var speed = (this.mouse.moving) ? this.speed : this.offSpeed;
 
 	if (this.card.rX > (this.card.tX + speed) || this.card.rX < (this.card.tX - speed))
-		this.card.rX += (this.card.rX > this.card.tX) ? -speed : speed;
+	this.card.rX += (this.card.rX > this.card.tX) ? -speed : speed;
 	else if (this.card.rX > (this.card.tX + (speed / 10)) || this.card.rX < (this.card.tX - (speed / 10)))
-		this.card.rX += (this.card.rX > this.card.tX) ? -(speed / 10) : (speed / 10);
+	this.card.rX += (this.card.rX > this.card.tX) ? -(speed / 10) : (speed / 10);
 
 	if (this.card.rY > (this.card.tY + speed) || this.card.rY < (this.card.tY - speed))
-		this.card.rY += (this.card.rY > this.card.tY) ? -speed : speed;
+	this.card.rY += (this.card.rY > this.card.tY) ? -speed : speed;
 	else if (this.card.rY > (this.card.tY + (speed / 10)) || this.card.rY < (this.card.tY - (speed / 10)))
-		this.card.rY += (this.card.rY > this.card.tY) ? -(speed / 10) : (speed / 10);
+	this.card.rY += (this.card.rY > this.card.tY) ? -(speed / 10) : (speed / 10);
 };
 
 CardDraw.prototype.updateScale = function() {
@@ -136,15 +142,15 @@ CardDraw.prototype.updateScale = function() {
 
 CardDraw.prototype.update = function() {
 	if (this.scaling)
-		this.updateScale();
+	this.updateScale();
 
 	this.getRotation();
 	this.updateRotation();
 };
 
 CardDraw.prototype.draw = function() {
-	this.card.left = "left: " + this.card.x + "px; ";
-	this.card.top = "top: " + this.card.y + "px; ";
+	this.card.left = "left: " + (this.card.x - this.offset_x + 10) + "px; ";
+	this.card.top = "top: " + (this.card.y - this.offset_y + 10) + "px; ";
 	this.card.transform = "transform: ";
 	this.card.transform += "rotateY(" + this.card.rX + "deg) ";
 	this.card.transform += "rotateX(" + -this.card.rY + "deg) ";
@@ -162,9 +168,11 @@ CardDraw.prototype.stop = function() {
 };
 
 CardDraw.prototype.run = function() {
-	this.update();
-	this.draw();
+	if(this.running) {
+		this.update();
+		this.draw();
+	}
 	loop = this.run.bind(this);
 	if (this.running)
-		requestAnimationFrame(loop);
+	requestAnimationFrame(loop);
 }

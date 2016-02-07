@@ -8,7 +8,6 @@ body {
 }
 
 #world {
-	position: absolute;
 	top: 0;
 	left: 0;
 	width: 1000;
@@ -18,12 +17,12 @@ body {
 }
 
 #player-card-container {
-  position : absolute;
-  top : 1000;
+  position:absolute;
+  top : 800;
   left : 200;
 }
 #enemy-card-container {
-  position : absolute;
+  position:absolute;
   top : 10;
   left : 200;
 }
