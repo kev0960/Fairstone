@@ -17,6 +17,9 @@ function Card (id) {
   this.dmg = 0;
   this.mana = 0;
 }
+
+var token = localStorage.getItem('hearth-server-token')
+
 function CardContainer(o) {
   this.card_list = [];
   this.selected_card = null;
@@ -56,6 +59,9 @@ CardContainer.prototype.on_selection = function(selected) {
   this.selected_card = selected;
 }
 CardContainer.prototype.on_selection_end = function(selected) {
+  // if card is dropped on my field zone
+  if(this.selected_card.position().top )
+
   // When things are good
   // TODO do something
 
@@ -94,4 +100,20 @@ var init = (function() {
   my_hand.add_card (new Card(5));
   my_hand.add_card (new Card(6));
 });
+
 window.onload = init;
+
+function HearthClient() {
+  this.socket = io.connect();
+
+  // Receiving hearht-event
+  this.socket.on('hearth-event', function (data) {
+    console.log('Received' + data + ' Event!')
+  })
+}
+UIManager.prototype.init = function () {
+}
+UIManager.prototype.play_card = function (card) {
+  this.socket.emit('hearth-user-play-card', {card_id : card.id});
+}
+var hearth_client = new HearthClient();
