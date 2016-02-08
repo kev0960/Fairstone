@@ -1,7 +1,7 @@
 const card_manager = require('./card_db/card');
 const card_db = require('./card_db/card_db');
 
-function Engine() {
+function Engine(p1_socket, p2_socket) {
   // Returns current turn
   function current_turn() {}
 
@@ -618,6 +618,8 @@ function Engine() {
     // this.exec_lock = false;
   }
   Handler.prototype.do_event = function(e) {
+    // Whenever some event is handled, notify its clients
+    
     // Make sure not to use handlers that are added during the do_event process
     var handler_num = this.event_handler_arr[e.event_type].length;
     var handler_arr = this.event_handler_arr[e.event_type];
@@ -657,8 +659,20 @@ function Engine() {
     f.apply(that, args);
   }
   var g_ui = new UserInterface();
+
+  this.p1_socket = p1;
+  this.p2_socket = p2;
+}
+
+Engine.prototype.start_match = function () {
+
 }
 
 module.exports = {
-  start_match: function(p1, p2) {}
+  start_match: function(p1, p2) {
+    var e = new Engine(p1, p2);
+    e.start_match();
+
+    return e;
+  }
 }

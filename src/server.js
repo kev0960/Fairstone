@@ -144,8 +144,14 @@ app.get('/match/:id', function (req, res) {
   else res.redirect('/')
 })
 
-io.of('/match').on('connection', function (socket) {
+io.of('/match/123').on('connection', function (socket) {
+  console.log('a user is connected to match server');
+  socket.on('auth', function(socket) {
 
+  });
+  socket.on('play_card', function(socket) {
+
+  })
 })
 app.post('/match/start-match', function (req, res) {
   var user_id = req.decoded;
@@ -159,7 +165,7 @@ http.listen(server_port, function() {
   console.log('app is listening on port ' + server_port)
 })
 
-io.on('connection', function(socket) {
+io.of('/match').on('connection', function(socket) {
   console.log('user is connected!');
   socket.on('send-token', function(data) {
     var token = data.token; console.log('client sent :::' + token);
@@ -319,7 +325,9 @@ MatchMaker.prototype.matching_queue = function() {
   if(next_chk < 0) next_chk  = 0;
   setTimeout(this.matching_queue.bind(this), next_chk);
 }
-
+MatchMaker.prototype.begin_match = function(match_id) {
+  hearth_game.
+}
 // TODO
 MatchMaker.prototype.is_valid_match = function (match_id) {
   return true;
