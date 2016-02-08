@@ -45,7 +45,8 @@ CardDraw.prototype.bindClick = function() {
 };
 
 CardDraw.prototype.bindMove = function(e) {
-	this.on_mouse_down(this.card.o);
+	if(!this.on_mouse_down(this.card.o))
+		return; // There are some types of card that does not require card to be dragged to the field
 
 	this.mouse.cx = e.layerX;
 	this.mouse.cy = e.layerY;

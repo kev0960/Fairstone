@@ -8,6 +8,7 @@ $(window).on('resize', function() {
 function Card (id) {
   this.id = id
   this.card_draw = null;
+  this.card_type = '';
 
   this.default_hp = 0;
   this.default_dmg = 0;
@@ -57,10 +58,14 @@ CardContainer.prototype.on_hover = function() {
 }
 CardContainer.prototype.on_selection = function(selected) {
   this.selected_card = selected;
+
+  return true;
 }
 CardContainer.prototype.on_selection_end = function(selected) {
-  // if card is dropped on my field zone
-  if(this.selected_card.position().top )
+  // if card is dropped on my field
+  if(-250 < this.selected_card.offsetTop && this.selected_card.offsetTop < -400) {
+    hearth_client.play_card($(this.selected_card.id));
+  }
 
   // When things are good
   // TODO do something
@@ -106,14 +111,25 @@ window.onload = init;
 function HearthClient() {
   this.socket = io.connect();
 
+  this.success = null;
+  this.fail = null;
+
   // Receiving hearht-event
   this.socket.on('hearth-event', function (data) {
-    console.log('Received' + data + ' Event!')
-  })
+    console.log('Received' + data + ' Event!');
+    if(data.event_type == 'play_card') {
+
+    }
+    if(data.event_type == 'summon') {
+    }
+  });
 }
-UIManager.prototype.init = function () {
+HearthClient.prototype.init = function () {
 }
-UIManager.prototype.play_card = function (card) {
-  this.socket.emit('hearth-user-play-card', {card_id : card.id});
+HearthClient.prototype.play_card = function (card_selector, success) {
+  var card_id = card_selector.selector;
+  var id = parseInt(card_id.substr(4));
+
+  this.socket.emit('hearth-user-play-card', {card_id : id});
 }
 var hearth_client = new HearthClient();
