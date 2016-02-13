@@ -8,7 +8,8 @@ var io = require('socket.io').listen(http)
 var uuid = require('node-uuid');
 var path = require('path');
 var jwt = require('jsonwebtoken');
-var flash = require('connect-flash')
+var flash = require('connect-flash');
+var crypto = require('crypto');
 
 const hearth_secret = 'hearth-server-secret';
 
@@ -284,7 +285,7 @@ MatchMaker.prototype.remove_from_match_queue = function (id) {
 }
 MatchMaker.prototype.match_found = function (user1, user2) {
   console.log('match is found!! ' + user1 + ' vs ' + user2)
-  this.found_match.push({p1 : user1, p2 : user2});
+  this.found_match.push({p1 : user1, p2 : user2, match_token : this.generate_match_token()});
   var socket1 = this.get_socket(user1);
   var socket2 = this.get_socket(user2);
 
@@ -324,6 +325,9 @@ MatchMaker.prototype.matching_queue = function() {
   var next_chk = 1000 - (Date.now() - called_time);
   if(next_chk < 0) next_chk  = 0;
   setTimeout(this.matching_queue.bind(this), next_chk);
+}
+MatchMaker.prototype.generate_match_token = function () {
+  return crypto.randomBytes(64).toString('hex');
 }
 MatchMaker.prototype.begin_match = function(match_id) {
   hearth_game.

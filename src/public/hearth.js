@@ -130,6 +130,6 @@ HearthClient.prototype.play_card = function (card_selector, success) {
   var card_id = card_selector.selector;
   var id = parseInt(card_id.substr(4));
 
-  this.socket.emit('hearth-user-play-card', {card_id : id});
+  this.socket.emit('hearth-user-play-card', {token : token, card_id : id});
 }
 var hearth_client = new HearthClient();

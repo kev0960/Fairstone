@@ -10,7 +10,7 @@
         on_play : function(me, bc, user_play, at) {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             if(non_bc) {
-              me.owner.g_h.add_handler(function(e, me) { if(e.turn_end == me.owner) {
+              me.owner.g_handler.add_handler(function(e, me) { if(e.turn_end == me.owner) {
                 for(var i = 0; i < me.owner.hand.num_card(); i ++) {
                   me.owner.hand[i].add_state(inc(-1), 'mana', me);
                 }
@@ -49,27 +49,28 @@
           function select_success(me) {  // on select success
             me.owner.play_success(me, -1,
               function(me) { me.owner.deal_dmg(me.calc_spell_dmg(6), me.target, me); }
-            );},
-            null, // on select failure
-            forced_target); // if forced_target is enabled then we don't make user to choose
-          }
-        },
-        '고귀한 희생' : {
-          on_play : function(me) {
-            // Spell does not require 'at' argument
-            me.owner.play_success(me, -1, function(me) {
-              me.owner.g_h.add_handler(function(e, me) {
-                if(e.who.owner == me.owner.enemy && me.owner.field.num_card() <= 6) {
-                  me.owner.summon_card('수호자', 10, function(me) { return function(c) { me.target = c; }; }(me))
-                }}, 'propose_attack', me, true);
-              });
-            }
+            );
+          },
+          null, // on select failure
+          forced_target); // if forced_target is enabled then we don't make user to choose
+        }
+      },
+      '고귀한 희생' : {
+        on_play : function(me) {
+          // Spell does not require 'at' argument
+          me.owner.play_success(me, -1, function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if(e.who.owner == me.owner.enemy && me.owner.field.num_card() <= 6) {
+                me.owner.summon_card('수호자', 10, function(me) { return function(c) { me.target = c; }; }(me))
+              }}, 'propose_attack', me, true);
+            });
           }
         }
-        module.exports = {
-          load_card: function(c) {
-            if (card_do[c]) return card_do[c];
-            return null;
-          }
+      }
+      module.exports = {
+        load_card: function(c) {
+          if (card_do[c]) return card_do[c];
+          return null;
         }
-      }());
+      }
+    }());
