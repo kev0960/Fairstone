@@ -296,25 +296,27 @@ MatchMaker.prototype.match_found = function (user1, user2) {
   }
 
 }
+function chk_in_range(first, second) {
+  if(first.mmr - (Date.now() - first.when) / 1000 < second.mmr + (Date.now() - second.when) / 1000) return true;
+  return false;
+}
 MatchMaker.prototype.matching_queue = function() {
   var called_time = Date.now();
   console.log('chking.. queue length ', this.match_queue.length);
   for(var i = 0; i < this.match_queue.length; i ++) {
     for(var j = i + 1; j < this.match_queue.length; j ++) {
       if(this.match_queue[i].mmr > this.match_queue[j].mmr) {
-        if(this.match_queue[i].mmr - (Date.now() - this.match_queue[i].when) / 1000 < this.match_queue[j].mmr + (Date.now() - this.match_queue[j].when) / 1000) {
+        if(chk_in_range(this.match_queue[i], this.match_queue[j])) {
           this.match_found(this.match_queue[i].id, this.match_queue[j].id);
-          this.match_queue.splice(j , 1);
-          this.match_queue.splice(i , 1);
+          this.match_queue.splice(j , 1); this.match_queue.splice(i , 1);
           i -= 2;
           break;
         }
       }
       else {
-        if(this.match_queue[j].mmr - (Date.now() - this.match_queue[j].when) / 1000 < this.match_queue[i].mmr + (Date.now() - this.match_queue[i].when) / 1000) {
+        if(chk_in_range(this.math_queue[j], this.match_queue[i])) {
           this.match_found(this.match_queue[i].id, this.match_queue[j].id);
-          this.match_queue.splice(j , 1);
-          this.match_queue.splice(i , 1);
+          this.match_queue.splice(j , 1); this.match_queue.splice(i , 1);
           i -= 2;
           break;
         }
@@ -330,7 +332,7 @@ MatchMaker.prototype.generate_match_token = function () {
   return crypto.randomBytes(64).toString('hex');
 }
 MatchMaker.prototype.begin_match = function(match_id) {
-  hearth_game.
+  hearth_game.start_match()
 }
 // TODO
 MatchMaker.prototype.is_valid_match = function (match_id) {
