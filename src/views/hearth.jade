@@ -1,12 +1,14 @@
 html
   body
+    link(rel="stylesheet" type="text/css" href="/style/card.css")
+    link(rel="stylesheet" type="text/css" href="/style/hearth.css")
+    canvas#world
+
+    div.card-container#enemy-card-container
+    div.card-container#player-card-container
+    
+  script(src="http://code.jquery.com/jquery-latest.min.js")
+  script(src="/socket.io/socket.io.js")
   script(src="/card.js")
-  link(rel="stylesheet" type="text/css" href="/style/card.css")
-  link(rel="stylesheet" type="text/css" href="/style/hearth.css")
+  script(src="/hearth.js")
 
-  canvas#world
-
-  div.card-container#enemy-card-container
-  div.card-container#player-card-containter
-    div#card.card(style="left:150px;right:150px;")
-    div#card.card(style="left:50px;right:50px;")
