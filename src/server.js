@@ -274,7 +274,7 @@ MatchMaker.prototype.find_match = function(user_id) {
   var user = user_manager.get_user(user_id);
   if(user) {
     console.log(user_id + ' is added to QUEUE')
-    this.match_queue.push({id : user_id, when : Date.now(), mmr : user.mmr});
+    this.match_queue.push({id : user_id, when : Date.now(), mmr : user.mmr, deck : user.deck});
   }
 }
 MatchMaker.prototype.remove_from_match_queue = function (id) {

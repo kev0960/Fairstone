@@ -114,6 +114,8 @@ function HearthClient() {
   this.success = null;
   this.fail = null;
 
+  this.url_token = window.location.href.split('/').slice(-1)[0]; // Get the last url
+  
   // Receiving hearht-event
   this.socket.on('hearth-event', function (data) {
     console.log('Received' + data + ' Event!');
