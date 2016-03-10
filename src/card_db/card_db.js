@@ -10,6 +10,18 @@ data = {
     "level" : "rare",
     "job" : "druid",
     "info" : [5, 4, 4]
+  },
+  "화염구" : {
+    "type" : "spell",
+    "level" : "common",
+    "job" : "mage",
+    "info" : [4, 0, 0]
+  },
+  "고귀한 희생" : {
+    "type" : "spell",
+    "level" : "common",
+    "job" : "paladin",
+    "info" : [1, 0, 0]
   }
 }
 module.exports = {

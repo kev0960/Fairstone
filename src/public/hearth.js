@@ -109,12 +109,20 @@ var init = (function() {
 window.onload = init;
 
 function HearthClient() {
-  this.socket = io.connect();
+  this.match_token = localStorage.getItem('hearth-match-token');
+  this.user_id = localStorage.getItem('hearth-user-id');
 
+  // Create a connection between client and match server (tell them that I JOINED!!)
+  this.socket = io.connect('/match/' + this.match_token);
+
+  // Send my Inforamation through socket
+  // 나중에 생성된 webtoken 을 보내서 인증받는 방식으로 바꿔야함
+  this.socket.emit('player-info', {match_token : this.match_token, user_id : this.user_id});
+
+  console.log('[Match] Received player info ' , this.user_id);
+  
   this.success = null;
   this.fail = null;
-
-  this.url_token = window.location.href.split('/').slice(-1)[0]; // Get the last url
 
   // Receiving hearht-event
   this.socket.on('hearth-event', function (data) {

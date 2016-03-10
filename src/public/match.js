@@ -46,6 +46,9 @@ socket.on('match-found', function(data) {
 
   // Save it to the match token
   localStorage.setItem('hearth-match-token', data.token);
+
+  // Redirect the player to the matching room
+  $(location).attr('href', '/match/' + data.token.substr(0, 32));
 });
 $('#begin_match').click(function() {
   socket.emit('find-match', {token : token})
