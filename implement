@@ -11,6 +11,18 @@
    그에 따른 정보를 로드하게 된다.
 
 
+** 매치 서버 구현 방식 요약 **
+
+1) Queue 가 잡히면 현재 /match 에 listen 중인 socket 에 match-found socket 을 보낸다.
+   그 socket 에는 현재 생성된 match 의 64 자리 (hex) 의 match-token 과 상대방 ID 정보가 들어가있다.
+
+2) 받은 match-token 을 통해 앞 32 자리를 딴 주소로 이동한다. 즉 생성된 방의 경로 -> /match/match-token 앞 32 자리
+   match-token 은 매우 unique 하기 때문에 비록 전체를 비교하지 않더라도 다른 방과 앞 32 자리가 겹칠 확률은 2^128 분의 1 이다.
+
+3) 그 방으로 이동하면 마지막으로 match-token 을 이용해 검증을 실시한다. 이 때 검증 시, POST 로 전체 match-token 과 자신의 id 를 결합해서 보내게 된다.
+
+4) 이를 이용해서 match 방으로 이동된 플레이어는 Match 를 성공적으로 진행할 수 있게 된다. 
+
 
 ** Implement Specifications **
 

@@ -163,6 +163,7 @@ function Player(player_name, job, engine) {
 
   this.hand = new Deck();
   this.field = new Deck();
+  this.deck = new Deck();
 
   this.g_handler = this.engine.g_handler;
   this.g_aura = this.engine.g_aura;
@@ -605,13 +606,15 @@ Handler.prototype.execute = function() {
   // this.exec_lock = false;
 };
 Handler.prototype.do_event = function(e) {
-  // Whenever some event is handled, notify its clients
+  // Whenever some event is handled, notify it to clients
 
   // Make sure not to use handlers that are added during the do_event process
   var handler_num = this.event_handler_arr[e.event_type].length;
   var handler_arr = this.event_handler_arr[e.event_type];
   for (var i = 0; i < handler_num; i++) {
-    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.destroyed)) handler_arr[i].f(e, handler_arr[i].me);
+    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.destroyed)) {
+      handler_arr[i].f(e, handler_arr[i].me);
+    }
   }
 
   this.exec_lock = false;
@@ -649,7 +652,7 @@ UserInterface.prototype.wait_user_input = function(player, f, that, args) {
   f.apply(that, args);
 };
 
-function Engine(p1_socket, p2_socket) {
+function Engine(p1_socket, p2_socket, p1, p2) {
   // Returns current turn
   this.current_turn = function() {};
 
@@ -666,20 +669,78 @@ function Engine(p1_socket, p2_socket) {
   this.g_aura = []; // Aura that is (selectively) affecting entire minions on field
   this.g_handler = new Handler();
 
-  this.p1 = new Player('a', 'mage', this); // First
-  this.p2 = new Player('b', 'warrior', this); // Second
+  this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
+  this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
+
+  for(var i = 0; i < p1.deck_list[0].cards.length / 2; i ++) {
+    var c = p1.deck_list[0].cards[2 * i];
+    var num = p1.deck_list[0].cards[2 * i + 1];
+
+    for(var j = 0; j < num; j ++) {
+      this.p1.deck.card_list.push(create_card(c));
+    }
+  }
+
+  for(var i = 0; i < p2.deck_list[0].cards.length / 2; i ++) {
+    var c = p2.deck_list[0].cards[2 * i];
+    var num = p2.deck_list[0].cards[2 * i + 1];
+
+    for(var j = 0; j < num; j ++) {
+      this.p2.deck.card_list.push(create_card(c));
+    }
+  }
+  this.p1_socket = p1_socket;
+  this.p2_socket = p2_socket;
 
   this.g_ui = new UserInterface(this, p1_socket, p2_socket);
-
 }
 
 Engine.prototype.start_match = function () {
-
+  
 };
 
+// e : the event that we just handled
+Engine.prototype.send_client_data = function (e) {
+  // Do not show SECRET card to the opponent player
+  if(e.event_type == 'draw_card' || e.event_type == 'spwan_card') {
+
+  }
+
+  var p1_card_info = [];
+
+  var p1_hand = this.p1.hand.card_list;
+  var p1_deck = this.p1.deck.card_list;
+
+  for(var i = 0; i < p1_hand.length; i ++) {
+    p1_card_info.push({where : 'hand',  owner : 'me', id : p1_hand[i].id, life : p1_hand[i].current_life, mana : p1_hand[i].mana(), dmg : p1_hand[i].dmg()})
+  }
+
+  // We should give info about the cards that are on the field
+  for(var i = 0; i < p1_deck.length; i ++) {
+    p1_card_info.push({where : 'field', owner : 'me', id : p1_deck[i].id, life : p1_deck[i].current_life, mana : p1_deck[i].mana(), dmg : p1_deck[i].dmg()});
+    p2_card_info.push({where : 'field', owner : 'enemy', id : p1_deck[i].id, life : p1_deck[i].current_life, mana : p1_deck[i].mana(), dmg : p1_deck[i].dmg()});
+  }
+
+  var p2_card_info = [];
+
+  var p2_hand = this.p2.hand.card_list;
+  var p2_deck = this.p2.deck.card_list;
+
+  for(var i = 0; i < p1_hand.length; i ++) {
+    p2_card_info.push({where : 'hand', owner : 'me', id : p2_hand[i].id, life : p2_hand[i].current_life, mana : p2_hand[i].mana(), dmg : p2_hand[i].dmg()})
+  }
+  for(var i = 0; i < p1_deck.length; i ++) {
+    p2_card_info.push({where : 'field', owner : 'me', id : p2_deck[i].id, life : p2_deck[i].current_life, mana : p2_deck[i].mana(), dmg : p2_deck[i].dmg()})
+    p1_card_info.push({where : 'field', owner : 'enemy', id : p2_deck[i].id, life : p2_deck[i].current_life, mana : p2_deck[i].mana(), dmg : p2_deck[i].dmg()})
+  }
+
+  p1_socket.emit('hearth-event', p1_card_info);
+  p2_socket.emit('hearth_event', p2_card_info);
+}
+
 module.exports = {
-  start_match: function(p1, p2) {
-    var e = new Engine(p1, p2);
+  start_match: function(p1_socket, p2_socket, p1, p2) {
+    var e = new Engine(p1_socket, p2_socket, p1, p2);
     e.start_match();
 
     return e;

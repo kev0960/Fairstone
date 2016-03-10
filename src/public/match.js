@@ -32,7 +32,7 @@ else {
   });
 }
 
-var socket = io.connect();
+var socket = io.connect('/match');
 
 // Hi Server!
 socket.emit('send-token', {token : token});
@@ -43,6 +43,9 @@ socket.on('token-not-valid', function(data) {
 socket.on('match-found', function(data) {
   $('#match-found').text("Match is found!!");
   console.log('match is found!')
+
+  // Save it to the match token
+  localStorage.setItem('hearth-match-token', data.token);
 });
 $('#begin_match').click(function() {
   socket.emit('find-match', {token : token})
