@@ -120,7 +120,7 @@ function HearthClient() {
   this.socket.emit('player-info', {match_token : this.match_token, user_id : this.user_id});
 
   console.log('[Match] Received player info ' , this.user_id);
-  
+
   this.success = null;
   this.fail = null;
 
@@ -133,6 +133,13 @@ function HearthClient() {
     if(data.event_type == 'summon') {
     }
   });
+
+  this.socket.on('choose-starting-cards', function (data) {
+    var card_list = data.cards;
+    for(var i = 0; i < card_list.length; i ++) {
+      console.log(card_list[i]);
+    }
+  })
 }
 HearthClient.prototype.init = function () {
 }

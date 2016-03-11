@@ -16,9 +16,13 @@ CardData.prototype.to_array = function() {
   return arr;
 };
 
+// card_data 는 여기서 CardData 객체의 Array 표현이다!
 function Card(card_data, id, owner) {
   this.id = 0;
+
   this.card_data = new CardData(card_data);
+  console.log('[Card]',this.card_data.name, ' ARG ' , card_data);
+
   this.state = []; // Array of added states
 
   if(this.card_data.type != 'hero') this.status = 'deck';
@@ -29,7 +33,7 @@ function Card(card_data, id, owner) {
   this.field_summon_turn = -1;
   this.summon_order = -1;
 
-  this.current_life = this.card_data.info[1];
+  this.current_life = this.card_data.life;
 
   this.is_frozen = {
     until: -1
@@ -98,6 +102,9 @@ Card.prototype.calc_state = function(state, init_value) {
   }
   return x;
 };
+Card.prototype.mana = function () {
+  return this.calc_state('mana', this.card_data.mana);
+}
 Card.prototype.update_atk_cnt = function() {
   if (this.atk_info.turn == this.owner.engine.current_turn()) return;
   var atk_num = this.calc_state('atk_num', 1);
@@ -149,11 +156,10 @@ Card.prototype.copy_to_other_card = function(c) {
   }
 };
 
-function create_card(name) {
+function create_card(name, owner) {
   var cd = card_db.load_card(name);
-  var card_data = new CardData(cd);
 
-  return new Card(card_data, 0, null);
+  return new Card(cd, 0, owner);
 }
 
 function Deck() {
@@ -184,11 +190,12 @@ Deck.prototype.remove_card = function(c) {
 Deck.prototype.remove_card_at = function(at) {
   this.card_list.splice(at, 1);
 };
-Deck.prototype.get_card_names = function() {
-  var names = [];
+Deck.prototype.get_card_datas = function() {
+  var data = [];
   for(var i = 0; i < this.card_list.length; i ++) {
-    names.push(this.card_list[i].card_data.name);
+    data.push(this.card_list[i].card_data);
   }
+  return data;
 }
 
 function Player(player_name, job, engine) {
@@ -198,7 +205,7 @@ function Player(player_name, job, engine) {
 
   // TODO this.enemy <- 정의할것!!
 
-  this.hero = new Card({name : player_name, type : 'hero', info : [30, 0, 0], level : 'hero', job : job}}, this.engine.g_id.get_id(), this);
+  this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
   this.current_mana = 1;
 
@@ -752,7 +759,7 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
     var num = p1.deck_list[0].cards[2 * i + 1];
 
     for (var j = 0; j < num; j++) {
-      this.p1.deck.card_list.push(create_card(c));
+      this.p1.deck.card_list.push(create_card(c, this.p1));
     }
   }
 
@@ -761,7 +768,7 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
     var num = p2.deck_list[0].cards[2 * i + 1];
 
     for (var j = 0; j < num; j++) {
-      this.p2.deck.card_list.push(create_card(c));
+      this.p2.deck.card_list.push(create_card(c, this.p2));
     }
   }
   this.p1_socket = p1_socket;
@@ -771,11 +778,12 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
 }
 
 Engine.prototype.start_match = function() {
-  var p1_starting_cards = util.rand_select(this.p1.deck.get_card_names(), 3);
-  var p2_starting_cards = util.rand_select(this.p2.deck.get_card_names(), 4);
+  var p1_starting_cards = util.rand_select(this.p1.deck.get_card_datas(), 3);
+  var p2_starting_cards = util.rand_select(this.p2.deck.get_card_datas(), 4);
 
-  this.p1_socket.emit('choose_starting_cards', p1_starting_cards);
-  this.p2_socket.emit('choose_starting_cards', p2_starting_cards);
+  console.log('[Engine]', this.p1.deck.get_card_datas());
+  this.p1_socket.emit('choose-starting-cards', {cards : p1_starting_cards});
+  this.p2_socket.emit('choose-starting-cards', {cards : p2_starting_cards});
 
   this.p1_socket.on('remove_some_cards', function( ) { return function(data) {
 

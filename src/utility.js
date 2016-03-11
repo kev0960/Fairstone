@@ -1,5 +1,6 @@
 module.exports = {
   rand_select : function (arr, n) {
+    console.log(arr);
     var temp = arr.slice();
 
     var result = [];

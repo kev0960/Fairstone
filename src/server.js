@@ -190,6 +190,10 @@ app.get('/match/:id', function(req, res) {
       socket.on('player-info', function(socket, match_maker) {
         return function(data) {
           var m = match_maker.get_match(data.match_token);
+
+          // Possible duplicated connection!
+          if(m.p1_join && m.p2_join) return;
+
           if (data.user_id == m.p1) {
             m.p1_join = true;
             m.p1_socket = socket;
@@ -255,7 +259,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['화염구', 12]
+      cards: ['화염구', 1]
     }]
   }, {
     id: 'Jaebum',
@@ -264,7 +268,7 @@ function UserManager() {
     deck_list: [{
       name: '전사 덱',
       job: 'warrior',
-      cards: ['제왕 타우릿산', 12]
+      cards: ['제왕 타우릿산', 1]
     }]
   }];
 }
