@@ -21,11 +21,11 @@ function Card(card_data, id, owner) {
   this.id = 0;
 
   this.card_data = new CardData(card_data);
-  console.log('[Card]',this.card_data.name, ' ARG ' , card_data);
+  console.log('[Card]', this.card_data.name, ' ARG ', card_data);
 
   this.state = []; // Array of added states
 
-  if(this.card_data.type != 'hero') this.status = 'deck';
+  if (this.card_data.type != 'hero') this.status = 'deck';
   else this.status = 'field'; // HERO is always on the field
 
   this.owner = owner;
@@ -102,7 +102,7 @@ Card.prototype.calc_state = function(state, init_value) {
   }
   return x;
 };
-Card.prototype.mana = function () {
+Card.prototype.mana = function() {
   return this.calc_state('mana', this.card_data.mana);
 }
 Card.prototype.update_atk_cnt = function() {
@@ -183,8 +183,10 @@ Deck.prototype.get_nearby_card = function(c, offset) {
 };
 Deck.prototype.remove_card = function(c) {
   for (var i = 0; i < this.card_list.length; i++) {
-    this.card_list.splice(i, 1);
-    return;
+    if (this.card_list[i] == c) {
+      this.card_list.splice(i, 1);
+      return;
+    }
   }
 };
 Deck.prototype.remove_card_at = function(at) {
@@ -192,7 +194,7 @@ Deck.prototype.remove_card_at = function(at) {
 };
 Deck.prototype.get_card_datas = function() {
   var data = [];
-  for(var i = 0; i < this.card_list.length; i ++) {
+  for (var i = 0; i < this.card_list.length; i++) {
     data.push(this.card_list[i].card_data);
   }
   return data;
@@ -258,6 +260,28 @@ Player.prototype.chk_target = function(c, next) {
 
   this.g_handler.add_callback(next, this, [c]);
 };
+Player.prototype.draw_card = function(c) {
+  this.deck.remove_card(c)
+  if (this.hand.num_card() >= 10) {
+    // Card is burned!!
+    return;
+  }
+
+  var card = card_manager.load_card(c.card_data.name);
+
+  c.status = 'hand';
+  c.id = this.g_id.get_id(); // ID is issued when the card goes to the user's hand
+
+  card.on_draw(c);
+}
+Player.prototype.draw_card_name = function(name) {
+  for (var i = 0; i < this.deck.num_card(); i++) {
+    if (this.deck.card_list[i].card_data.name == name) {
+      this.draw_card(this.deck.card_list[i]);
+      return;
+    }
+  }
+}
 // Play a card from a hand
 Player.prototype.play_minion = function(c, at) {
   if (this.field.num_card() >= 7) return; // Is space available for a minion?
@@ -280,7 +304,6 @@ Player.prototype.play_success = function(c, at, next) {
   c.status = 'field';
   this.current_mana -= c.mana();
   c.field_summon_turn = this.engine.current_turn();
-  c.id = this.g_id.get_id();
   c.summon_order = this.g_when.get_id();
 
   this.hand.remove_card(c);
@@ -313,7 +336,6 @@ Player.prototype.summon_card = function(name, at, after_summon) {
   var c = create_card(name);
 
   c.field_summon_turn = this.engine.current_turn();
-  c.id = this.g_id.get_id();
   c.status = 'field';
   c.owner = this;
   c.summon_order = this.g_when.get_id();
@@ -782,12 +804,28 @@ Engine.prototype.start_match = function() {
   var p2_starting_cards = util.rand_select(this.p2.deck.get_card_datas(), 4);
 
   console.log('[Engine]', this.p1.deck.get_card_datas());
-  this.p1_socket.emit('choose-starting-cards', {cards : p1_starting_cards});
-  this.p2_socket.emit('choose-starting-cards', {cards : p2_starting_cards});
+  this.p1_socket.emit('choose-starting-cards', {
+    cards: p1_starting_cards
+  });
+  this.p2_socket.emit('choose-starting-cards', {
+    cards: p2_starting_cards
+  });
 
-  this.p1_socket.on('remove_some_cards', function( ) { return function(data) {
+  this.p1_socket.on('remove_some_cards', function(p, starting_cards) {
+    return function(data) {
+      var removed = data.removed;
+      removed.sort(); // Sort by ascending order
 
-  }; }())
+      for (var i = starting_cards.length - 1; i >= 0; i--) {
+        starting_cards.splice(i, 1);
+      }
+
+      var remaining_num = 3 - removed.length;
+      for (var i = 0; i < starting_cards.length; i++) {
+        this.p1.draw_card(p1_card)
+      }
+    };
+  }(this.p1, p1_starting_cards))
 };
 
 // e : the event that we just handled

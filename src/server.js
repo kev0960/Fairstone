@@ -113,8 +113,6 @@ app.post('/login', function(req, res) {
   var id = req.body.user_id;
   var password = req.body.password;
 
-  console.log('post :: id : ' + id + ' / password : ' + password);
-
   var token = '';
   if (user_manager.chk_user(id, password).result) {
     token = jwt.sign({
@@ -185,7 +183,6 @@ app.get('/match/:id', function(req, res) {
 
   if (match_maker.is_valid_match(match_token)) {
     io.of('/match/' + match_maker.get_full_token(match_token)).on('connection', function(socket) {
-      console.log('a user has joined to the match room');
 
       socket.on('player-info', function(socket, match_maker) {
         return function(data) {
