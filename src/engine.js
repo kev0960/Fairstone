@@ -219,7 +219,9 @@ function Player(player_name, job, engine) {
   this.g_aura = this.engine.g_aura;
   this.g_id = this.engine.g_id;
   this.g_when = this.engine.g_when;
-}
+  
+  this.selection_waiting = false; 
+  this.selection_fail_timer = null;
 
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.g_aura.length; i++) {
@@ -275,14 +277,14 @@ Player.prototype.draw_card = function(c) {
   card.on_draw(c);
 }
 Player.prototype.draw_card_name = function(name) {
-  for (var i = 0; i < this.deck.num_card(); i++) {
-    if (this.deck.card_list[i].card_data.name == name) {
-      this.draw_card(this.deck.card_list[i]);
-      return;
+    for (var i = 0; i < this.deck.num_card(); i++) {
+      if (this.deck.card_list[i].card_data.name == name) {
+        this.draw_card(this.deck.card_list[i]);
+        return;
+      }
     }
   }
-}
-// Play a card from a hand
+  // Play a card from a hand
 Player.prototype.play_minion = function(c, at) {
   if (this.field.num_card() >= 7) return; // Is space available for a minion?
   if (this.current_mana < c.mana()) return; // Enough mana?
@@ -323,7 +325,8 @@ Player.prototype.play_success = function(c, at, next) {
         this.g_handler.add_callback(next, this, [c, false, true]);
       }
     }
-  } else if (c.card_data.type == 'spell') {
+  }
+  else if (c.card_data.type == 'spell') {
     // play_done must be called at LAST
     this.g_handler.add_callback(this.play_done, this, [c]);
     this.g_handler.add_callback(this.chk_target, this, [c, next]);
@@ -511,7 +514,8 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
     this.g_handler.add_event(new Event('pre_dmg', [from, to_arr[done], dmg_arr[done]]));
     this.g_handler.add_callback(this.deal_dmg_many, this, [dmg_arr, from, to_arr, done + 1]);
     return;
-  } else { // Now pre_dmg events are done
+  }
+  else { // Now pre_dmg events are done
     dmg_arr[done - 1] = from.dmg_given;
 
     for (i = 0; i < from.length; i++) {
@@ -571,42 +575,55 @@ function Event(event_type, args) {
     this.who = args[0];
     this.target = args[1];
     this.type = args[2];
-  } else if (event_type == 'take_dmg') {
+  }
+  else if (event_type == 'take_dmg') {
     this.victim = args[0];
     this.attacker = args[1];
     this.dmg = args[2];
-  } else if (event_type == 'deal_dmg') {
+  }
+  else if (event_type == 'deal_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  } else if (event_type == 'pre_dmg') {
+  }
+  else if (event_type == 'pre_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  } else if (event_type == 'destroyed') {
+  }
+  else if (event_type == 'destroyed') {
     this.destroyed = args[0];
     this.attacker = args[1];
-  } else if (event_type == 'summon') {
+  }
+  else if (event_type == 'summon') {
     this.spawned = args[0];
     this.is_user_play = args[1];
-  } else if (event_type == 'draw_card') {
+  }
+  else if (event_type == 'draw_card') {
     this.card = args[0];
     this.who = args[1];
-  } else if (event_type == 'play_card') {
+  }
+  else if (event_type == 'play_card') {
     this.card = args[0];
     this.who = args[1];
-  } else if (event_type == 'turn_begin') {
+  }
+  else if (event_type == 'turn_begin') {
     this.who = args[0];
-  } else if (event_type == 'turn_end') {
+  }
+  else if (event_type == 'turn_end') {
     this.who = args[0];
-  } else if (event_type == 'deathrattle') {
+  }
+  else if (event_type == 'deathrattle') {
     this.who = args[0];
-  } else if (event_type == 'propose_attack') {
+  }
+  else if (event_type == 'propose_attack') {
     this.who = args[0];
     this.target = args[1];
-  } else if (event_type == 'target') {
+  }
+  else if (event_type == 'target') {
     this.who = args[0];
-  } else if (event_type == 'silence') {
+  }
+  else if (event_type == 'silence') {
     this.who = args[0];
     this.target = args[1];
   }
@@ -644,7 +661,8 @@ Handler.prototype.add_event = function(e) {
 
   if (e.event_type == 'destroyed') {
     this.destroyed_queue.push(e);
-  } else {
+  }
+  else {
     // Insert in front of all other events
     this.queue.splice(0, 0, e);
   }
@@ -680,7 +698,8 @@ Handler.prototype.execute = function() {
 
       f.f.apply(f.that, f.args);
       return;
-    } else {
+    }
+    else {
       // If both destoryed queue and callback queues are empty, then we initiate
       // death creation phase
       this.death_creation();
@@ -797,6 +816,9 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p2_socket = p2_socket;
 
   this.g_ui = new UserInterface(this, p1_socket, p2_socket);
+  
+  this.p1_selection_waiting = false;
+  this.p2_selection_waiting = false; 
 }
 
 Engine.prototype.start_match = function() {
@@ -811,8 +833,12 @@ Engine.prototype.start_match = function() {
     cards: p2_starting_cards
   });
 
-  this.p1_socket.on('remove_some_cards', function(p, starting_cards) {
+  function remove_some_cards (p, starting_cards, util, num) {
     return function(data) {
+      if(p.selection_waiting == false) return; 
+      p.selection_waiting = false;
+      clearTimeout(p.selection_fail_timer);
+      
       var removed = data.removed;
       removed.sort(); // Sort by ascending order
 
@@ -820,12 +846,32 @@ Engine.prototype.start_match = function() {
         starting_cards.splice(i, 1);
       }
 
-      var remaining_num = 3 - removed.length;
+      var card_data_list = p.deck.get_card_datas();
+
       for (var i = 0; i < starting_cards.length; i++) {
-        this.p1.draw_card(p1_card)
+        for (var j = 0; j < card_data_list.length; j++) {
+          if (starting_cards[i] == card_data_list[j]) {
+            card_data_list.splice(j, 1);
+            break;
+          }
+        }
       }
+
+      var new_starting_cards = util.rand_select(card_data_list, num - starting_cards.length);
+        p.socket.emit('new-starting-cards', {
+          cards: new_starting_cards
+        });
     };
-  }(this.p1, p1_starting_cards))
+  }
+  
+  this.p1.selection_waiting = true;
+  this.p2.selection_waiting = true;
+  
+  this.p1_socket.on('remove_some_cards', remove_some_cards(this.p1, p1_starting_cards, util, 3));
+  this.p2_socket.on('remove_some_cards', remove_some_cards(this.p2, p2_starting_cards, util, 4));
+  
+  this.p1.selection_fail_timer = setTimeout(90000, function(p) { return function() { p.socket.emit('new_starting_cards', {cards : []}); }; }(this.p1));
+  this.p2.selection_fail_timer = setTimeout(90000, function(p) { return function() { p.socket.emit('new_starting_cards', {cards : []}); }; }(this.p2));
 };
 
 // e : the event that we just handled
@@ -912,7 +958,8 @@ Engine.prototype.send_client_data = function(e) {
 Engine.prototype.socket = function(p) {
   if (p == this.p1) {
     return this.p1_socket;
-  } else if (p == this.p2) {
+  }
+  else if (p == this.p2) {
     return this.p2_socket;
   }
   throw "SOCKET ERROR"

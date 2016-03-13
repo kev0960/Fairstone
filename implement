@@ -4,6 +4,11 @@
 2) git push heroku 하면 설정된 곳으로 push
 3) heroku git:remote -a sleepy-ravine-57378
 
+** c9.io Node.js server 주소 **
+
+http://hearthstoneserver.jaebumlee.c9users.io/
+
+
 ** 서버 관련 알아야 될 사항들 **
 
 1) Json web token 의 경우 (id) 를 인자로 가진다 (user_id 가 아니다!!)

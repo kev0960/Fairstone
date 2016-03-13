@@ -15,9 +15,6 @@ const hearth_secret = 'hearth-server-secret';
 
 const hearth_game = require('./engine.js')
 
-app.set('view engine', 'jade');
-app.set('views', path.join(__dirname, '/views'));
-
 app.use(express.static(__dirname + '/public'));
 
 app.use(body_parser.urlencoded({
@@ -40,7 +37,6 @@ app.use(flash());
 app.use(function(req, res, next) {
   //console.log('cookie :: ' + req.cookies)
   var token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies["hearth-server-token"];
-  console.log('TOKEN RECEIVED ' + token)
   if (token) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
       if (!err) {
@@ -64,9 +60,7 @@ app.get('/', function(req, res) {
   var id = req.decoded;
   console.log('Token :: ' + token);
 
-  res.render('index.jade', {
-    'token': token
-  })
+  res.sendFile('/public/index.html', { root: __dirname });
 });
 
 app.post('/info', function(req, res) {
@@ -86,7 +80,7 @@ app.post('/info', function(req, res) {
   });
 })
 app.get('/info', function(req, res) {
-  res.render('info.jade');
+  res.sendFile('/public/info.html', { root: __dirname });
 });
 app.get('/info/:id', function(req, res) {
 
@@ -107,7 +101,7 @@ app.post('/auth', function(req, res) {
 })
 
 app.get('/login', function(req, res) {
-  res.render('login.jade');
+  res.sendFile('/public/login.html', { root: __dirname });
 })
 app.post('/login', function(req, res) {
   var id = req.body.user_id;
@@ -171,7 +165,7 @@ app.post('/match', function(req, res) {
   }(req_deck_id));
 })
 app.get('/match', function(req, res) {
-  res.render('match.jade');
+  res.sendFile('/public/match.html', { root: __dirname });
 });
 
 // 유저가 match room 에 GET 요청을 보내면 그 즉시, 이 위치에 대한
@@ -206,7 +200,7 @@ app.get('/match/:id', function(req, res) {
       }(socket, match_maker));
     });
 
-    res.render('hearth.jade');
+    res.sendFile('/public/hearth.html', { root: __dirname });
   } else res.redirect('/')
 });
 

@@ -16,6 +16,13 @@ body {
 	z-index: 10;
 }
 
+#battlefield {
+  position : absolute;
+  top : 250;
+  left : 200;
+  width : 1000;
+  height : 400;
+}
 #player-card-container {
   position:absolute;
   top : 800;
