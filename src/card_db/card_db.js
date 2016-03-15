@@ -1,27 +1,38 @@
-data = {
-  "제왕 타우릿산" : {
+var data = {
+  "Emperor Thaurissan" : {
     "type" : "minion",
     "level" : "legendary",
-    "job" : "common",
-    "info" : [6, 5, 5]
+    "job" : "neutral",
+    "info" : [6, 5, 5],
+    "kor" : "제왕 타우릿산"
   },
-  "발톱의 드루이드" : {
+  "War Golem" : {
+    "type" : "minion",
+    "level" : "common",
+    "job" : "neutral",
+    "info" : [7, 7, 7],
+    "kor" : "전쟁 골렘"
+  },
+  "Druid of the Claw" : {
     "type" : "minion",
     "level" : "rare",
     "job" : "druid",
-    "info" : [5, 4, 4]
+    "info" : [5, 4, 4],
+    "kor" : "발톱의 드루이드"
   },
-  "화염구" : {
+  "Fireball" : {
     "type" : "spell",
     "level" : "common",
     "job" : "mage",
-    "info" : [4, 0, 0]
+    "info" : [4, 0, 0],
+    "kor" : "화염구"
   },
-  "고귀한 희생" : {
+  "Noble Sacrifice" : {
     "type" : "spell",
     "level" : "common",
     "job" : "paladin",
-    "info" : [1, 0, 0]
+    "info" : [1, 0, 0],
+    "kor" : "고귀한 희생"
   }
 }
 module.exports = {

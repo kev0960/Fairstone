@@ -250,7 +250,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['화염구', 1]
+      cards: ['Fireball', 3, 'War Golem', 3]
     }]
   }, {
     id: 'Jaebum',
@@ -259,7 +259,7 @@ function UserManager() {
     deck_list: [{
       name: '전사 덱',
       job: 'warrior',
-      cards: ['제왕 타우릿산', 1]
+      cards: ['Emperor Thaurissan', 3, 'War Golem', 3]
     }]
   }];
 }

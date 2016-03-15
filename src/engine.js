@@ -205,8 +205,9 @@ function Player(player_name, job, engine) {
   this.player_job = job;
   this.engine = engine;
 
-  // TODO this.enemy <- 정의할것!!
-
+  // Engine 에서 설정해준다. 
+  this.enemy = null;
+  
   this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
   this.current_mana = 1;
@@ -222,6 +223,10 @@ function Player(player_name, job, engine) {
   
   this.selection_waiting = false; 
   this.selection_fail_timer = null;
+  this.socket = null;
+  
+  this.starting_cards = [];
+};
 
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.g_aura.length; i++) {
@@ -794,6 +799,9 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
 
   this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
   this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
+  
+  this.p1.enemy = this.p2;
+  this.p2.enemy = this.p1;
 
   for (var i = 0; i < p1.deck_list[0].cards.length / 2; i++) {
     var c = p1.deck_list[0].cards[2 * i];
@@ -814,6 +822,8 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   }
   this.p1_socket = p1_socket;
   this.p2_socket = p2_socket;
+  this.p1.socket = p1_socket;
+  this.p2.socket = p2_socket;
 
   this.g_ui = new UserInterface(this, p1_socket, p2_socket);
   
@@ -822,15 +832,14 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
 }
 
 Engine.prototype.start_match = function() {
-  var p1_starting_cards = util.rand_select(this.p1.deck.get_card_datas(), 3);
-  var p2_starting_cards = util.rand_select(this.p2.deck.get_card_datas(), 4);
+  this.p1.starting_cards = util.rand_select(this.p1.deck.get_card_datas(), 3);
+  this.p2.starting_cards = util.rand_select(this.p2.deck.get_card_datas(), 4);
 
-  console.log('[Engine]', this.p1.deck.get_card_datas());
   this.p1_socket.emit('choose-starting-cards', {
-    cards: p1_starting_cards
+    cards: this.p1.starting_cards
   });
   this.p2_socket.emit('choose-starting-cards', {
-    cards: p2_starting_cards
+    cards: this.p2.starting_cards
   });
 
   function remove_some_cards (p, starting_cards, util, num) {
@@ -857,21 +866,39 @@ Engine.prototype.start_match = function() {
         }
       }
 
-      var new_starting_cards = util.rand_select(card_data_list, num - starting_cards.length);
-        p.socket.emit('new-starting-cards', {
-          cards: new_starting_cards
-        });
+      var new_starting_cards = util.rand_select(card_data_list, removed.length);
+      
+      p.socket.emit('new-starting-cards', { cards: new_starting_cards });
+
+      console.log('[Removed :: ]', removed);
+      console.log('[New Starting Cards]', new_starting_cards);
+      
+      if(!p.selection_waiting && !p.enemy.selection_waiting) {
+        p.socket.emit('begin-match', {});
+        p.enemy.socket.emit('begin-match', {});
+      }
     };
   }
   
   this.p1.selection_waiting = true;
   this.p2.selection_waiting = true;
   
-  this.p1_socket.on('remove_some_cards', remove_some_cards(this.p1, p1_starting_cards, util, 3));
-  this.p2_socket.on('remove_some_cards', remove_some_cards(this.p2, p2_starting_cards, util, 4));
+  this.p1_socket.on('remove-some-cards', remove_some_cards(this.p1, this.p1.starting_cards, util, 3));
+  this.p2_socket.on('remove-some-cards', remove_some_cards(this.p2, this.p1.starting_cards, util, 4));
   
-  this.p1.selection_fail_timer = setTimeout(90000, function(p) { return function() { p.socket.emit('new_starting_cards', {cards : []}); }; }(this.p1));
-  this.p2.selection_fail_timer = setTimeout(90000, function(p) { return function() { p.socket.emit('new_starting_cards', {cards : []}); }; }(this.p2));
+  function fail_client_select(p) {
+    return function() {
+      p.selection_waiting = false; 
+      p.socket.emit('new-starting-cards', {cards : []});
+      
+      if(!p.selection_waiting && !p.enemy.selection_waiting) {
+        p.socket.emit('begin-match', {});
+        p.enemy.socket.emit('begin-match', {});
+      }
+    }
+  }
+  this.p1.selection_fail_timer = setTimeout(fail_client_select(this.p1_socket), 90000 );
+  this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2_socket), 90000 );
 };
 
 // e : the event that we just handled
@@ -951,8 +978,8 @@ Engine.prototype.send_client_data = function(e) {
     })
   }
 
-  p1_socket.emit('hearth-event', p1_card_info);
-  p2_socket.emit('hearth_event', p2_card_info);
+  this.p1_socket.emit('hearth-event', p1_card_info);
+  this.p2_socket.emit('hearth_event', p2_card_info);
 }
 
 Engine.prototype.socket = function(p) {

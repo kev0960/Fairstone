@@ -71,3 +71,5 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 #4. actual_combat 함수에서 실제 공격을 수행한다. 이를 바탕으로 주고 받은 데미지가 0 보다 크면 take_dmg, deal_dmg 이벤트가 발생하며
     파괴된 하수인이 있다면 그 하수인에 대한 destroyed 이벤트가 발생하게 된다. 참고로, 이벤트가 발생하는 순서는 take_dmg 는 언제나
     target 이 먼저 발동하며, deal_dmg 는 공격자의 것이 먼저 발생된다.
+    
+    참고로 여기서 사용자에게 combat 결과를 알려주는 minion_battle 이벤트 정보가 클라이언트로 전송된다. 

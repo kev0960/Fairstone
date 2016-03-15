@@ -10,8 +10,6 @@ body {
 #world {
 	top: 0;
 	left: 0;
-	width: 1000;
-	height: 1000;
 	pointer-events: none;
 	z-index: 10;
 }
@@ -20,8 +18,7 @@ body {
   position : absolute;
   top : 250;
   left : 200;
-  width : 1000;
-  height : 400;
+  z-index : 3;
 }
 #player-card-container {
   position:absolute;
