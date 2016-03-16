@@ -14,7 +14,7 @@ function Card(id) {
   this.default_dmg = 0;
   this.default_mana = 0;
 
-  this.hp = 0;
+  this.life = 0;
   this.dmg = 0;
   this.mana = 0;
 }
@@ -48,6 +48,8 @@ CardContainer.prototype.add_card = function(card) {
 CardContainer.prototype.make_card_first = function(c) {
   this.o.append(c); // make c to be first div element
 }
+
+// 여기서 this 는 hover 된 div element 를 가리킨다. 
 CardContainer.prototype.on_hover = function() {
   $(this).css({
     '-webkit-transform': 'rotate(' + 0 + 'deg)',
@@ -131,13 +133,56 @@ function HearthClient() {
   this.success = null;
   this.fail = null;
 
-  // Receiving hearht-event
+  this.enemy_num_card = 0;
+
+  this.my_field = [];
+  this.enemy_field = [];
+
+  // Receiving hearth-event
   this.socket.on('hearth-event', function(data) {
-    console.log('Received' + data + ' Event!');
+    console.log('Received' + data.event + ' Event!');
     if (data.event_type == 'play_card') {
 
     }
-    if (data.event_type == 'summon') {}
+    if (data.event_type == 'summon') {
+
+    }
+
+    // 항상 Card DOM Element 를 생성하는 것이 아니라, 카드가 추가 
+    // 될 때에만 선택적으로 Element 를 생성한다. 그 외의 경우에는 그냥
+    // 필드의 Element 정보를 바꾸기만 하면 된다.
+    var recv_my_hand = [];
+    
+    for (var i = 0; i < data.card_info.length; i++) {
+      if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'hand') {
+        recv_my_hand.push(data.card_info[i]);
+      }
+    }
+    
+    console.log('[Received hand]', recv_my_hand);
+    
+    var my_hand_len = recv_my_hand.length;
+    for (var i = 0; i < my_hand.card_list.length; i++) {
+      if (i < my_hand_len) {
+        // Change id of the div element
+        $('#card' + my_hand.card_list[i].id).attr('id', '#card' + recv_my_hand[i].id);
+        my_hand.card_list[i].id = recv_my_hand[i].id;
+
+        my_hand.card_list[i].life = recv_my_hand[i].life;
+        my_hand.card_list[i].mana = recv_my_hand[i].mana;
+        my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
+      }
+      if (i >= my_hand_len) {
+        my_hand.o.remove('#card' + my_hand.card_list[i].id)
+      }
+    }
+    for (; i < recv_my_hand.length; i++) {
+      my_hand.add_card(new Card(recv_my_hand[i].id));
+      
+      my_hand.card_list[i].life = recv_my_hand[i].life;
+      my_hand.card_list[i].mana = recv_my_hand[i].mana;
+      my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
+    }
   });
 
   this.socket.on('choose-starting-cards', function(h) {
@@ -147,14 +192,14 @@ function HearthClient() {
         console.log(card_list[i]);
       }
       h.choose_remove_card(card_list);
-    }
+    };
   }(this));
 
   this.socket.on('new-starting-cards', function(h) {
     return function(data) {
       var card_list = data.cards;
       var j = 0;
-      
+
       console.log('new starting cards :: ', card_list);
       for (var i = 0; i < h.choose_card_list.length; i++) {
         if (h.choose_card_list[i].selected) {
@@ -165,10 +210,11 @@ function HearthClient() {
     };
   }(this));
 
-  this.socket.on('begin-match', function(h) {
+  this.socket.on('begin-match', function(h) { return function() {
+    console.log('[Begin Match Received]');
     h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
-  }(this));
-  
+  }; }(this));
+
   this.world_canvas = document.getElementById('world');
   this.world_ctx = document.getElementById('world').getContext('2d');
   this.world_ctx.canvas.width = window.innerWidth;

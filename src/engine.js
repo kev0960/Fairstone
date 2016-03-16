@@ -102,6 +102,9 @@ Card.prototype.calc_state = function(state, init_value) {
   }
   return x;
 };
+Card.prototype.dmg = function() {
+  return this.calc_state('dmg', this.card_data.dmg);
+}
 Card.prototype.mana = function() {
   return this.calc_state('mana', this.card_data.mana);
 }
@@ -207,7 +210,7 @@ function Player(player_name, job, engine) {
 
   // Engine 에서 설정해준다. 
   this.enemy = null;
-  
+
   this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
   this.current_mana = 1;
@@ -220,11 +223,11 @@ function Player(player_name, job, engine) {
   this.g_aura = this.engine.g_aura;
   this.g_id = this.engine.g_id;
   this.g_when = this.engine.g_when;
-  
-  this.selection_waiting = false; 
+
+  this.selection_waiting = false;
   this.selection_fail_timer = null;
   this.socket = null;
-  
+
   this.starting_cards = [];
 };
 
@@ -271,6 +274,7 @@ Player.prototype.draw_card = function(c) {
   this.deck.remove_card(c)
   if (this.hand.num_card() >= 10) {
     // Card is burned!!
+    this.g_handler.add_event(new Event('card_burnt', c));
     return;
   }
 
@@ -569,7 +573,7 @@ Player.prototype.silence = function(from, target) {
     }
   }
 
-  this.g_msg.add_event(new Event('silenced', from, target));
+  this.g_handler.add_event(new Event('silenced', from, target));
 };
 
 function Event(event_type, args) {
@@ -632,6 +636,9 @@ function Event(event_type, args) {
     this.who = args[0];
     this.target = args[1];
   }
+  else if (event_type == 'card_burnt') {
+    this.card = args[0];
+  }
 }
 // Global Event handler
 function Handler() {
@@ -649,7 +656,7 @@ function Handler() {
 
   var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon',
     'draw_card', 'play_card', 'turn_begin', 'turn_end', 'deathrattle',
-    'propose_attack', 'pre_dmg', 'heal', 'silence'
+    'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt'
   ];
 
   // initialize event handler array
@@ -799,7 +806,7 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
 
   this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
   this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
-  
+
   this.p1.enemy = this.p2;
   this.p2.enemy = this.p1;
 
@@ -826,9 +833,9 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p2.socket = p2_socket;
 
   this.g_ui = new UserInterface(this, p1_socket, p2_socket);
-  
+
   this.p1_selection_waiting = false;
-  this.p2_selection_waiting = false; 
+  this.p2_selection_waiting = false;
 }
 
 Engine.prototype.start_match = function() {
@@ -842,12 +849,12 @@ Engine.prototype.start_match = function() {
     cards: this.p2.starting_cards
   });
 
-  function remove_some_cards (p, starting_cards, util, num) {
+  function remove_some_cards(p, starting_cards, util, num) {
     return function(data) {
-      if(p.selection_waiting == false) return; 
+      if (p.selection_waiting == false) return;
       p.selection_waiting = false;
       clearTimeout(p.selection_fail_timer);
-      
+
       var removed = data.removed;
       removed.sort(); // Sort by ascending order
 
@@ -857,6 +864,7 @@ Engine.prototype.start_match = function() {
 
       var card_data_list = p.deck.get_card_datas();
 
+      // Remove already starting_cards added cards
       for (var i = 0; i < starting_cards.length; i++) {
         for (var j = 0; j < card_data_list.length; j++) {
           if (starting_cards[i] == card_data_list[j]) {
@@ -867,52 +875,91 @@ Engine.prototype.start_match = function() {
       }
 
       var new_starting_cards = util.rand_select(card_data_list, removed.length);
-      
-      p.socket.emit('new-starting-cards', { cards: new_starting_cards });
+
+      p.socket.emit('new-starting-cards', {
+        cards: new_starting_cards
+      });
+      p.starting_cards = p.starting_cards.concat(new_starting_cards);
 
       console.log('[Removed :: ]', removed);
       console.log('[New Starting Cards]', new_starting_cards);
-      
-      if(!p.selection_waiting && !p.enemy.selection_waiting) {
+
+      if (!p.selection_waiting && !p.enemy.selection_waiting) {
         p.socket.emit('begin-match', {});
         p.enemy.socket.emit('begin-match', {});
+        
+        p.engine.begin_game();
       }
     };
   }
-  
+
   this.p1.selection_waiting = true;
   this.p2.selection_waiting = true;
-  
+
   this.p1_socket.on('remove-some-cards', remove_some_cards(this.p1, this.p1.starting_cards, util, 3));
-  this.p2_socket.on('remove-some-cards', remove_some_cards(this.p2, this.p1.starting_cards, util, 4));
-  
+  this.p2_socket.on('remove-some-cards', remove_some_cards(this.p2, this.p2.starting_cards, util, 4));
+
   function fail_client_select(p) {
     return function() {
-      p.selection_waiting = false; 
-      p.socket.emit('new-starting-cards', {cards : []});
-      
-      if(!p.selection_waiting && !p.enemy.selection_waiting) {
+      p.selection_waiting = false;
+      p.socket.emit('new-starting-cards', {
+        cards: []
+      });
+
+      if (!p.selection_waiting && !p.enemy.selection_waiting) {
         p.socket.emit('begin-match', {});
         p.enemy.socket.emit('begin-match', {});
+        
+        p.engine.begin_game();
+      }
+    };
+  }
+  this.p1.selection_fail_timer = setTimeout(fail_client_select(this.p1), 90000);
+  this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
+};
+// Begins the game by putting selected cards to each player's deck
+Engine.prototype.begin_game = function() { 
+  function hand_card(player) {
+    for (var i = 0; i < player.starting_cards.length; i++) {
+      for (var j = 0; j < player.deck.card_list.length; j++) {
+        if (player.starting_cards[i].name == player.deck.card_list[j].card_data.name) {
+          var c = player.deck.card_list[j];
+          player.deck.card_list.splice(j, 1);
+          
+          c.id = player.g_id.get_id();
+          c.status = 'hand';
+
+          player.hand.card_list.push(c);
+          break;
+        }
       }
     }
   }
-  this.p1.selection_fail_timer = setTimeout(fail_client_select(this.p1_socket), 90000 );
-  this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2_socket), 90000 );
-};
+
+  console.log('[Game Begins!]');
+  
+  hand_card(this.p1);
+  hand_card(this.p2);
+  
+  this.send_client_data();
+}
 
 // e : the event that we just handled
 Engine.prototype.send_client_data = function(e) {
   // Do not show SECRET card to the opponent player
-  if (e.event_type == 'draw_card' || e.event_type == 'spwan_card') {
+  if (e && (e.event_type == 'draw_card' || e.event_type == 'spwan_card')) {
 
   }
 
   var p1_card_info = [];
+  var p2_card_info = [];
 
   var p1_hand = this.p1.hand.card_list;
   var p1_deck = this.p1.deck.card_list;
-
+  
+  var p2_hand = this.p2.hand.card_list;
+  var p2_deck = this.p2.deck.card_list;
+  
   for (var i = 0; i < p1_hand.length; i++) {
     p1_card_info.push({
       where: 'hand',
@@ -944,12 +991,7 @@ Engine.prototype.send_client_data = function(e) {
     });
   }
 
-  var p2_card_info = [];
-
-  var p2_hand = this.p2.hand.card_list;
-  var p2_deck = this.p2.deck.card_list;
-
-  for (var i = 0; i < p1_hand.length; i++) {
+  for (var i = 0; i < p2_hand.length; i++) {
     p2_card_info.push({
       where: 'hand',
       owner: 'me',
@@ -959,7 +1001,7 @@ Engine.prototype.send_client_data = function(e) {
       dmg: p2_hand[i].dmg()
     })
   }
-  for (var i = 0; i < p1_deck.length; i++) {
+  for (var i = 0; i < p2_deck.length; i++) {
     p2_card_info.push({
       where: 'field',
       owner: 'me',
@@ -978,8 +1020,8 @@ Engine.prototype.send_client_data = function(e) {
     })
   }
 
-  this.p1_socket.emit('hearth-event', p1_card_info);
-  this.p2_socket.emit('hearth_event', p2_card_info);
+  this.p1_socket.emit('hearth-event', {card_info : p1_card_info, event : e, enemy_num_hand : this.p2.hand.num_card()});
+  this.p2_socket.emit('hearth_event', {card_info : p2_card_info, event : e, enemy_num_hand : this.p1.hand.num_card()});
 }
 
 Engine.prototype.socket = function(p) {
