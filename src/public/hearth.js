@@ -114,6 +114,79 @@ var init = (function() {
 
 window.onload = init;
 
+function HearthImageDB() {
+  this.img_list = []; // { card_name, img }
+}
+
+// 보여고자 하는 카드들을 리스트를 받아 이미지 정보가 얻어지면 그 img 에 대해 on_load
+// 함수를 호출한다. 모든 img 들이 load 되었으면 on_done 함수를 호출한다 (optional)
+HearthImageDB.prototype.get_image_arr = function(card_name_arr, on_load, on_done) {
+  var num_finish = {
+    num: card_name_arr.length
+  };
+
+  for (var i = 0; i < card_name_arr.length; i++) {
+    for (var j = 0; j < this.img_list.length; j++) {
+      if (this.img_list[j].card_name == card_name_arr[i]) {
+        on_load(this.img_list[j].img);
+        card_name_arr.splice(i, 1);
+
+        i--;
+        num_finish.num--;
+
+        break;
+      }
+    }
+  }
+
+  for (var i = 0; i < card_name_arr.length; i++) {
+    hearth_client.get_card_image(card_name_arr[i], function(card_name, num_finish, on_load, on_done) {
+      return function(img) {
+        on_load(img);
+
+        hearth_img_db.add_image(card_name, img);
+
+        num_finish.num--;
+
+        if (num_finish.num == 0) {
+          if (on_done) on_done();
+        }
+      };
+    }(card_name_arr[i], num_finish, on_load, on_done));
+  }
+}
+HearthImageDB.prototype.get_image = function(card_name, on_load) {
+  for (var j = 0; j < this.img_list.length; j++) {
+    if (this.img_list[j].card_name == card_name) {
+      on_load(this.img_list[j].img);
+      return;
+    }
+  }
+
+  hearth_client.get_card_image(card_name, function(card_name, on_load) {
+    return function(img) {
+      on_load(img);
+      hearth_img_db.add_image(card_name, img);
+    };
+  }(card_name, on_load));
+}
+HearthImageDB.prototype.async_get_image = function (card_name) {
+    for (var j = 0; j < this.img_list.length; j++) {
+    if (this.img_list[j].card_name == card_name) {
+      return this.img_list[j].img;
+    }
+  }
+  throw Error('[async-get_image] ' , card_name, ' does not exist');
+}
+HearthImageDB.prototype.add_image = function(card_name, img) {
+  this.img_list.push({
+    card_name: card_name,
+    img: img
+  });
+}
+
+var hearth_img_db = new HearthImageDB();
+
 function HearthClient() {
   this.match_token = localStorage.getItem('hearth-match-token');
   this.user_id = localStorage.getItem('hearth-user-id');
@@ -152,15 +225,15 @@ function HearthClient() {
     // 될 때에만 선택적으로 Element 를 생성한다. 그 외의 경우에는 그냥
     // 필드의 Element 정보를 바꾸기만 하면 된다.
     var recv_my_hand = [];
-    
+
     for (var i = 0; i < data.card_info.length; i++) {
       if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'hand') {
         recv_my_hand.push(data.card_info[i]);
       }
     }
-    
+
     console.log('[Received hand]', recv_my_hand);
-    
+
     var my_hand_len = recv_my_hand.length;
     for (var i = 0; i < my_hand.card_list.length; i++) {
       if (i < my_hand_len) {
@@ -178,7 +251,7 @@ function HearthClient() {
     }
     for (; i < recv_my_hand.length; i++) {
       my_hand.add_card(new Card(recv_my_hand[i].id));
-      
+
       my_hand.card_list[i].life = recv_my_hand[i].life;
       my_hand.card_list[i].mana = recv_my_hand[i].mana;
       my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
@@ -210,10 +283,12 @@ function HearthClient() {
     };
   }(this));
 
-  this.socket.on('begin-match', function(h) { return function() {
-    console.log('[Begin Match Received]');
-    h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
-  }; }(this));
+  this.socket.on('begin-match', function(h) {
+    return function() {
+      console.log('[Begin Match Received]');
+      h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
+    };
+  }(this));
 
   this.world_canvas = document.getElementById('world');
   this.world_ctx = document.getElementById('world').getContext('2d');
@@ -235,19 +310,15 @@ HearthClient.prototype.play_card = function(card_selector, success) {
 
 HearthClient.prototype.show_card_list = function(card_list) {
     for (var i = 0; i < card_list.length; i++) {
-      hearth_client.get_card_image(card_list[i].name, function(img_pos, h, i) {
-        return function f(img_addr) {
-          var img = new Image();
-          img.src = img_addr;
-          img.onload = function() {
-            h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+      hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+        return function f(img) {
+          h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
 
-            h.choose_card_list[i].img = img;
-            h.choose_card_list[i].x = img_pos.x;
-            h.choose_card_list[i].y = img_pos.y;
-            h.choose_card_list[i].w = img.width;
-            h.choose_card_list[i].h = img.height;
-          }
+          h.choose_card_list[i].img = img;
+          h.choose_card_list[i].x = img_pos.x;
+          h.choose_card_list[i].y = img_pos.y;
+          h.choose_card_list[i].w = img.width;
+          h.choose_card_list[i].h = img.height;
         };
       }({
         x: i * 300 + 400,
