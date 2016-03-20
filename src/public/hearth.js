@@ -17,6 +17,7 @@ function Card(id) {
   this.life = 0;
   this.dmg = 0;
   this.mana = 0;
+  this.name = '';
 }
 
 var token = localStorage.getItem('hearth-server-token')
@@ -141,12 +142,16 @@ HearthImageDB.prototype.get_image_arr = function(card_name_arr, on_load, on_done
 
   for (var i = 0; i < card_name_arr.length; i++) {
     hearth_client.get_card_image(card_name_arr[i], function(card_name, num_finish, on_load, on_done) {
-      return function(img) {
-        on_load(img);
+      return function(img_addr) {
+        var img = new Image;
+        img.src = img_addr;
 
-        hearth_img_db.add_image(card_name, img);
+        img.onload = function() {
+          on_load(img)
+          hearth_img_db.add_image(card_name, img);
 
-        num_finish.num--;
+          num_finish.num--;
+        };
 
         if (num_finish.num == 0) {
           if (on_done) on_done();
@@ -164,19 +169,25 @@ HearthImageDB.prototype.get_image = function(card_name, on_load) {
   }
 
   hearth_client.get_card_image(card_name, function(card_name, on_load) {
-    return function(img) {
-      on_load(img);
-      hearth_img_db.add_image(card_name, img);
+    return function(img_addr) {
+      var img = new Image;
+      img.src = img_addr;
+
+      img.onload = function() {
+        on_load(img)
+
+        hearth_img_db.add_image(card_name, img);
+      };
     };
   }(card_name, on_load));
 }
-HearthImageDB.prototype.async_get_image = function (card_name) {
-    for (var j = 0; j < this.img_list.length; j++) {
+HearthImageDB.prototype.async_get_image = function(card_name) {
+  for (var j = 0; j < this.img_list.length; j++) {
     if (this.img_list[j].card_name == card_name) {
       return this.img_list[j].img;
     }
   }
-  throw Error('[async-get_image] ' , card_name, ' does not exist');
+  throw Error('[async-get_image] ', card_name, ' does not exist');
 }
 HearthImageDB.prototype.add_image = function(card_name, img) {
   this.img_list.push({
@@ -238,15 +249,19 @@ function HearthClient() {
     for (var i = 0; i < my_hand.card_list.length; i++) {
       if (i < my_hand_len) {
         // Change id of the div element
-        $('#card' + my_hand.card_list[i].id).attr('id', '#card' + recv_my_hand[i].id);
+        $('#card' + my_hand.card_list[i].id).attr('id', 'card' + recv_my_hand[i].id);
         my_hand.card_list[i].id = recv_my_hand[i].id;
 
         my_hand.card_list[i].life = recv_my_hand[i].life;
         my_hand.card_list[i].mana = recv_my_hand[i].mana;
         my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
+        my_hand.card_list[i].name = recv_my_hand[i].name;
       }
       if (i >= my_hand_len) {
-        my_hand.o.remove('#card' + my_hand.card_list[i].id)
+        $('#card' + my_hand.card_list[i].id).remove();
+        
+        // remove the last element of my_hand card list
+        my_hand.card_list.splice(my_hand.card_list.length - 1, 1); 
       }
     }
     for (; i < recv_my_hand.length; i++) {
@@ -255,6 +270,7 @@ function HearthClient() {
       my_hand.card_list[i].life = recv_my_hand[i].life;
       my_hand.card_list[i].mana = recv_my_hand[i].mana;
       my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
+      my_hand.card_list[i].name = recv_my_hand[i].name;
     }
   });
 
@@ -279,13 +295,25 @@ function HearthClient() {
           h.choose_card_list[i] = card_list[j++];
         }
       }
+      var done = h.choose_card_list.length;
+      h.show_card_list_done(h.choose_card_list, function() { 
+        done --;
+        if(done == 0) {
+          if(this.did_game_begin) {
+            h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
+          }
+        }
+      });
+      
       h.show_card_list(h.choose_card_list);
     };
   }(this));
 
+  this.did_game_begin = false;
   this.socket.on('begin-match', function(h) {
-    return function() {
+    return function(data) {
       console.log('[Begin Match Received]');
+      this.did_game_begin = true;
       h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
     };
   }(this));
@@ -309,24 +337,40 @@ HearthClient.prototype.play_card = function(card_selector, success) {
 }
 
 HearthClient.prototype.show_card_list = function(card_list) {
-    for (var i = 0; i < card_list.length; i++) {
-      hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
-        return function f(img) {
-          h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
-
-          h.choose_card_list[i].img = img;
-          h.choose_card_list[i].x = img_pos.x;
-          h.choose_card_list[i].y = img_pos.y;
-          h.choose_card_list[i].w = img.width;
-          h.choose_card_list[i].h = img.height;
-        };
-      }({
-        x: i * 300 + 400,
-        y: 200
-      }, this, i));
-    }
+  for (var i = 0; i < card_list.length; i++) {
+    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+      return function f(img) {
+        h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+        h.choose_card_list[i].img = img;
+        h.choose_card_list[i].x = img_pos.x;
+        h.choose_card_list[i].y = img_pos.y;
+        h.choose_card_list[i].w = img.width;
+        h.choose_card_list[i].h = img.height;
+      };
+    }({
+      x: i * 300 + 400,
+      y: 200
+    }, this, i));
   }
-  // card_list is an array of card names
+}
+// card_list is an array of card names
+HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
+  for (var i = 0; i < card_list.length; i++) {
+    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+      return function f(img) {
+        h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+        h.choose_card_list[i].img = img;
+        h.choose_card_list[i].x = img_pos.x;
+        h.choose_card_list[i].y = img_pos.y;
+        h.choose_card_list[i].w = img.width;
+        h.choose_card_list[i].h = img.height;
+      };
+    }({
+      x: i * 300 + 400,
+      y: 200
+    }, this, i), on_done);
+  }
+}
 HearthClient.prototype.choose_remove_card = function(card_list) {
   this.choose_card_list = card_list;
   this.show_card_list(card_list);
@@ -365,7 +409,7 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
             hearth_client.world_ctx.stroke();
           }
           else {
-            hearth_client.world_ctx.drawImage(card_list[i].img, card_list[i].x, card_list[i].y);
+            hearth_client.world_ctx.drawImage(hearth_img_db.async_get_image(card_list[i].name), card_list[i].x, card_list[i].y);
             card_list[i].selected = false;
           }
         }

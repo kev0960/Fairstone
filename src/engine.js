@@ -858,8 +858,8 @@ Engine.prototype.start_match = function() {
       var removed = data.removed;
       removed.sort(); // Sort by ascending order
 
-      for (var i = starting_cards.length - 1; i >= 0; i--) {
-        starting_cards.splice(i, 1);
+      for (var i = removed.length - 1; i >= 0; i--) {
+        starting_cards.splice(removed[i], 1);
       }
 
       var card_data_list = p.deck.get_card_datas();
@@ -879,10 +879,10 @@ Engine.prototype.start_match = function() {
       p.socket.emit('new-starting-cards', {
         cards: new_starting_cards
       });
+      
+      console.log('[Starting Cards :: ]', p.starting_cards)
+      console.log('[New Starting Cards :: ]', new_starting_cards)
       p.starting_cards = p.starting_cards.concat(new_starting_cards);
-
-      console.log('[Removed :: ]', removed);
-      console.log('[New Starting Cards]', new_starting_cards);
 
       if (!p.selection_waiting && !p.enemy.selection_waiting) {
         p.socket.emit('begin-match', {});
@@ -920,10 +920,13 @@ Engine.prototype.start_match = function() {
 // Begins the game by putting selected cards to each player's deck
 Engine.prototype.begin_game = function() { 
   function hand_card(player) {
+    console.log('[player starting cards]', player.starting_cards)
     for (var i = 0; i < player.starting_cards.length; i++) {
       for (var j = 0; j < player.deck.card_list.length; j++) {
         if (player.starting_cards[i].name == player.deck.card_list[j].card_data.name) {
           var c = player.deck.card_list[j];
+          
+          console.log('added :: ', c.card_data.name);
           player.deck.card_list.splice(j, 1);
           
           c.id = player.g_id.get_id();
@@ -960,6 +963,9 @@ Engine.prototype.send_client_data = function(e) {
   var p2_hand = this.p2.hand.card_list;
   var p2_deck = this.p2.deck.card_list;
   
+  var p1_field = this.p1.field.card_list;
+  var p2_field = this.p2.field.card_list;
+  
   for (var i = 0; i < p1_hand.length; i++) {
     p1_card_info.push({
       where: 'hand',
@@ -967,27 +973,30 @@ Engine.prototype.send_client_data = function(e) {
       id: p1_hand[i].id,
       life: p1_hand[i].current_life,
       mana: p1_hand[i].mana(),
-      dmg: p1_hand[i].dmg()
+      dmg: p1_hand[i].dmg(),
+      name: p1_hand[i].card_data.name
     })
   }
 
   // We should give info about the cards that are on the field
-  for (var i = 0; i < p1_deck.length; i++) {
+  for (var i = 0; i < p1_field.length; i++) {
     p1_card_info.push({
       where: 'field',
       owner: 'me',
-      id: p1_deck[i].id,
-      life: p1_deck[i].current_life,
-      mana: p1_deck[i].mana(),
-      dmg: p1_deck[i].dmg()
+      id: p1_field[i].id,
+      life: p1_field[i].current_life,
+      mana: p1_field[i].mana(),
+      dmg: p1_field[i].dmg(),
+      name: p1_field[i].card_data.name
     });
     p2_card_info.push({
       where: 'field',
       owner: 'enemy',
-      id: p1_deck[i].id,
-      life: p1_deck[i].current_life,
-      mana: p1_deck[i].mana(),
-      dmg: p1_deck[i].dmg()
+      id: p1_field[i].id,
+      life: p1_field[i].current_life,
+      mana: p1_field[i].mana(),
+      dmg: p1_field[i].dmg(),
+      name : p1_field[i].card_data.name
     });
   }
 
@@ -998,30 +1007,36 @@ Engine.prototype.send_client_data = function(e) {
       id: p2_hand[i].id,
       life: p2_hand[i].current_life,
       mana: p2_hand[i].mana(),
-      dmg: p2_hand[i].dmg()
+      dmg: p2_hand[i].dmg(),
+      name: p1_field[i].card_data.name
     })
   }
-  for (var i = 0; i < p2_deck.length; i++) {
+  for (var i = 0; i < p2_field.length; i++) {
     p2_card_info.push({
       where: 'field',
       owner: 'me',
-      id: p2_deck[i].id,
-      life: p2_deck[i].current_life,
-      mana: p2_deck[i].mana(),
-      dmg: p2_deck[i].dmg()
+      id: p2_field[i].id,
+      life: p2_field[i].current_life,
+      mana: p2_field[i].mana(),
+      dmg: p2_field[i].dmg(),
+      name: p1_field[i].card_data.name
     })
     p1_card_info.push({
       where: 'field',
       owner: 'enemy',
-      id: p2_deck[i].id,
-      life: p2_deck[i].current_life,
-      mana: p2_deck[i].mana(),
-      dmg: p2_deck[i].dmg()
+      id: p2_field[i].id,
+      life: p2_field[i].current_life,
+      mana: p2_field[i].mana(),
+      dmg: p2_field[i].dmg(),
+      name: p1_field[i].card_data.name
     })
   }
+  
+  console.log('[p1 card info]', p1_card_info);
+  console.log('[p2 card info]', p2_card_info);
 
   this.p1_socket.emit('hearth-event', {card_info : p1_card_info, event : e, enemy_num_hand : this.p2.hand.num_card()});
-  this.p2_socket.emit('hearth_event', {card_info : p2_card_info, event : e, enemy_num_hand : this.p1.hand.num_card()});
+  this.p2_socket.emit('hearth-event', {card_info : p2_card_info, event : e, enemy_num_hand : this.p1.hand.num_card()});
 }
 
 Engine.prototype.socket = function(p) {
