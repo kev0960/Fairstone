@@ -21,7 +21,6 @@ function Card(card_data, id, owner) {
   this.id = 0;
 
   this.card_data = new CardData(card_data);
-  console.log('[Card]', this.card_data.name, ' ARG ', card_data);
 
   this.state = []; // Array of added states
 
@@ -213,7 +212,8 @@ function Player(player_name, job, engine) {
 
   this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
-  this.current_mana = 1;
+  // TODO make it to the default setting
+  this.current_mana = 100;
 
   this.hand = new Deck();
   this.field = new Deck();
@@ -295,9 +295,15 @@ Player.prototype.draw_card_name = function(name) {
   }
   // Play a card from a hand
 Player.prototype.play_minion = function(c, at) {
-  if (this.field.num_card() >= 7) return; // Is space available for a minion?
-  if (this.current_mana < c.mana()) return; // Enough mana?
+  console.log('mana : ', this.current_mana, ' vs ', c.mana());
+  
+  if (this.field.num_card() >= 7 || this.current_mana < c.mana()) {
+    this.emit_play_card_fail(c);
+    return;
+  }
 
+  console.log('play card!!');
+  
   var card = card_manager.load_card(c.card_data.name);
   card.on_play(c, true, true, at);
 };
@@ -318,7 +324,7 @@ Player.prototype.play_success = function(c, at, next) {
   c.summon_order = this.g_when.get_id();
 
   this.hand.remove_card(c);
-  this.emit_play_card_success (c, at, c.mana());
+  this.emit_play_card_success(c, at, c.mana());
 
   this.g_handler.add_event(new Event('play_card', c, this));
 
@@ -362,7 +368,18 @@ Player.prototype.summon_card = function(name, at, after_summon) {
   card.on_play(c, false, false, at);
 };
 Player.prototype.emit_play_card_success = function(card, at, mana) {
-  this.socket.emit('hearth-play-card', {result : true, id : card.id, at : at, cost : mana})
+  this.socket.emit('hearth-play-card', {
+    result: true,
+    id: card.id,
+    at: at,
+    cost: mana
+  })
+}
+Player.prototype.emit_play_card_fail = function(card) {
+  this.socket.emit('hearth-play-card', {
+    result: false,
+    id: card.id,
+  })
 }
 Player.prototype.chk_enemy_taunt = function(target) {
   if (target.chk_state('taunt')) return true;
@@ -645,7 +662,7 @@ function Event(event_type, args) {
   }
 }
 // Global Event handler
-function Handler() {
+function Handler(engine) {
   this.queue = [];
 
   // record all of the events
@@ -655,6 +672,8 @@ function Handler() {
   this.destroyed_queue = [];
   this.destroyed_queue_length = 0;
 
+  this.legacy_queue = [];
+  
   // List of waiting call backs
   this.queue_resolved_callback = [];
 
@@ -668,6 +687,8 @@ function Handler() {
   for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = [];
 
   this.exec_lock = false;
+  
+  this.engine = engine;
 }
 
 Handler.prototype.add_event = function(e) {
@@ -790,8 +811,13 @@ UserInterface.prototype.get_user_input = function(socket, send, recv) {
 }
 
 function Engine(p1_socket, p2_socket, p1, p2, io) {
-  // Returns current turn
-  this.current_turn = function() {};
+  // TODO Returns current turn
+  this.current_turn = function() { return 0; };
+
+  // TODO IMPLEMENT THIS
+  this.current_player = function() {
+    return this.p1;
+  };
 
   this.server_io = io;
 
@@ -806,7 +832,7 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.g_when = new UniqueId(); // Object to give unique number to the events
 
   this.g_aura = []; // Aura that is (selectively) affecting entire minions on field
-  this.g_handler = new Handler();
+  this.g_handler = new Handler(this);
 
   this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
   this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
@@ -883,7 +909,7 @@ Engine.prototype.start_match = function() {
       p.socket.emit('new-starting-cards', {
         cards: new_starting_cards
       });
-      
+
       console.log('[Starting Cards :: ]', p.starting_cards)
       console.log('[New Starting Cards :: ]', new_starting_cards)
       p.starting_cards = p.starting_cards.concat(new_starting_cards);
@@ -891,7 +917,7 @@ Engine.prototype.start_match = function() {
       if (!p.selection_waiting && !p.enemy.selection_waiting) {
         p.socket.emit('begin-match', {});
         p.enemy.socket.emit('begin-match', {});
-        
+
         p.engine.begin_game();
       }
     };
@@ -913,7 +939,7 @@ Engine.prototype.start_match = function() {
       if (!p.selection_waiting && !p.enemy.selection_waiting) {
         p.socket.emit('begin-match', {});
         p.enemy.socket.emit('begin-match', {});
-        
+
         p.engine.begin_game();
       }
     };
@@ -922,17 +948,17 @@ Engine.prototype.start_match = function() {
   this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
 };
 // Begins the game by putting selected cards to each player's deck
-Engine.prototype.begin_game = function() { 
+Engine.prototype.begin_game = function() {
   function hand_card(player) {
     console.log('[player starting cards]', player.starting_cards)
     for (var i = 0; i < player.starting_cards.length; i++) {
       for (var j = 0; j < player.deck.card_list.length; j++) {
         if (player.starting_cards[i].name == player.deck.card_list[j].card_data.name) {
           var c = player.deck.card_list[j];
-          
+
           console.log('added :: ', c.card_data.name);
           player.deck.card_list.splice(j, 1);
-          
+
           c.id = player.g_id.get_id();
           c.status = 'hand';
 
@@ -944,13 +970,49 @@ Engine.prototype.begin_game = function() {
   }
 
   console.log('[Game Begins!]');
-  
+
   hand_card(this.p1);
   hand_card(this.p2);
-  
-  this.send_client_data();
-}
 
+  this.send_client_data();
+  
+  this.set_up_listener(this.p1);
+  this.set_up_listener(this.p2);
+}
+Engine.prototype.set_up_listener = function(p) {
+  p.socket.on('hearth-user-play-card', function(e) {
+    return function(data) {
+      var card_id = data.id;
+      console.log('player draws card ::', card_id);
+      
+      // User can only play the card when it is his/her turn
+      if (p == e.current_player()) {
+        console.log('Lets find the card #', card_id);
+        
+        for (var i = 0; i < p.hand.card_list.length; i++) {
+          if (p.hand.card_list[i].id == card_id) {
+            var c = p.hand.card_list[i];
+            
+            console.log('card :: ', c.card_data.type, ' , ', c.card_data);
+            if (c.card_data.type == 'minion') {
+              p.play_minion(c, data.at);
+              return;
+            }
+            else if (c.card_data.type == 'spell') {
+              p.play_spell(c);
+              return;
+            }
+          }
+        }
+      }
+      // If something goes wrong
+      p.socket.emit('hearth-play-card', {
+        result: false,
+        card: card_id
+      });
+    };
+  }(this));
+}
 // e : the event that we just handled
 Engine.prototype.send_client_data = function(e) {
   // Do not show SECRET card to the opponent player
@@ -963,13 +1025,13 @@ Engine.prototype.send_client_data = function(e) {
 
   var p1_hand = this.p1.hand.card_list;
   var p1_deck = this.p1.deck.card_list;
-  
+
   var p2_hand = this.p2.hand.card_list;
   var p2_deck = this.p2.deck.card_list;
-  
+
   var p1_field = this.p1.field.card_list;
   var p2_field = this.p2.field.card_list;
-  
+
   for (var i = 0; i < p1_hand.length; i++) {
     p1_card_info.push({
       where: 'hand',
@@ -1000,7 +1062,7 @@ Engine.prototype.send_client_data = function(e) {
       life: p1_field[i].current_life,
       mana: p1_field[i].mana(),
       dmg: p1_field[i].dmg(),
-      name : p1_field[i].card_data.name
+      name: p1_field[i].card_data.name
     });
   }
 
@@ -1035,12 +1097,20 @@ Engine.prototype.send_client_data = function(e) {
       name: p2_field[i].card_data.name
     })
   }
-  
+
   console.log('[p1 card info]', p1_card_info);
   console.log('[p2 card info]', p2_card_info);
 
-  this.p1_socket.emit('hearth-event', {card_info : p1_card_info, event : e, enemy_num_hand : this.p2.hand.num_card()});
-  this.p2_socket.emit('hearth-event', {card_info : p2_card_info, event : e, enemy_num_hand : this.p1.hand.num_card()});
+  this.p1_socket.emit('hearth-event', {
+    card_info: p1_card_info,
+    event: e,
+    enemy_num_hand: this.p2.hand.num_card()
+  });
+  this.p2_socket.emit('hearth-event', {
+    card_info: p2_card_info,
+    event: e,
+    enemy_num_hand: this.p1.hand.num_card()
+  });
 }
 
 Engine.prototype.socket = function(p) {

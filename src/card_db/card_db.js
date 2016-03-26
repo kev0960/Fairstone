@@ -38,6 +38,6 @@ var data = {
 module.exports = {
   load_card : function(name) {
     var card = data[name];
-    return [name, card.level, card.type, card.job, card.info[0], card.info[1], card.info[2]];
+    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2]];
   }
 }

@@ -70,13 +70,14 @@ CardContainer.prototype.on_selection = function(selected) {
 }
 CardContainer.prototype.on_selection_end = function(selected) {
   // if card is dropped on my field
-  if (-250 < this.selected_card.offsetTop && this.selected_card.offsetTop < -400) {
-    hearth_client.play_card($(this.selected_card.id));
+  console.log('Offset :: ', this.selected_card.offsetTop)
+  if (-200 > this.selected_card.offsetTop && this.selected_card.offsetTop > -600) {
+    hearth_client.play_card(this.selected_card.id, 0);
   }
 
   // When things are good
   // TODO do something
-
+  
   // When things goes wrong
   // card goes back to the hand
   this.position_cards();
@@ -102,6 +103,13 @@ CardContainer.prototype.position_cards = function() {
     this.card_list[i].card_draw.mouse.y = this.y;
     this.o.append($(card_id))
   }
+}
+// Remove a particular card
+CardContainer.prototype.remove_card_at = function(at) {
+  var id = this.card_list[at].id;
+  $('#card' + id).remove();
+  
+  this.card_list.splice(at, 1);
 }
 var my_hand = new CardContainer($('#player-card-container'))
 var enemy_hand = new CardContainer($('#enemy-card-container'))
@@ -284,19 +292,29 @@ function HearthClient() {
     }
   });
 
-  this.socket.on('hearth-play-card-success', function(h) {
+  this.socket.on('hearth-play-card', function(h) {
     return function(data) {
       if(data.result) {
         var card_id = data.id;
         for(var i = 0; i < my_hand.card_list.length; i ++) {
           if(my_hand.card_list[i].id == card_id) {
-            // Deduct the cost
-            this.current_mana -= data.cost;
+            var c = my_hand.card_list[i];
+            my_hand.remove_card_at(i);
             
-            // Remove it from my hand and add it to the field
+            // Insert card to the field
+            h.my_field.splice (data.at, 0, c);
+            
+            // Deduct the cost
+            h.current_mana -= data.cost;
+            
+            // Now redraw the field
+            h.draw_field();
             
           }
         }
+      }
+      else {
+        console.log('Failed on playing card#', data.id);
       }
     }
   }(this));
@@ -355,20 +373,32 @@ function HearthClient() {
   this.choose_card_list = [];
 }
 HearthClient.prototype.init = function() {}
-HearthClient.prototype.play_card = function(card_selector, success) {
-  var card_id = card_selector.selector;
+HearthClient.prototype.play_card = function(card_id, at) {
   var id = parseInt(card_id.substr(4));
 
   this.socket.emit('hearth-user-play-card', {
-    token: token,
-    card_id: id
+    id : id,
+    at : at
   });
 }
-HearthClient.prototype.add_card_to_field = function(c, at) {
+HearthClient.prototype.draw_field = function() {
   this.field_ctx.save();
   
   var num_field = this.my_field.length;
   
+  for(var i = 0; i < num_field; i ++) {
+    this.field_ctx.save();
+    
+    this.field_ctx.beginPath();
+    this.field_ctx.ellipse(500 - 100 * (i -  Math.floor(num_field / 2)), 250, 40, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.closePath();
+    
+    // We should clip the image of minion to look like an actual minion
+    this.field_ctx.clip();
+    
+    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 100 * (i -  Math.floor(num_field / 2)) - 80, 170, 160, 238);
+    this.field_ctx.restore();
+  }
 }
 HearthClient.prototype.show_card_list = function(card_list) {
     for (var i = 0; i < card_list.length; i++) {

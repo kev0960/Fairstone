@@ -31,15 +31,18 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 
 ** Implement Specifications **
 
-하수인 카드 내기 - play_minion Function
+하수인 카드 내기 - play_minion Function (Full version)
 
-#1. 일단 필드에 하수인 카드가 들어갈 자리가 있는지 확인한다. 또한, 하수인 카드를 내기 위한 마나가 충분한지 확인한다.
-    확인 되었다면, 해당하는 카드의 on_play 함수를 호출한다
+#1. 클라이언트 사용자가 하수인 카드를 끌어서 자신의 Field 에 drop 하게 되면, hearth-user-play-card 를 Server 로 emit 한다. 
 
-#2. on_play 함수는 만일 유저로 부터 받아야 할 정보들이 있다면 이를 추합한 뒤에, 없다면 바로 play_success 함수를 호출한다
+#2. Server 의 listener 가 이를 accept 하게 되면, play_minion 함수를 호출한다. 이 함수는 필드에 하수인 카드가 들어갈 자리가 있는지 확인한다.
+    또한, 하수인 카드를 내기 위한 마나가 충분한지 확인한다. 확인 되었다면, 해당하는 카드의 on_play 함수를 호출한다
+
+#2. on_play 함수는 만일 유저로 부터 받아야 할 정보들이 있다면 이를 추합한 뒤에 (eg. 선택, 발견, 타겟팅 등), 없다면 바로 play_success 함수를 호출한다.
     play_success 함수에는 인자로 next 가 들어가는데 이 next 에는 카드가 무엇을 수행하는지 정보를 포함하고 있다. (즉 카드의 text)
     play_success 함수는 실질적으로 카드를 핸드에서 빼고 필드에 소환하며, 마나를 감소시키고 여러가지 카드에 대한 초기화 설정을
-    수행하는 역할을 한다. 또한 'play_card' 이벤트를 발생시킨다. play_card 이벤트가 발생되고 처리된다면 이제 next() 가 호출된다
+    수행하는 역할을 한다. 또한 'play_card' 이벤트를 발생시킨다. play_card 이벤트가 발생되고 처리된다면 이제 next() 가 호출된다.
+    또한 play_success 에서 카드를 빼고 필드에 소환하는 작업을 마친 후에 hearth-play-card 를 Client 로 emit 한다. 
 
     play_card 이벤트에 핸들러를 가지는 카드들 : 밥통고블린, 지옥절단기, 땅굴 트로그 등
 
