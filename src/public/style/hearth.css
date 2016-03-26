@@ -18,7 +18,6 @@ body {
   position : absolute;
   top : 250;
   left : 200;
-  z-index : 3;
 }
 #player-card-container {
   position:absolute;

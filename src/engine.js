@@ -318,6 +318,7 @@ Player.prototype.play_success = function(c, at, next) {
   c.summon_order = this.g_when.get_id();
 
   this.hand.remove_card(c);
+  this.emit_play_card_success (c, at, c.mana());
 
   this.g_handler.add_event(new Event('play_card', c, this));
 
@@ -360,6 +361,9 @@ Player.prototype.summon_card = function(name, at, after_summon) {
 
   card.on_play(c, false, false, at);
 };
+Player.prototype.emit_play_card_success = function(card, at, mana) {
+  this.socket.emit('hearth-play-card', {result : true, id : card.id, at : at, cost : mana})
+}
 Player.prototype.chk_enemy_taunt = function(target) {
   if (target.chk_state('taunt')) return true;
   for (var i = 0; i < this.enemy.field.num_card(); i++) {
@@ -1008,7 +1012,7 @@ Engine.prototype.send_client_data = function(e) {
       life: p2_hand[i].current_life,
       mana: p2_hand[i].mana(),
       dmg: p2_hand[i].dmg(),
-      name: p1_field[i].card_data.name
+      name: p2_hand[i].card_data.name
     })
   }
   for (var i = 0; i < p2_field.length; i++) {
@@ -1019,7 +1023,7 @@ Engine.prototype.send_client_data = function(e) {
       life: p2_field[i].current_life,
       mana: p2_field[i].mana(),
       dmg: p2_field[i].dmg(),
-      name: p1_field[i].card_data.name
+      name: p2_field[i].card_data.name
     })
     p1_card_info.push({
       where: 'field',
@@ -1028,7 +1032,7 @@ Engine.prototype.send_client_data = function(e) {
       life: p2_field[i].current_life,
       mana: p2_field[i].mana(),
       dmg: p2_field[i].dmg(),
-      name: p1_field[i].card_data.name
+      name: p2_field[i].card_data.name
     })
   }
   

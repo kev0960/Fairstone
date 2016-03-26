@@ -1,21 +1,10 @@
-* {
-	webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
-}
 
 .card {
 	position: absolute;
-	width: 230px;
-	height: 342px;
-	width: 160px;
-	height: 238px;
-	z-index: 1;
-	background-image: url('http://wow.zamimg.com/images/hearthstone/cards/enus/original/CS2_188.png');
 	background-size: 100% 100%;
+	height:238;
+  	width:160;
+	z-index: 1;
 	-webkit-transform-origin: 50% 50%;
 	-moz-transform-origin: 50% 50%;
 	-ms-transform-origin: 50% 50%;

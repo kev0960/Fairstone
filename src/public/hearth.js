@@ -30,12 +30,14 @@ function CardContainer(o) {
   this.x = o.position().left;
   this.y = o.position().top;
 }
-CardContainer.prototype.add_card = function(card) {
+CardContainer.prototype.add_card = function(card, img_addr) {
   this.card_list.push(card);
 
   var card_id = 'card' + card.id;
-  this.o.append("<div class='card' id='" + card_id + "'></div>");
 
+  this.o.append("<div class='card' id='" + card_id + "'></div>");
+  $('#' + card_id).css('background-image', 'url(' + img_addr + ')');
+  
   card.card_draw = new CardDraw(document.getElementById(card_id), {
     sensibility: 6, //sensibility to the mouse velocity
     rotateLimit: 60, //card rotate limite
@@ -47,10 +49,10 @@ CardContainer.prototype.add_card = function(card) {
   this.position_cards();
 }
 CardContainer.prototype.make_card_first = function(c) {
-  this.o.append(c); // make c to be first div element
+  this.o.append(c); // make c to be first img element
 }
 
-// 여기서 this 는 hover 된 div element 를 가리킨다. 
+// 여기서 this 는 hover 된 img element 를 가리킨다. 
 CardContainer.prototype.on_hover = function() {
   $(this).css({
     '-webkit-transform': 'rotate(' + 0 + 'deg)',
@@ -104,14 +106,7 @@ CardContainer.prototype.position_cards = function() {
 var my_hand = new CardContainer($('#player-card-container'))
 var enemy_hand = new CardContainer($('#enemy-card-container'))
 
-var init = (function() {
-  my_hand.add_card(new Card(1));
-  my_hand.add_card(new Card(2));
-  my_hand.add_card(new Card(3));
-  my_hand.add_card(new Card(4));
-  my_hand.add_card(new Card(5));
-  my_hand.add_card(new Card(6));
-});
+var init = (function() {});
 
 window.onload = init;
 
@@ -181,6 +176,27 @@ HearthImageDB.prototype.get_image = function(card_name, on_load) {
     };
   }(card_name, on_load));
 }
+HearthImageDB.prototype.get_image_addr = function(card_name, on_load) {
+  for (var j = 0; j < this.img_list.length; j++) {
+    if (this.img_list[j].card_name == card_name) {
+      on_load(this.img_list[j].img.src);
+      return;
+    }
+  }
+
+  hearth_client.get_card_image(card_name, function(card_name, on_load) {
+    return function(img_addr) {
+      var img = new Image;
+      img.src = img_addr;
+
+      img.onload = function() {
+        on_load(img.src)
+
+        hearth_img_db.add_image(card_name, img);
+      };
+    };
+  }(card_name, on_load));
+}
 HearthImageDB.prototype.async_get_image = function(card_name) {
   for (var j = 0; j < this.img_list.length; j++) {
     if (this.img_list[j].card_name == card_name) {
@@ -221,6 +237,9 @@ function HearthClient() {
 
   this.my_field = [];
   this.enemy_field = [];
+  
+  this.current_mana = 1;
+  this.total_mana = 1;
 
   // Receiving hearth-event
   this.socket.on('hearth-event', function(data) {
@@ -246,34 +265,41 @@ function HearthClient() {
     console.log('[Received hand]', recv_my_hand);
 
     var my_hand_len = recv_my_hand.length;
-    for (var i = 0; i < my_hand.card_list.length; i++) {
-      if (i < my_hand_len) {
-        // Change id of the div element
-        $('#card' + my_hand.card_list[i].id).attr('id', 'card' + recv_my_hand[i].id);
-        my_hand.card_list[i].id = recv_my_hand[i].id;
 
-        my_hand.card_list[i].life = recv_my_hand[i].life;
-        my_hand.card_list[i].mana = recv_my_hand[i].mana;
-        my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
-        my_hand.card_list[i].name = recv_my_hand[i].name;
-      }
-      if (i >= my_hand_len) {
-        $('#card' + my_hand.card_list[i].id).remove();
-        
-        // remove the last element of my_hand card list
-        my_hand.card_list.splice(my_hand.card_list.length - 1, 1); 
-      }
-    }
-    for (; i < recv_my_hand.length; i++) {
-      my_hand.add_card(new Card(recv_my_hand[i].id));
+    // Remove entire cards 
+    $('#player-card-container').empty();
 
-      my_hand.card_list[i].life = recv_my_hand[i].life;
-      my_hand.card_list[i].mana = recv_my_hand[i].mana;
-      my_hand.card_list[i].dmg = recv_my_hand[i].dmg;
-      my_hand.card_list[i].name = recv_my_hand[i].name;
+    for (var i = 0; i < my_hand_len; i++) {
+      hearth_img_db.get_image_addr(recv_my_hand[i].name, function(c) {
+        return function(img_addr) {
+          var card = new Card(c.id);
+          my_hand.add_card(card, img_addr);
+
+          card.life = c.life;
+          card.mana = c.mana;
+          card.dmg = c.dmg;
+          card.name = c.name;
+        };
+      }(recv_my_hand[i]))
     }
   });
 
+  this.socket.on('hearth-play-card-success', function(h) {
+    return function(data) {
+      if(data.result) {
+        var card_id = data.id;
+        for(var i = 0; i < my_hand.card_list.length; i ++) {
+          if(my_hand.card_list[i].id == card_id) {
+            // Deduct the cost
+            this.current_mana -= data.cost;
+            
+            // Remove it from my hand and add it to the field
+            
+          }
+        }
+      }
+    }
+  }(this));
   this.socket.on('choose-starting-cards', function(h) {
     return function(data) {
       var card_list = data.cards;
@@ -296,15 +322,15 @@ function HearthClient() {
         }
       }
       var done = h.choose_card_list.length;
-      h.show_card_list_done(h.choose_card_list, function() { 
-        done --;
-        if(done == 0) {
-          if(this.did_game_begin) {
+      h.show_card_list_done(h.choose_card_list, function() {
+        done--;
+        if (done == 0) {
+          if (this.did_game_begin) {
             h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
           }
         }
       });
-      
+
       h.show_card_list(h.choose_card_list);
     };
   }(this));
@@ -322,6 +348,9 @@ function HearthClient() {
   this.world_ctx = document.getElementById('world').getContext('2d');
   this.world_ctx.canvas.width = window.innerWidth;
   this.world_ctx.canvas.height = window.innerHeight;
+  
+  this.field_canvas = document.getElementById('battlefield');
+  this.field_ctx = this.field_canvas.getContext('2d');
 
   this.choose_card_list = [];
 }
@@ -335,25 +364,30 @@ HearthClient.prototype.play_card = function(card_selector, success) {
     card_id: id
   });
 }
-
-HearthClient.prototype.show_card_list = function(card_list) {
-  for (var i = 0; i < card_list.length; i++) {
-    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
-      return function f(img) {
-        h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
-        h.choose_card_list[i].img = img;
-        h.choose_card_list[i].x = img_pos.x;
-        h.choose_card_list[i].y = img_pos.y;
-        h.choose_card_list[i].w = img.width;
-        h.choose_card_list[i].h = img.height;
-      };
-    }({
-      x: i * 300 + 400,
-      y: 200
-    }, this, i));
-  }
+HearthClient.prototype.add_card_to_field = function(c, at) {
+  this.field_ctx.save();
+  
+  var num_field = this.my_field.length;
+  
 }
-// card_list is an array of card names
+HearthClient.prototype.show_card_list = function(card_list) {
+    for (var i = 0; i < card_list.length; i++) {
+      hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+        return function f(img) {
+          h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+          h.choose_card_list[i].img = img;
+          h.choose_card_list[i].x = img_pos.x;
+          h.choose_card_list[i].y = img_pos.y;
+          h.choose_card_list[i].w = img.width;
+          h.choose_card_list[i].h = img.height;
+        };
+      }({
+        x: i * 300 + 400,
+        y: 200
+      }, this, i));
+    }
+  }
+  // card_list is an array of card names
 HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
   for (var i = 0; i < card_list.length; i++) {
     hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
@@ -450,7 +484,11 @@ HearthClient.prototype.get_card_image = function(card_name, f) {
     },
     url: "https://omgvamp-hearthstone-v1.p.mashape.com/cards/search/" + window.encodeURI(card_name),
     success: function(response) {
-      f(response[0].img)
+      for(var i = 0; i < response.length; i ++) {
+        if(response[i].type != 'Hero') {
+          f(response[i].img); break;
+        }
+      }
     }
   });
 }
