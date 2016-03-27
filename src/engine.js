@@ -1155,8 +1155,8 @@ Engine.prototype.send_client_data = function(e) {
     })
   }
 
-  console.log('[p1 card info]', p1_card_info);
-  console.log('[p2 card info]', p2_card_info);
+//  console.log('[p1 card info]', p1_card_info);
+//  console.log('[p2 card info]', p2_card_info);
 
   this.p1_socket.emit('hearth-event', {
     card_info: p1_card_info,

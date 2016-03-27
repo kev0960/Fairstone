@@ -93,7 +93,7 @@ CardContainer.prototype.position_cards = function() {
     var card_id = '#card' + this.card_list[i].id;
     var deg = -30 + (60 / (this.card_list.length)) * i;
 
-    var loc_x = loc_center - (this.card_list.length / 2) * 100 + i * 100;
+    var loc_x = loc_center - Math.floor(this.card_list.length / 2) * 100 + i * 100;
     $(card_id).css({
       '-webkit-transform': 'rotate(' + deg + 'deg)',
       '-moz-transform': 'rotate(' + deg + 'deg)',
