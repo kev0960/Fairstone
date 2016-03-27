@@ -18,6 +18,10 @@ function Card(id) {
   this.dmg = 0;
   this.mana = 0;
   this.name = '';
+  
+  // Card position on the canvas field
+  this.x = 0;
+  this.y = 0;
 }
 
 var token = localStorage.getItem('hearth-server-token')
@@ -273,7 +277,8 @@ function HearthClient() {
     console.log('[Received hand]', recv_my_hand);
 
     var my_hand_len = recv_my_hand.length;
-
+    my_hand.card_list = [];
+    
     // Remove entire cards 
     $('#player-card-container').empty();
 
@@ -369,7 +374,13 @@ function HearthClient() {
   
   this.field_canvas = document.getElementById('battlefield');
   this.field_ctx = this.field_canvas.getContext('2d');
+  
+  // Turn end button
+  this.field_ctx.fillStyle = 'yellow'
+  this.field_ctx.fillRect(800, 200, 150, 50)
 
+  this.init_field_click();
+  
   this.choose_card_list = [];
 }
 HearthClient.prototype.init = function() {}
@@ -390,11 +401,15 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.save();
     
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(500 - 100 * (i -  Math.floor(num_field / 2)), 250, 40, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(500 - 100 * (i -  Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
     
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
+    
+    // Set card position on the canvas 
+    this.my_field[i].x = 500 - 100 * (i -  Math.floor(num_field / 2));
+    this.my_field[i].y = 250;
     
     this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 100 * (i -  Math.floor(num_field / 2)) - 80, 170, 160, 238);
     this.field_ctx.restore();
@@ -434,7 +449,32 @@ HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
       y: 200
     }, this, i), on_done);
   }
-}
+};
+HearthClient.prototype.init_field_click = function() {
+  this.field_canvas.onclick = function(e) {
+    hearth_client.field_ctx.fillStyle = 'red';
+    hearth_client.field_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
+    
+    // If some minion on field is selected
+    for(var i = 0; i < hearth_client.my_field.card_list; i ++) {
+      if(e.offsetX >= hearth_client.my_field.card_list[i].x && e.offsetX <= hearth_client.my_field.card_list[i].x + 100) {
+        if(e.offsetY >= hearth_client.my_field.card_list[i].y && e.offsetY <= hearth_client.my_field.card_list[i].y + 160) {
+          console.log('Minion #', hearth_client.my_field.card_list[i].id, ' is selected!');
+          
+          // TODO do something
+          break;
+        }
+      }
+    }
+    
+    if(e.offsetX >= 800 && e.offsetX <= 950 && e.offsetY >= 200 && e.offsetY <= 250) {
+      console.log('Turn ended!');
+      
+      // Notify the server that the client has ended its turn
+      hearth_client.socket.emit('hearth-end-turn', {}); 
+    }
+  }
+};
 HearthClient.prototype.choose_remove_card = function(card_list) {
   this.choose_card_list = card_list;
   this.show_card_list(card_list);

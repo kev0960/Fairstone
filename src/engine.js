@@ -10,9 +10,10 @@ function CardData(args) {
   this.mana = args[4];
   this.dmg = args[5];
   this.life = args[6];
+  this.kind = args[7];
 }
 CardData.prototype.to_array = function() {
-  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life];
+  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind];
   return arr;
 };
 
@@ -73,6 +74,9 @@ Card.prototype.chk_state = function(state) {
   }
   return false;
 };
+Card.prototype.do_action = function(action) {
+  this.owner.engine.send_client_minion_action(this.id, action);
+}
 Card.prototype.calc_state = function(state, init_value) {
   var x = init_value;
   var modifiers = [];
@@ -108,15 +112,15 @@ Card.prototype.mana = function() {
   return this.calc_state('mana', this.card_data.mana);
 }
 Card.prototype.update_atk_cnt = function() {
-  if (this.atk_info.turn == this.owner.engine.current_turn()) return;
+  if (this.atk_info.turn == this.owner.engine.current_turn) return;
   var atk_num = this.calc_state('atk_num', 1);
 
-  this.atk_info.turn = this.owner.engine.current_turn();
+  this.atk_info.turn = this.owner.engine.current_turn;
   this.atk_info.cnt = atk_num;
   this.atk_info.did = 0;
 };
 Card.prototype.is_attackable = function() {
-  if (this.is_frozen.until >= this.owner.engine.current_turn()) return false;
+  if (this.is_frozen.until >= this.owner.engine.current_turn) return false;
   this.update_atk_cnt();
 
   if (this.atk_info.cnt <= this.atk_info.did) return false;
@@ -214,6 +218,13 @@ function Player(player_name, job, engine) {
 
   // TODO make it to the default setting
   this.current_mana = 100;
+  this.boosted_mana = 0;
+
+  // current turn's overloaded mana
+  this.current_overload_mana = 0;
+
+  // Next turn's overloaded mana
+  this.next_overload_mana = 0;
 
   this.hand = new Deck();
   this.field = new Deck();
@@ -296,14 +307,14 @@ Player.prototype.draw_card_name = function(name) {
   // Play a card from a hand
 Player.prototype.play_minion = function(c, at) {
   console.log('mana : ', this.current_mana, ' vs ', c.mana());
-  
+
   if (this.field.num_card() >= 7 || this.current_mana < c.mana()) {
     this.emit_play_card_fail(c);
     return;
   }
 
   console.log('play card!!');
-  
+
   var card = card_manager.load_card(c.card_data.name);
   card.on_play(c, true, true, at);
 };
@@ -320,7 +331,7 @@ Player.prototype.play_success = function(c, at, next) {
 
   c.status = 'field';
   this.current_mana -= c.mana();
-  c.field_summon_turn = this.engine.current_turn();
+  c.field_summon_turn = this.engine.current_turn;
   c.summon_order = this.g_when.get_id();
 
   this.hand.remove_card(c);
@@ -354,7 +365,7 @@ Player.prototype.play_done = function(c) {
 Player.prototype.summon_card = function(name, at, after_summon) {
   var c = create_card(name);
 
-  c.field_summon_turn = this.engine.current_turn();
+  c.field_summon_turn = this.engine.current_turn;
   c.status = 'field';
   c.owner = this;
   c.summon_order = this.g_when.get_id();
@@ -394,7 +405,7 @@ Player.prototype.chk_invincible = function(target) {
       return true;
     }
   }
-  if (this.is_invincible.until >= this.engine.current_turn()) return true;
+  if (this.is_invincible.until >= this.engine.current_turn) return true;
 
   return false;
 };
@@ -433,11 +444,11 @@ Player.prototype.actual_combat = function(c) {
   var target = c.target;
 
   // checking for shields
-  if (target.dmg_given > 0 && c.is_shielded.until >= this.engine.current_turn()) {
+  if (target.dmg_given > 0 && c.is_shielded.until >= this.engine.current_turn) {
     target.dmg_given = 0;
     c.is_shielded.until = -1; // shield is GONE
   }
-  if (c.dmg_given > 0 && target.is_shielded.until >= this.engine.current_turn()) {
+  if (c.dmg_given > 0 && target.is_shielded.until >= this.engine.current_turn) {
     c.dmg_given = 0;
     target.is_shielded.until = -1;
   }
@@ -484,7 +495,7 @@ Player.prototype.deal_dmg = function(dmg, from, to) {
 };
 Player.prototype.actual_dmg_deal = function(from, to) {
   var dmg = from.dmg_given;
-  if (dmg > 0 && to.is_shielded.until >= this.engine.current_turn()) {
+  if (dmg > 0 && to.is_shielded.until >= this.engine.current_turn) {
     dmg = 0;
     to.is_shielded.until = -1;
   }
@@ -550,7 +561,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
 
     for (i = 0; i < from.length; i++) {
       // shield is dispelled
-      if (dmg_arr[i] > 0 && to_arr[i].is_shielded.until >= this.engine.current_turn()) {
+      if (dmg_arr[i] > 0 && to_arr[i].is_shielded.until >= this.engine.current_turn) {
         to_arr[i].is_shielded.until = -1;
         dmg_arr[i] = 0;
       }
@@ -673,7 +684,7 @@ function Handler(engine) {
   this.destroyed_queue_length = 0;
 
   this.legacy_queue = [];
-  
+
   // List of waiting call backs
   this.queue_resolved_callback = [];
 
@@ -687,12 +698,12 @@ function Handler(engine) {
   for (var i = 0; i < event_type_list.length; i++) this.event_handler_arr[event_type_list[i]] = [];
 
   this.exec_lock = false;
-  
+
   this.engine = engine;
 }
 
 Handler.prototype.add_event = function(e) {
-  e.turn = this.engine.current_turn();
+  e.turn = this.engine.current_turn;
 
   this.legacy_queue.push(e);
 
@@ -712,7 +723,7 @@ Handler.prototype.add_handler = function(f, event, me, is_secret) {
   });
 };
 Handler.prototype.force_add_event = function(e) {
-  e.turn = this.engine.current_turn();
+  e.turn = this.engine.current_turn;
 
   this.queue.push(e);
 };
@@ -752,7 +763,10 @@ Handler.prototype.execute = function() {
   // this.exec_lock = false;
 };
 Handler.prototype.do_event = function(e) {
+  console.log('[Handler] Process Event :: ', e.event_type);
+  
   // Whenever some event is handled, notify it to clients
+  this.engine.send_client_data(e);
 
   // Make sure not to use handlers that are added during the do_event process
   var handler_num = this.event_handler_arr[e.event_type].length;
@@ -807,17 +821,12 @@ UserInterface.prototype.get_user_input = function(socket, send, recv) {
     return function(data) {
       recv.f(data);
     };
-  })
-}
+  });
+};
 
 function Engine(p1_socket, p2_socket, p1, p2, io) {
   // TODO Returns current turn
-  this.current_turn = function() { return 0; };
-
-  // TODO IMPLEMENT THIS
-  this.current_player = function() {
-    return this.p1;
-  };
+  this.current_turn = 0;
 
   this.server_io = io;
 
@@ -836,6 +845,9 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
 
   this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
   this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
+
+  // TODO IMPLEMENT THIS
+  this.current_player = this.p1;
 
   this.p1.enemy = this.p2;
   this.p2.enemy = this.p1;
@@ -975,24 +987,48 @@ Engine.prototype.begin_game = function() {
   hand_card(this.p2);
 
   this.send_client_data();
-  
+
   this.set_up_listener(this.p1);
   this.set_up_listener(this.p2);
+};
+Engine.prototype.end_turn = function() {
+  console.log('change Turn!!');
+  
+  // Change the players
+  if (this.current_player == this.p1) {
+    this.current_player = this.p2;
+  }
+  else this.current_player = this.p1;
+
+  this.current_turn += 1;
+
+  // Set maximum mana as 10
+  this.current_player.current_mana = Math.floor(this.current_turn / 2) + 1 + this.current_player.boosted_mana;
+  if (this.current_player.current_mana > 10) this.current_player.current_mana = 10;
+
+  // Apply overloaded mana deduction
+  this.current_player.current_mana -= this.current_player.next_overload_mana;
+  if (this.current_player.current_mana < 0) this.current_player.current_mana = 0;
+
+  this.current_player.current_overload_mana = this.current_player.next_overload_mana;
+  this.current_player.next_overload_mana = 0;
+
+  this.g_handler.add_event(new Event('turn_begin', this.current_player));
 }
 Engine.prototype.set_up_listener = function(p) {
   p.socket.on('hearth-user-play-card', function(e) {
     return function(data) {
       var card_id = data.id;
       console.log('player draws card ::', card_id);
-      
+
       // User can only play the card when it is his/her turn
-      if (p == e.current_player()) {
+      if (p == e.current_player) {
         console.log('Lets find the card #', card_id);
-        
+
         for (var i = 0; i < p.hand.card_list.length; i++) {
           if (p.hand.card_list[i].id == card_id) {
             var c = p.hand.card_list[i];
-            
+
             console.log('card :: ', c.card_data.type, ' , ', c.card_data);
             if (c.card_data.type == 'minion') {
               p.play_minion(c, data.at);
@@ -1012,7 +1048,28 @@ Engine.prototype.set_up_listener = function(p) {
       });
     };
   }(this));
-}
+
+  p.socket.on('hearth-end-turn', function(e) {
+    return function(data) {
+      if (p == e.current_player) {
+        console.log('Player ', p.player_name, 'turn ends');
+        e.g_handler.add_event(new Event('turn_end', p));
+        e.g_handler.add_callback(e.end_turn, e, []);
+        e.g_handler.execute();
+      }
+    }
+  }(this));
+};
+Engine.prototype.send_client_minion_action = function(c, action) {
+  this.p1_socket.emit('hearth-minion-action', {
+    id: c.id,
+    action: action
+  });
+  this.p2_socket.emit('hearth-minion-action', {
+    id: c.id,
+    action: action
+  });
+};
 // e : the event that we just handled
 Engine.prototype.send_client_data = function(e) {
   // Do not show SECRET card to the opponent player
@@ -1041,7 +1098,7 @@ Engine.prototype.send_client_data = function(e) {
       mana: p1_hand[i].mana(),
       dmg: p1_hand[i].dmg(),
       name: p1_hand[i].card_data.name
-    })
+    });
   }
 
   // We should give info about the cards that are on the field
@@ -1075,7 +1132,7 @@ Engine.prototype.send_client_data = function(e) {
       mana: p2_hand[i].mana(),
       dmg: p2_hand[i].dmg(),
       name: p2_hand[i].card_data.name
-    })
+    });
   }
   for (var i = 0; i < p2_field.length; i++) {
     p2_card_info.push({
@@ -1086,7 +1143,7 @@ Engine.prototype.send_client_data = function(e) {
       mana: p2_field[i].mana(),
       dmg: p2_field[i].dmg(),
       name: p2_field[i].card_data.name
-    })
+    });
     p1_card_info.push({
       where: 'field',
       owner: 'enemy',
