@@ -31,7 +31,7 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 
 ** Implement Specifications **
 
-하수인 카드 내기 - play_minion Function (Full version)
+하수인 카드 내기 - play_minion Function (Full version) ------ CURRENTLY DEPRECATED
 
 #1. 클라이언트 사용자가 하수인 카드를 끌어서 자신의 Field 에 drop 하게 되면, hearth-user-play-card 를 Server 로 emit 한다. 
 
@@ -51,6 +51,53 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 #4. play_done 함수는 summon 이벤트를 발생시킨다.
 
     summon 이벤트에 핸들러를 가지는 카드들 : 거울상, 참회, 저격, 신성한 시험 등 (<- 우선권을 가짐), 함포, 단검 곡예사 등
+    
+    
+하수인 카드 내기 - 재설계됨
+
+현재 하수인 카드 내는 방식은 Hearthstone wiki 의 advanced rulebook 을 참조하였습니다.
+
+하수인 카드를 내는 단계는 일련의 Phase 로 구성되어 있으며, 각각의 phase 가 끝날 때 마다 Death Creation Step 을 밟게 됩니다. 
+(사실 정확히 말하자면 summon resolution step 이 포함되어 있지만 여기 engine 에선 생략하도록 합니다)
+
+#1. 유저가 카드를 Play 합니다. Client 는 hearth-user-play-card 를 server 로 emit 하게 됩니다. 
+
+#2. server 의 listener 가 이를 accept 하게 되면 play_minion 함수를 호출하게 됩니다. 이 함수는 플레이어의 마나와, 하수인 자리가
+    있는지 확인 한 후, 적합하다면 해당 카드의 on_play 함수를 호출하게 됩니다.
+    
+#3. on_play 함수는 그 하수인 카드를 실행하는데 필요한 선제적 작업들을 하는데, 예를 들어 선택 이나, 소환하면서 다른 하수인을 타게팅
+    하는 경우 (ex 무쇠부리 올빼미, 나 이런 사냥꾼이야 등)에 어떠한 것을 선택하는지 기억하는 역할을 합니다. (아직 반영되지는 않음)
+    여기서 통과하지 못한다면 emit_play_card_fail 를 통해 client 로 잘못되었음을 전달합니다. 통과한다면 play_success 함수를 호출합니다.
+    
+#4. play_success 함수 까지 도달하였다면 이제 카드는 실질적으로 드로우 된 상태입니다. 내 hand 에서 해당 하수인 카드를 제거하고, 
+    마나 코스트를 줄이고, 필드에 이를 소환합니다. 또한 emit_play_card_success 를 호출해서 client 에 카드가 필드로 드로우 되었음을
+    알립니다. 
+    
+    여기서 play_card 이벤트를 발생시키고, battlecry_phase 함수를 다음 phase 로 등록합니다.  play_card 이벤트에 발동하는 카드들은
+    
+    밥통고블린, 지옥 절단기, 일리단 스톰레이지
+    
+#5. battlecry_phase 함수는 해당하는 카드의 text 를 수행한다고 보면 됩니다. (전투의 함성만 수행하는 것이 아닙니다) 다만 여기서 중요한 것은
+    g_handler 의 add_phase_block 를 true 로 만들어서 phase 가 추가되는 것을 방지하는데, 이는 카드의 text 를 수행함에 있어서 다른 phase
+    가 발생하는 것을 사전 차단하기 위함입니다. (ex. battlecry 로 다른 하수인을 생성하는 경우 summon phase 가 생길 수 있다)
+    
+    물론 카드 text 단계에서 다른 battlecry 가 발생하는 경우는 없기 때문에 (유저가 직접적으로 play 하지 않으므로) 큰 문제 없습니다.
+    카드 text 내용이 모두 수행되었다면 카드 내부에서 end_bc 를 호출합니다. 
+    
+#6. end_bc 함수는 lock 된 add_phase_block 을 풀고, after_play_phase 를 다음 phase 로 등록합니다. 
+
+#7. after_play_phase 는 after_play 이벤트를 발생시키고, summon_phase 를 콜백으로 등록합니다. 이 때 콜백으로 등록하는 이유는 after-play phase 와
+    summon-phase 사이에서 death creation step 이 생략되기 때문입니다.
+    
+    after_play 이벤트에 발동하는 카드들은
+    
+    거울상, 참회, 저격
+    
+#8. summon_phase 는 summon event 를 발생시킵니다. 
+
+    summon event 에 발동하는 카드들은
+    
+    단검 곡예사, 함포 등등
 
 하수인이 다른 하수인/영웅을 공격시에 - combat Function
 

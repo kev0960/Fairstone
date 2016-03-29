@@ -4,20 +4,26 @@
       return x + n;
     };
   }
+  function end(me, non_bc, bc) {
+    if(bc && non_bc) { me.owner.end_bc(me); }
+  }
+  function end_spell(me) {
+    me.owner.end_spell_txt(me);
+  }
   var card_do = {
     'Murloc Raider': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {});
+        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
       }
     },
     'River Crocolisk': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {});
+        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
       }
     },
     'Magma Rager': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {});
+        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
       }
     },
     'Emperor Thaurissan': {
@@ -33,12 +39,13 @@
               }
             });
           }
+          end(me, non_bc, bc);
         });
       }
     },
     'War Golem': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {});
+        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
       }
     },
     'Druid of the Claw': {
@@ -52,6 +59,7 @@
                     me.add_state(inc(2), 'life', me);
                     me.current_life += 2;
                   }
+                  end(me, non_bc, bc);
                 });
               }
               else { // 표범 변환
@@ -59,13 +67,14 @@
                   if (non_bc) {
                     me.make_charge(me);
                   }
+                  end(me, non_bc, bc);
                 });
               }
             };
           }(me, at));
         }
         else {
-          me.owner.play_success(me, at);
+          me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
         }
       }
     },
@@ -78,6 +87,7 @@
             me.owner.play_success(me, -1,
               function(me) {
                 me.owner.deal_dmg(me.calc_spell_dmg(6), me.target, me);
+                end_spell(me);
               }
             );
           },
@@ -98,6 +108,7 @@
               }(me))
             }
           }, 'propose_attack', me, true);
+          end_spell(me);
         });
       }
     }
