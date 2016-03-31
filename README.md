@@ -31,7 +31,7 @@ page.
 - Node.js based matching server and game engine
 - Client Free Hearthstone game
 - Lite and Fast, works well on low performance computers
-- (TODO) Supports Console
+- (TODO) Supports Linux Console (TUI) 
 
 ## Basic Info ##
 

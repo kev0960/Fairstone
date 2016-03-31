@@ -37,7 +37,7 @@
                   me.owner.hand[i].add_state(inc(-1), 'mana', me);
                 }
               }
-            });
+            }, 'turn_end', me, false);
           }
           end(me, non_bc, bc);
         });

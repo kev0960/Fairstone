@@ -353,6 +353,7 @@ Player.prototype.play_success = function(c, at, next) {
   if (c.card_data.type == 'minion') {
     this.field.put_card(c, at);
 
+    console.log('battle cry phase is added');
     this.g_handler.add_event(new Event('play_card', c, this));
     this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
   }
@@ -372,6 +373,7 @@ Player.prototype.battlecry_phase = function(c, next) {
   // next_phase 가 등록되는 것을 방지해야 한다. 
   this.g_handler.add_phase_block = true;
   
+  console.log('battle cry phase !!')
   if (next) {
     next(c, true, true); // Do battle cry!
 
@@ -390,6 +392,7 @@ Player.prototype.end_bc = function(c) {
   this.g_handler.execute();
 };
 Player.prototype.after_play_phase = function(c) {
+  console.log('afterplay phase!')
   this.g_handler.add_event(new Event('after_play', c, this));
   
   // Death creation step is not created following this phase!
@@ -807,9 +810,11 @@ Handler.prototype.execute = function() {
     if (this.queue_resolved_callback.length) {
       var f = this.queue_resolved_callback[0];
       this.queue_resolved_callback.splice(0, 1);
-      this.exec_lock = false;
 
       f.f.apply(f.that, f.args);
+      
+      this.exec_lock = false;
+      this.execute();
       return;
     }
     else {
@@ -846,6 +851,9 @@ Handler.prototype.do_event = function(e) {
   this.execute();
 };
 Handler.prototype.death_creation = function() {
+  console.log('Death Creation ', this.destroyed_queue.length);
+  console.log('Callback size, ', this.queue_resolved_callback.length);
+  
   this.destroyed_queue_length = this.destroyed_queue.length;
   var dq = this.destroyed_queue;
 
@@ -863,11 +871,20 @@ Handler.prototype.death_creation = function() {
     this.force_add_event(new Event('destroyed', dq[i].destroyed, dq[i].attacker));
     this.force_add_event(new Event('deathrattle', dq[i].destroyed));
   }
+  
+  // Clear destroyed queue
+  dq.splice(0, dq.length);
 
   // Death Creation step 이 끝나면 end phase 를 실행할 수 있게 된다.
-  this.add_callback(this.end_phase, this, []);
+  if(this.next_phase) this.add_callback(this.end_phase, this, []);
+  
+  this.exec_lock = false;
+  if(this.queue.length || this.queue_resolved_callback.length) {
+    this.execute();
+  }
 };
 Handler.prototype.end_phase = function() {
+  console.log('end phase invoked!');
   if (this.next_phase) {
     var f = this.next_phase;
     this.next_phase = null;
