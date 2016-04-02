@@ -1107,6 +1107,7 @@ Engine.prototype.end_turn = function() {
   this.current_player.next_overload_mana = 0;
 
   this.g_handler.add_event(new Event('turn_begin', this.current_player));
+  this.g_handler.execute();
 };
 Engine.prototype.set_up_listener = function(p) {
   p.socket.on('hearth-user-play-card', function(e) {

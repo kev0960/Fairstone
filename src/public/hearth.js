@@ -377,7 +377,7 @@ function HearthClient() {
   
   // Turn end button
   this.field_ctx.fillStyle = 'yellow'
-  this.field_ctx.fillRect(800, 200, 150, 50)
+  this.field_ctx.fillRect(1200, 200, 150, 50)
 
   this.init_field_click();
   
