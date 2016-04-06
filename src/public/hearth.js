@@ -18,7 +18,7 @@ function Card(id) {
   this.dmg = 0;
   this.mana = 0;
   this.name = '';
-  
+
   // Card position on the canvas field
   this.x = 0;
   this.y = 0;
@@ -41,7 +41,7 @@ CardContainer.prototype.add_card = function(card, img_addr) {
 
   this.o.append("<div class='card' id='" + card_id + "'></div>");
   $('#' + card_id).css('background-image', 'url(' + img_addr + ')');
-  
+
   card.card_draw = new CardDraw(document.getElementById(card_id), {
     sensibility: 6, //sensibility to the mouse velocity
     rotateLimit: 60, //card rotate limite
@@ -56,7 +56,7 @@ CardContainer.prototype.make_card_first = function(c) {
   this.o.append(c); // make c to be first img element
 }
 
-// 여기서 this 는 hover 된 img element 를 가리킨다. 
+// 여기서 this 는 hover 된 img element 를 가리킨다.
 CardContainer.prototype.on_hover = function() {
   $(this).css({
     '-webkit-transform': 'rotate(' + 0 + 'deg)',
@@ -81,7 +81,7 @@ CardContainer.prototype.on_selection_end = function(selected) {
 
   // When things are good
   // TODO do something
-  
+
   // When things goes wrong
   // card goes back to the hand
   this.position_cards();
@@ -112,7 +112,7 @@ CardContainer.prototype.position_cards = function() {
 CardContainer.prototype.remove_card_at = function(at) {
   var id = this.card_list[at].id;
   $('#card' + id).remove();
-  
+
   this.card_list.splice(at, 1);
 }
 var my_hand = new CardContainer($('#player-card-container'))
@@ -249,12 +249,13 @@ function HearthClient() {
 
   this.my_field = [];
   this.enemy_field = [];
-  
+
   this.current_mana = 1;
   this.total_mana = 1;
 
   // Receiving hearth-event
-  this.socket.on('hearth-event', function(data) {
+  this.socket.on('hearth-event', function(h) {
+    return function(data) {
     console.log('Received' + data.event + ' Event!');
     if (data.event_type == 'play_card') {
 
@@ -263,14 +264,20 @@ function HearthClient() {
 
     }
 
-    // 항상 Card DOM Element 를 생성하는 것이 아니라, 카드가 추가 
-    // 될 때에만 선택적으로 Element 를 생성한다. 그 외의 경우에는 그냥
-    // 필드의 Element 정보를 바꾸기만 하면 된다.
+    // 핸드에 카드를 받게 되면 계속해서 DOM Element 를 새로 생성하게 된다.
     var recv_my_hand = [];
+    var recv_my_field = [];
+    var recv_enemy_field = [];
 
     for (var i = 0; i < data.card_info.length; i++) {
       if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'hand') {
         recv_my_hand.push(data.card_info[i]);
+      }
+      else if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'field') {
+        recv_my_field.push(data.card_info[i]);
+      }
+      else if (data.card_info[i].owner == 'enemy' && data.card_info[i].where == 'field') {
+        recv_enemy_field.push(data.card_info[i]);
       }
     }
 
@@ -278,24 +285,38 @@ function HearthClient() {
 
     var my_hand_len = recv_my_hand.length;
     my_hand.card_list = [];
-    
-    // Remove entire cards 
+    h.my_field = [];
+    h.enemy_field = [];
+
+    // Remove entire cards
     $('#player-card-container').empty();
 
-    for (var i = 0; i < my_hand_len; i++) {
-      hearth_img_db.get_image_addr(recv_my_hand[i].name, function(c) {
-        return function(img_addr) {
-          var card = new Card(c.id);
-          my_hand.add_card(card, img_addr);
+    function change_to_recv_data (src, dest) {
+      for(var i = 0; i < src.length; i ++) {
+        hearth_img_db.get_image_addr(src[i].name, function(c) {
+          return function(img_addr) {
+            var card = new Card(c.id);
 
-          card.life = c.life;
-          card.mana = c.mana;
-          card.dmg = c.dmg;
-          card.name = c.name;
-        };
-      }(recv_my_hand[i]))
+            // card_container 는 add_card 로 넣어야 하고,
+            // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
+            // array 이므로 push 로 한다.
+            if(dest.add_card) dest.add_card(card, img_addr);
+            else dest.push(card);
+
+            card.life = c.life;
+            card.mana = c.mana;
+            card.dmg = c.dmg;
+            card.name = c.name;
+          };
+        }(src[i]));
+      }
     }
-  });
+
+    change_to_recv_data(recv_my_hand, my_hand);
+    change_to_recv_data(recv_my_field, h.my_field);
+    change_to_recv_data(recv_enemy_field, h.enemy_field);
+
+  }; }(this));
 
   this.socket.on('hearth-play-card', function(h) {
     return function(data) {
@@ -305,16 +326,16 @@ function HearthClient() {
           if(my_hand.card_list[i].id == card_id) {
             var c = my_hand.card_list[i];
             my_hand.remove_card_at(i);
-            
+
             // Insert card to the field
             h.my_field.splice (data.at, 0, c);
-            
+
             // Deduct the cost
             h.current_mana -= data.cost;
-            
+
             // Now redraw the field
             h.draw_field();
-            
+
           }
         }
       }
@@ -371,16 +392,16 @@ function HearthClient() {
   this.world_ctx = document.getElementById('world').getContext('2d');
   this.world_ctx.canvas.width = window.innerWidth;
   this.world_ctx.canvas.height = window.innerHeight;
-  
+
   this.field_canvas = document.getElementById('battlefield');
   this.field_ctx = this.field_canvas.getContext('2d');
-  
+
   // Turn end button
   this.field_ctx.fillStyle = 'yellow'
   this.field_ctx.fillRect(1200, 200, 150, 50)
 
   this.init_field_click();
-  
+
   this.choose_card_list = [];
 }
 HearthClient.prototype.init = function() {}
@@ -394,23 +415,23 @@ HearthClient.prototype.play_card = function(card_id, at) {
 }
 HearthClient.prototype.draw_field = function() {
   this.field_ctx.save();
-  
+
   var num_field = this.my_field.length;
-  
+
   for(var i = 0; i < num_field; i ++) {
     this.field_ctx.save();
-    
+
     this.field_ctx.beginPath();
     this.field_ctx.ellipse(500 - 100 * (i -  Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
-    
+
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
-    
-    // Set card position on the canvas 
+
+    // Set card position on the canvas
     this.my_field[i].x = 500 - 100 * (i -  Math.floor(num_field / 2));
     this.my_field[i].y = 250;
-    
+
     this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 100 * (i -  Math.floor(num_field / 2)) - 80, 170, 160, 238);
     this.field_ctx.restore();
   }
@@ -454,24 +475,24 @@ HearthClient.prototype.init_field_click = function() {
   this.field_canvas.onclick = function(e) {
     hearth_client.field_ctx.fillStyle = 'red';
     hearth_client.field_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
-    
+
     // If some minion on field is selected
     for(var i = 0; i < hearth_client.my_field.card_list; i ++) {
       if(e.offsetX >= hearth_client.my_field.card_list[i].x && e.offsetX <= hearth_client.my_field.card_list[i].x + 100) {
         if(e.offsetY >= hearth_client.my_field.card_list[i].y && e.offsetY <= hearth_client.my_field.card_list[i].y + 160) {
           console.log('Minion #', hearth_client.my_field.card_list[i].id, ' is selected!');
-          
+
           // TODO do something
           break;
         }
       }
     }
-    
-    if(e.offsetX >= 800 && e.offsetX <= 950 && e.offsetY >= 200 && e.offsetY <= 250) {
+
+    if(e.offsetX >= 1200 && e.offsetX <= 1350 && e.offsetY >= 200 && e.offsetY <= 250) {
       console.log('Turn ended!');
-      
+
       // Notify the server that the client has ended its turn
-      hearth_client.socket.emit('hearth-end-turn', {}); 
+      hearth_client.socket.emit('hearth-end-turn', {});
     }
   }
 };
@@ -482,14 +503,14 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
   var btn_x = 800,
     btn_y = 650;
 
-  // Adding button 
+  // Adding button
   hearth_client.fillStyle = 'yellow';
   hearth_client.world_ctx.fillRect(btn_x, btn_y, 200, 50);
 
   hearth_client.fillStyle = 'black';
   hearth_client.world_ctx.fillText("Done!", btn_x + 50, btn_y);
 
-  // Enable clicking the 'world' canvas 
+  // Enable clicking the 'world' canvas
   $('#world').css('pointer-events', 'auto');
   $('#battlefield').css('pointer-events', 'none');
 
