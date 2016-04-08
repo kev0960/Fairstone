@@ -87,28 +87,28 @@ CardContainer.prototype.on_selection_end = function(selected) {
   this.position_cards();
 }
 CardContainer.prototype.position_cards = function() {
-  // Set rotation
-  var loc_center = $(window).width() / 2 - this.x;
-  for (var i = 0; i < this.card_list.length; i++) {
-    var card_id = '#card' + this.card_list[i].id;
-    var deg = -30 + (60 / (this.card_list.length)) * i;
+    // Set rotation
+    var loc_center = $(window).width() / 2 - this.x;
+    for (var i = 0; i < this.card_list.length; i++) {
+      var card_id = '#card' + this.card_list[i].id;
+      var deg = -30 + (60 / (this.card_list.length)) * i;
 
-    var loc_x = loc_center - Math.floor(this.card_list.length / 2) * 100 + i * 100;
-    $(card_id).css({
-      '-webkit-transform': 'rotate(' + deg + 'deg)',
-      '-moz-transform': 'rotate(' + deg + 'deg)',
-      '-ms-transform': 'rotate(' + deg + 'deg)',
-      'transform': 'rotate(' + deg + 'deg)'
-    })
-    $(card_id).css('left', loc_x)
-    $(card_id).css('top', 0)
+      var loc_x = loc_center - Math.floor(this.card_list.length / 2) * 100 + i * 100;
+      $(card_id).css({
+        '-webkit-transform': 'rotate(' + deg + 'deg)',
+        '-moz-transform': 'rotate(' + deg + 'deg)',
+        '-ms-transform': 'rotate(' + deg + 'deg)',
+        'transform': 'rotate(' + deg + 'deg)'
+      })
+      $(card_id).css('left', loc_x)
+      $(card_id).css('top', 0)
 
-    this.card_list[i].card_draw.mouse.x = this.x + loc_x;
-    this.card_list[i].card_draw.mouse.y = this.y;
-    this.o.append($(card_id))
+      this.card_list[i].card_draw.mouse.x = this.x + loc_x;
+      this.card_list[i].card_draw.mouse.y = this.y;
+      this.o.append($(card_id))
+    }
   }
-}
-// Remove a particular card
+  // Remove a particular card
 CardContainer.prototype.remove_card_at = function(at) {
   var id = this.card_list[at].id;
   $('#card' + id).remove();
@@ -256,79 +256,81 @@ function HearthClient() {
   // Receiving hearth-event
   this.socket.on('hearth-event', function(h) {
     return function(data) {
-    console.log('Received' + data.event + ' Event!');
-    if (data.event_type == 'play_card') {
+      console.log('Received' + data.event + ' Event!');
+      if (data.event_type == 'play_card') {
 
-    }
-    if (data.event_type == 'summon') {
-
-    }
-
-    // 핸드에 카드를 받게 되면 계속해서 DOM Element 를 새로 생성하게 된다.
-    var recv_my_hand = [];
-    var recv_my_field = [];
-    var recv_enemy_field = [];
-
-    for (var i = 0; i < data.card_info.length; i++) {
-      if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'hand') {
-        recv_my_hand.push(data.card_info[i]);
       }
-      else if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'field') {
-        recv_my_field.push(data.card_info[i]);
+      if (data.event_type == 'summon') {
+
       }
-      else if (data.card_info[i].owner == 'enemy' && data.card_info[i].where == 'field') {
-        recv_enemy_field.push(data.card_info[i]);
+
+      // 핸드에 카드를 받게 되면 계속해서 DOM Element 를 새로 생성하게 된다.
+      var recv_my_hand = [];
+      var recv_my_field = [];
+      var recv_enemy_field = [];
+
+      for (var i = 0; i < data.card_info.length; i++) {
+        if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'hand') {
+          recv_my_hand.push(data.card_info[i]);
+        }
+        else if (data.card_info[i].owner == 'me' && data.card_info[i].where == 'field') {
+          recv_my_field.push(data.card_info[i]);
+        }
+        else if (data.card_info[i].owner == 'enemy' && data.card_info[i].where == 'field') {
+          recv_enemy_field.push(data.card_info[i]);
+        }
       }
-    }
 
-    console.log('[Received hand]', recv_my_hand);
+      console.log('[Received hand]', recv_my_hand);
 
-    var my_hand_len = recv_my_hand.length;
-    my_hand.card_list = [];
-    h.my_field = [];
-    h.enemy_field = [];
+      var my_hand_len = recv_my_hand.length;
+      my_hand.card_list = [];
+      h.my_field = [];
+      h.enemy_field = [];
 
-    // Remove entire cards
-    $('#player-card-container').empty();
+      // Remove entire cards
+      $('#player-card-container').empty();
 
-    function change_to_recv_data (src, dest) {
-      for(var i = 0; i < src.length; i ++) {
-        hearth_img_db.get_image_addr(src[i].name, function(c) {
-          return function(img_addr) {
-            var card = new Card(c.id);
+      function change_to_recv_data(src, dest) {
+        for (var i = 0; i < src.length; i++) {
+          hearth_img_db.get_image_addr(src[i].name, function(c) {
+            return function(img_addr) {
+              var card = new Card(c.id);
 
-            // card_container 는 add_card 로 넣어야 하고,
-            // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
-            // array 이므로 push 로 한다.
-            if(dest.add_card) dest.add_card(card, img_addr);
-            else dest.push(card);
+              // card_container 는 add_card 로 넣어야 하고,
+              // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
+              // array 이므로 push 로 한다.
+              if (dest.add_card) dest.add_card(card, img_addr);
+              else dest.push(card);
 
-            card.life = c.life;
-            card.mana = c.mana;
-            card.dmg = c.dmg;
-            card.name = c.name;
-          };
-        }(src[i]));
+              card.life = c.life;
+              card.mana = c.mana;
+              card.dmg = c.dmg;
+              card.name = c.name;
+            };
+          }(src[i]));
+        }
       }
-    }
 
-    change_to_recv_data(recv_my_hand, my_hand);
-    change_to_recv_data(recv_my_field, h.my_field);
-    change_to_recv_data(recv_enemy_field, h.enemy_field);
+      change_to_recv_data(recv_my_hand, my_hand);
+      change_to_recv_data(recv_my_field, h.my_field);
+      change_to_recv_data(recv_enemy_field, h.enemy_field);
 
-  }; }(this));
+      h.draw_field();
+    };
+  }(this));
 
   this.socket.on('hearth-play-card', function(h) {
     return function(data) {
-      if(data.result) {
+      if (data.result) {
         var card_id = data.id;
-        for(var i = 0; i < my_hand.card_list.length; i ++) {
-          if(my_hand.card_list[i].id == card_id) {
+        for (var i = 0; i < my_hand.card_list.length; i++) {
+          if (my_hand.card_list[i].id == card_id) {
             var c = my_hand.card_list[i];
             my_hand.remove_card_at(i);
 
             // Insert card to the field
-            h.my_field.splice (data.at, 0, c);
+            h.my_field.splice(data.at, 0, c);
 
             // Deduct the cost
             h.current_mana -= data.cost;
@@ -397,63 +399,82 @@ function HearthClient() {
   this.field_ctx = this.field_canvas.getContext('2d');
 
   // Turn end button
-  this.field_ctx.fillStyle = 'yellow'
-  this.field_ctx.fillRect(1200, 200, 150, 50)
+  this.field_ctx.fillStyle = 'yellow';
+  this.field_ctx.fillRect(1200, 200, 150, 50);
 
   this.init_field_click();
 
   this.choose_card_list = [];
 }
-HearthClient.prototype.init = function() {}
+HearthClient.prototype.init = function() {};
 HearthClient.prototype.play_card = function(card_id, at) {
   var id = parseInt(card_id.substr(4));
 
   this.socket.emit('hearth-user-play-card', {
-    id : id,
-    at : at
+    id: id,
+    at: at
   });
-}
+};
 HearthClient.prototype.draw_field = function() {
   this.field_ctx.save();
 
   var num_field = this.my_field.length;
 
-  for(var i = 0; i < num_field; i ++) {
+  for (var i = 0; i < this.my_field.length; i++) {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(500 - 100 * (i -  Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(800 - 200 * (i - Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.my_field[i].x = 500 - 100 * (i -  Math.floor(num_field / 2));
+    this.my_field[i].x = 800 - 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = 250;
 
-    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 100 * (i -  Math.floor(num_field / 2)) - 80, 170, 160, 238);
+    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 800 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
     this.field_ctx.restore();
   }
-}
-HearthClient.prototype.show_card_list = function(card_list) {
-    for (var i = 0; i < card_list.length; i++) {
-      hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
-        return function f(img) {
-          h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
-          h.choose_card_list[i].img = img;
-          h.choose_card_list[i].x = img_pos.x;
-          h.choose_card_list[i].y = img_pos.y;
-          h.choose_card_list[i].w = img.width;
-          h.choose_card_list[i].h = img.height;
-        };
-      }({
-        x: i * 300 + 400,
-        y: 200
-      }, this, i));
-    }
+  
+  var ene_num_field = this.enemy_field.length;
+  for(var i = 0; i < ene_num_field; i ++) {
+    this.field_ctx.save();
+
+    this.field_ctx.beginPath();
+    this.field_ctx.ellipse(800 - 200 * (i - Math.floor(ene_num_field / 2)), 150, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.closePath();
+
+    // We should clip the image of minion to look like an actual minion
+    this.field_ctx.clip();
+
+    // Set card position on the canvas
+    this.enemy_field[i].x = 800 - 200 * (i - Math.floor(ene_num_field / 2));
+    this.enemy_field[i].y = 150;
+
+    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 800 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 70, 160, 238);
+    this.field_ctx.restore();    
   }
-  // card_list is an array of card names
+};
+HearthClient.prototype.show_card_list = function(card_list) {
+ for (var i = 0; i < card_list.length; i++) {
+   hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+     return function f(img) {
+       h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+       h.choose_card_list[i].img = img;
+       h.choose_card_list[i].x = img_pos.x;
+       h.choose_card_list[i].y = img_pos.y;
+       h.choose_card_list[i].w = img.width;
+       h.choose_card_list[i].h = img.height;
+     };
+   }({
+     x: i * 300 + 400,
+     y: 200
+   }, this, i));
+ }
+};
+// card_list is an array of card names
 HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
   for (var i = 0; i < card_list.length; i++) {
     hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
@@ -477,9 +498,9 @@ HearthClient.prototype.init_field_click = function() {
     hearth_client.field_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
 
     // If some minion on field is selected
-    for(var i = 0; i < hearth_client.my_field.card_list; i ++) {
-      if(e.offsetX >= hearth_client.my_field.card_list[i].x && e.offsetX <= hearth_client.my_field.card_list[i].x + 100) {
-        if(e.offsetY >= hearth_client.my_field.card_list[i].y && e.offsetY <= hearth_client.my_field.card_list[i].y + 160) {
+    for (var i = 0; i < hearth_client.my_field.card_list; i++) {
+      if (e.offsetX >= hearth_client.my_field.card_list[i].x && e.offsetX <= hearth_client.my_field.card_list[i].x + 100) {
+        if (e.offsetY >= hearth_client.my_field.card_list[i].y && e.offsetY <= hearth_client.my_field.card_list[i].y + 160) {
           console.log('Minion #', hearth_client.my_field.card_list[i].id, ' is selected!');
 
           // TODO do something
@@ -488,7 +509,7 @@ HearthClient.prototype.init_field_click = function() {
       }
     }
 
-    if(e.offsetX >= 1200 && e.offsetX <= 1350 && e.offsetY >= 200 && e.offsetY <= 250) {
+    if (e.offsetX >= 1200 && e.offsetX <= 1350 && e.offsetY >= 200 && e.offsetY <= 250) {
       console.log('Turn ended!');
 
       // Notify the server that the client has ended its turn
@@ -575,9 +596,10 @@ HearthClient.prototype.get_card_image = function(card_name, f) {
     },
     url: "https://omgvamp-hearthstone-v1.p.mashape.com/cards/search/" + window.encodeURI(card_name),
     success: function(response) {
-      for(var i = 0; i < response.length; i ++) {
-        if(response[i].type != 'Hero') {
-          f(response[i].img); break;
+      for (var i = 0; i < response.length; i++) {
+        if (response[i].type != 'Hero') {
+          f(response[i].img);
+          break;
         }
       }
     }

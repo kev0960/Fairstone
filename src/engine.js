@@ -65,7 +65,7 @@ Card.prototype.add_state = function(f, state, who) {
     f: f,
     state: state,
     who: who,
-    when: this.engine.g_when.get_id()
+    when: this.owner.g_when.get_id()
   });
 };
 Card.prototype.chk_state = function(state) {
@@ -106,10 +106,12 @@ Card.prototype.calc_state = function(state, init_value) {
   return x;
 };
 Card.prototype.dmg = function() {
-  return this.calc_state('dmg', this.card_data.dmg);
+  var d = this.calc_state('dmg', this.card_data.dmg);
+  if(d < 0) return 0;
 }
 Card.prototype.mana = function() {
-  return this.calc_state('mana', this.card_data.mana);
+  var m = this.calc_state('mana', this.card_data.mana);
+  if(m < 0) return 0;
 }
 Card.prototype.update_atk_cnt = function() {
   if (this.atk_info.turn == this.owner.engine.current_turn) return;
@@ -214,7 +216,7 @@ function Player(player_name, job, engine) {
   // Engine 에서 설정해준다. 
   this.enemy = null;
 
-  this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
+  this.card_data = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
   // TODO make it to the default setting
   this.current_mana = 100;
@@ -240,6 +242,9 @@ function Player(player_name, job, engine) {
   this.socket = null;
 
   this.starting_cards = [];
+  
+  // 플레이어 역시 하나의 카드로 취급되기 때문에 고유의 ID 번호를 부여받게 된다. 
+  this.id = this.g_id.get_id();
 };
 
 Player.prototype.chk_aura = function(aura) {
@@ -278,7 +283,7 @@ Player.prototype.play_spell = function(c) {
 Player.prototype.chk_target = function(c, next) {
   if (c.status == 'destroyed') return;
   if (c.target) {
-    this.g_handler.add_event(new Event('target', c));
+    this.g_handler.add_event(new Event('target', [c]));
   }
 
   this.g_handler.add_callback(next, this, [c]);
@@ -297,7 +302,7 @@ Player.prototype.draw_card = function(c) {
   this.deck.remove_card(c);
   if (this.hand.num_card() >= 10) {
     // Card is burned!!
-    this.g_handler.add_event(new Event('card_burnt', c));
+    this.g_handler.add_event(new Event('card_burnt', [c]));
     return;
   }
 
@@ -354,11 +359,11 @@ Player.prototype.play_success = function(c, at, next) {
     this.field.put_card(c, at);
 
     console.log('battle cry phase is added');
-    this.g_handler.add_event(new Event('play_card', c, this));
+    this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
   }
   else if (c.card_data.type == 'spell') {
-    this.g_handler.add_event(new Event('play_card', c, this));
+    this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
   }
   
@@ -393,7 +398,7 @@ Player.prototype.end_bc = function(c) {
 };
 Player.prototype.after_play_phase = function(c) {
   console.log('afterplay phase!')
-  this.g_handler.add_event(new Event('after_play', c, this));
+  this.g_handler.add_event(new Event('after_play', [c, this]));
   
   // Death creation step is not created following this phase!
   this.g_handler.add_callback(this.summon_phase, this, [c]);
@@ -401,7 +406,7 @@ Player.prototype.after_play_phase = function(c) {
   this.g_handler.execute();
 };
 Player.prototype.summon_phase = function(c) {
-  this.g_handler.add_event(new Event('summon', c));
+  this.g_handler.add_event(new Event('summon', [c]));
   
   this.g_handler.execute();
 };
@@ -515,10 +520,10 @@ Player.prototype.actual_combat = function(c) {
   // Minion must be alive before this attack in order to invoke destroyed event!
   // (DESTROYED EVENT IS NOT CREATED TWICE)
   if (first.currnet_life <= 0 && first.current_life + first.dmg_given > 0 && first.status != 'destroyed')
-    this.g_handler.add_event(new Event('destroyed', first, second));
+    this.g_handler.add_event(new Event('destroyed', [first, second]));
 
   if (second.currnet_life <= 0 && second.current_life + second.dmg_given > 0 && second.status != 'destroyed')
-    this.g_handler.add_event(new Event('destroyed', second, first));
+    this.g_handler.add_event(new Event('destroyed', [second, first]));
 };
 Player.prototype.spell_dmg = function(c, dmg) {
   for (var i = 0; i < this.g_aura.length; i++) {
@@ -554,7 +559,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   this.g_handler.add_event(new Event('deal_dmg', [from, to, dmg]));
 
   if (to.current_life <= 0 && to.current_life + dmg > 0 && to.status != 'destroyed')
-    this.g_handler.add_event(new Event('destroyed', to, from));
+    this.g_handler.add_event(new Event('destroyed', [to, from]));
 };
 
 // Do not specify increased healling amount into 'heal'
@@ -618,7 +623,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
         this.g_handler.add_event(new Event('take_dmg', [to_arr[i], from, dmg_arr[i]]));
 
         if (to_arr[i].current_life <= 0 && to_arr[i].current_life + dmg_arr[i] > 0 && to_arr[i].status != 'destroyed')
-          this.g_handler.add_event(new Event('destroyed', to_arr[i], from));
+          this.g_handler.add_event(new Event('destroyed', [to_arr[i], from]));
       }
     }
   }
@@ -649,13 +654,14 @@ Player.prototype.silence = function(from, target) {
     }
   }
 
-  this.g_handler.add_event(new Event('silenced', from, target));
+  this.g_handler.add_event(new Event('silenced', [from, target]));
 };
 
 function Event(event_type, args) {
   this.event_type = event_type;
   this.turn = 0;
-
+  this.args = args;
+  
   if (event_type == 'attack') {
     this.who = args[0];
     this.target = args[1];
@@ -681,8 +687,7 @@ function Event(event_type, args) {
     this.attacker = args[1];
   }
   else if (event_type == 'summon') {
-    this.spawned = args[0];
-    this.is_user_play = args[1];
+    this.card = args[0];
   }
   else if (event_type == 'draw_card') {
     this.card = args[0];
@@ -703,7 +708,7 @@ function Event(event_type, args) {
     this.who = args[0];
   }
   else if (event_type == 'deathrattle') {
-    this.who = args[0];
+    this.card = args[0];
   }
   else if (event_type == 'propose_attack') {
     this.who = args[0];
@@ -719,6 +724,21 @@ function Event(event_type, args) {
   else if (event_type == 'card_burnt') {
     this.card = args[0];
   }
+  else if (event_type == 'heal') {
+    
+  }
+}
+Event.prototype.packer = function() {
+  if(this.args.length == 0) {
+    return {event_type : this.event_type};
+  } else if(this.args.length == 1) {
+    return {event_type : this.event_type, from : this.args[0].id};
+  } else if(this.args.length == 2) {
+    return {event_type : this.event_type, from : this.args[0].id, to : this.args[1].id};
+  } else if(this.args.length == 3) {
+    return {event_type : this.event_type, from : this.args[0].id, to : this.args[1].id, amount : this.args[2]};
+  }
+  throw Error('something is wrong with Event Packer');
 }
 // Global Event handler
 function Handler(engine) {
@@ -803,6 +823,7 @@ Handler.prototype.add_phase = function(f, that, args) {
   }
 }
 Handler.prototype.execute = function() {
+  console.log('execute!');
   if (this.exec_lock) return;
   this.exec_lock = true;
 
@@ -832,8 +853,41 @@ Handler.prototype.execute = function() {
 
   // this.exec_lock = false;
 };
+Handler.prototype.log_event = function(e) {
+  var s = '[' + e.event_type + '] ';
+  switch(e.event_type) {
+    case 'attack' :
+      s += e.who.card_data.name + ' attacks ' + e.target.card_data.name; break;
+    case 'deal_dmg' :
+      s += e.attacker.card_data.name + ' deals dmg to ' + e.victim.card_data.name + ' / dmg :: ' + e.dmg; break;
+    case 'take_dmg' :
+      s += e.victim.card_data.name + ' takes dmg from ' + e.attacker.card_data.name + ' / dmg :: ' + e.dmg; break;
+    case 'destroyed' :
+      s += e.destroyed.card_data.name + ' is destroyed';  break;
+    case 'summon' :
+      s += e.card.card_data.name + ' is summoned'; break;
+    case 'draw_card' :
+      s += e.card.card_data.name + ' is drawn from a deck'; break;
+    case 'play_card' :
+      s += e.card.card_data.name + ' is played from hand'; break;
+    case 'after_play' :
+    case 'turn_begin' :
+      s += e.who.card_data.name + ' turn begins'; break;
+    case 'turn_ends' :
+      s += e.who.card_data.name + ' turn ends'; break;
+    case 'deathrattle' :
+      s += e.card.card_data.name + ' deathrattle '; break;
+    case 'propose_attack' :
+      break;
+    case 'pre_dmg' :
+      break;
+    case 'heal' :
+      break;
+  }
+  console.log(s);
+}
 Handler.prototype.do_event = function(e) {
-  console.log('[Handler] Process Event :: ', e.event_type);
+  this.log_event(e)
 
   // Whenever some event is handled, notify it to clients
   this.engine.send_client_data(e);
@@ -868,8 +922,8 @@ Handler.prototype.death_creation = function() {
   // Since Event queue is already flushed out, we can comfortably
   // force push events
   for (i = 0; i < this.destroyed_queue.length; i++) {
-    this.force_add_event(new Event('destroyed', dq[i].destroyed, dq[i].attacker));
-    this.force_add_event(new Event('deathrattle', dq[i].destroyed));
+    this.force_add_event(new Event('destroyed', [dq[i].destroyed, dq[i].attacker]));
+    this.force_add_event(new Event('deathrattle', [dq[i].destroyed]));
   }
   
   // Clear destroyed queue
@@ -1106,7 +1160,7 @@ Engine.prototype.end_turn = function() {
   this.current_player.current_overload_mana = this.current_player.next_overload_mana;
   this.current_player.next_overload_mana = 0;
 
-  this.g_handler.add_event(new Event('turn_begin', this.current_player));
+  this.g_handler.add_event(new Event('turn_begin', [this.current_player]));
   this.g_handler.execute();
 };
 Engine.prototype.set_up_listener = function(p) {
@@ -1147,7 +1201,7 @@ Engine.prototype.set_up_listener = function(p) {
     return function(data) {
       if (p == e.current_player) {
         console.log('Player ', p.player_name, 'turn ends');
-        e.g_handler.add_event(new Event('turn_end', p));
+        e.g_handler.add_event(new Event('turn_end', [p]));
         e.g_handler.add_callback(e.end_turn, e, []);
         e.g_handler.execute();
       }
@@ -1254,13 +1308,13 @@ Engine.prototype.send_client_data = function(e) {
 
   this.p1_socket.emit('hearth-event', {
     card_info: p1_card_info,
-    event: e,
-    enemy_num_hand: this.p2.hand.num_card()
+    enemy_num_hand: this.p2.hand.num_card(),
+    event : (e ? e.packer() : null )
   });
   this.p2_socket.emit('hearth-event', {
     card_info: p2_card_info,
-    event: e,
-    enemy_num_hand: this.p1.hand.num_card()
+    enemy_num_hand: this.p1.hand.num_card(),
+    event : (e ? e.packer() : null)
   });
 };
 

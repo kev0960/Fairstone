@@ -31,10 +31,10 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.g_handler.add_handler(function(e, me) {
-              if (e.turn_end == me.owner) {
+              if (e.who == me.owner) {
                 me.do_action('emperor_thaurissan');
                 for (var i = 0; i < me.owner.hand.num_card(); i++) {
-                  me.owner.hand[i].add_state(inc(-1), 'mana', me);
+                  me.owner.hand.card_list[i].add_state(inc(-1), 'mana', me);
                 }
               }
             }, 'turn_end', me, false);
