@@ -107,11 +107,15 @@ Card.prototype.calc_state = function(state, init_value) {
 };
 Card.prototype.dmg = function() {
   var d = this.calc_state('dmg', this.card_data.dmg);
-  if(d < 0) return 0;
+  if (d < 0) return 0;
+  
+  return d;
 }
 Card.prototype.mana = function() {
   var m = this.calc_state('mana', this.card_data.mana);
-  if(m < 0) return 0;
+  if (m < 0) return 0;
+  
+  return m;
 }
 Card.prototype.update_atk_cnt = function() {
   if (this.atk_info.turn == this.owner.engine.current_turn) return;
@@ -242,7 +246,7 @@ function Player(player_name, job, engine) {
   this.socket = null;
 
   this.starting_cards = [];
-  
+
   // 플레이어 역시 하나의 카드로 취급되기 때문에 고유의 ID 번호를 부여받게 된다. 
   this.id = this.g_id.get_id();
 };
@@ -293,7 +297,7 @@ Player.prototype.spell_txt_phase = function(c, next) {
 
   next(c);
 };
-Player.prototype.end_spell_txt = function (c) {
+Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
@@ -341,12 +345,12 @@ Player.prototype.play_success = function(c, at, next) {
   // but forcefully summoned
   if (c.status == 'field') {
     this.g_handler.add_phase(this.summon_phase, this, [c]);
-    
+
     // only turn on non-battlecry stuff (어치파 bc phase 로 들어갈 일은 없다)
     this.g_handler.add_callback(next, this, [c, true, false]);
     return;
   }
-  
+
   c.status = 'field';
   this.current_mana -= c.mana();
   c.field_summon_turn = this.engine.current_turn;
@@ -358,6 +362,15 @@ Player.prototype.play_success = function(c, at, next) {
   if (c.card_data.type == 'minion') {
     this.field.put_card(c, at);
 
+    c.atk_info.cnt = c.calc_state('atk_num', 1);
+    c.atk_info.turn = this.engine.current_turn;
+    
+    if(c.chk_state('charge')) {
+      c.atk_info.did = 0;  
+    } else {
+      c.atk_info.did = c.atk_info.cnt; // Cannot move at a spawned turn
+    }
+    
     console.log('battle cry phase is added');
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
@@ -366,7 +379,7 @@ Player.prototype.play_success = function(c, at, next) {
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
   }
-  
+
   this.g_handler.execute();
 };
 // next (card, non_battlecry_stuff, battlecry_stuff)
@@ -377,7 +390,7 @@ Player.prototype.battlecry_phase = function(c, next) {
   // 않도록 add_phase 시에 설사 next_phase 가 등록되어 있지 않더라도 
   // next_phase 가 등록되는 것을 방지해야 한다. 
   this.g_handler.add_phase_block = true;
-  
+
   console.log('battle cry phase !!')
   if (next) {
     next(c, true, true); // Do battle cry!
@@ -387,27 +400,27 @@ Player.prototype.battlecry_phase = function(c, next) {
       next(c, false, true);
     }
   }
-  
+
   this.g_handler.execute();
 };
 Player.prototype.end_bc = function(c) {
-  this.g_handler.add_phase_block = false; 
+  this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.after_play_phase, this, [c]);
-  
+
   this.g_handler.execute();
 };
 Player.prototype.after_play_phase = function(c) {
   console.log('afterplay phase!')
   this.g_handler.add_event(new Event('after_play', [c, this]));
-  
+
   // Death creation step is not created following this phase!
   this.g_handler.add_callback(this.summon_phase, this, [c]);
-  
+
   this.g_handler.execute();
 };
 Player.prototype.summon_phase = function(c) {
   this.g_handler.add_event(new Event('summon', [c]));
-  
+
   this.g_handler.execute();
 };
 
@@ -454,7 +467,7 @@ Player.prototype.chk_invincible = function(target) {
       return true;
     }
   }
-  if (this.is_invincible.until >= this.engine.current_turn) return true;
+  if (target.is_invincible.until >= this.engine.current_turn) return true;
 
   return false;
 };
@@ -466,10 +479,13 @@ Player.prototype.combat = function(c, target) {
 
   c.target = target;
   c.is_stealth.until = -1; // stealth is gone!
+  c.atk_info.did += 1; // Did attack 
 
   // propose_attack event can change the target of the attacker
   this.g_handler.add_event(new Event('propose_attack', [c, target]));
-  this.g_handler.add_callback(this.attack, this, []);
+  this.g_handler.add_callback(this.attack, this, [c]);
+  
+  this.g_handler.execute();
 };
 Player.prototype.attack = function(c) {
   // If the attacker is mortally wounded or out of play, then combat event is closed
@@ -477,7 +493,9 @@ Player.prototype.attack = function(c) {
 
   // attack event does not change the target of an attacker
   this.g_handler.add_event(new Event('attack', [c, c.target]));
-  this.g_handler.add_callback(this.pre_combat, this, []);
+  this.g_handler.add_callback(this.pre_combat, this, [c]);
+  
+  this.g_handler.execute();
 };
 Player.prototype.pre_combat = function(c) {
   var target = c.target;
@@ -488,6 +506,8 @@ Player.prototype.pre_combat = function(c) {
   this.g_handler.add_event(new Event('pre_dmg', [c, target, c.dmg_given]));
   this.g_handler.add_event(new Event('pre_dmg', [target, c, target.dmg_given]));
   this.g_handler.add_callback(this.actual_combat, this, [c]);
+  
+  this.g_handler.execute();
 };
 Player.prototype.actual_combat = function(c) {
   var target = c.target;
@@ -514,16 +534,20 @@ Player.prototype.actual_combat = function(c) {
     this.g_handler.add_event(new Event('deal_dmg', [target, c, target.dmg_given]));
   }
 
-  var first = c.summon_order > target.summon_order ? target.summon_order : c.summon_order;
-  var second = c.summon_order > target.summon_order ? c.summon_order : target.summon_order;
+  var first = c.summon_order > target.summon_order ? target : c;
+  var second = c.summon_order > target.summon_order ? c : target;
 
+  console.log('First :: ', first.card_data.name, ' life : ', first.current_life);
+  console.log('Second :: ', second.card_data.name, ' life : ', second.current_life);
   // Minion must be alive before this attack in order to invoke destroyed event!
   // (DESTROYED EVENT IS NOT CREATED TWICE)
-  if (first.currnet_life <= 0 && first.current_life + first.dmg_given > 0 && first.status != 'destroyed')
+  if (first.current_life <= 0 && first.current_life + second.dmg_given > 0 && first.status != 'destroyed')
     this.g_handler.add_event(new Event('destroyed', [first, second]));
 
-  if (second.currnet_life <= 0 && second.current_life + second.dmg_given > 0 && second.status != 'destroyed')
+  if (second.current_life <= 0 && second.current_life + first.dmg_given > 0 && second.status != 'destroyed')
     this.g_handler.add_event(new Event('destroyed', [second, first]));
+    
+  this.g_handler.execute();
 };
 Player.prototype.spell_dmg = function(c, dmg) {
   for (var i = 0; i < this.g_aura.length; i++) {
@@ -633,7 +657,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
 Player.prototype.silence = function(from, target) {
   target.is_frozen.until = -1;
   target.is_shielded.until = -1;
-  target.is_invincible = -1;
+  target.is_invincible.until = -1;
 
   for (var i = 0; i < this.g_aura.length; i++) {
     if (this.g_aura[i].who == target) {
@@ -661,7 +685,7 @@ function Event(event_type, args) {
   this.event_type = event_type;
   this.turn = 0;
   this.args = args;
-  
+
   if (event_type == 'attack') {
     this.who = args[0];
     this.target = args[1];
@@ -725,22 +749,39 @@ function Event(event_type, args) {
     this.card = args[0];
   }
   else if (event_type == 'heal') {
-    
+
   }
 }
 Event.prototype.packer = function() {
-  if(this.args.length == 0) {
-    return {event_type : this.event_type};
-  } else if(this.args.length == 1) {
-    return {event_type : this.event_type, from : this.args[0].id};
-  } else if(this.args.length == 2) {
-    return {event_type : this.event_type, from : this.args[0].id, to : this.args[1].id};
-  } else if(this.args.length == 3) {
-    return {event_type : this.event_type, from : this.args[0].id, to : this.args[1].id, amount : this.args[2]};
+    if (this.args.length == 0) {
+      return {
+        event_type: this.event_type
+      };
+    }
+    else if (this.args.length == 1) {
+      return {
+        event_type: this.event_type,
+        from: this.args[0].id
+      };
+    }
+    else if (this.args.length == 2) {
+      return {
+        event_type: this.event_type,
+        from: this.args[0].id,
+        to: this.args[1].id
+      };
+    }
+    else if (this.args.length == 3) {
+      return {
+        event_type: this.event_type,
+        from: this.args[0].id,
+        to: this.args[1].id,
+        amount: this.args[2]
+      };
+    }
+    throw Error('something is wrong with Event Packer');
   }
-  throw Error('something is wrong with Event Packer');
-}
-// Global Event handler
+  // Global Event handler
 function Handler(engine) {
   this.queue = [];
 
@@ -772,13 +813,14 @@ function Handler(engine) {
   // 거쳐야 하기 때문에 기존의 callback 에 최상단 phase 를 등록하게 되면 위 단계를
   // 건너 뛰기 때문이다.
   this.next_phase = null;
-  
-  this.add_phase_block = false; 
+
+  this.add_phase_block = false;
 
   this.engine = engine;
 }
 
 Handler.prototype.add_event = function(e) {
+  console.log('[Event]', e.event_type, ' is added!!');
   e.turn = this.engine.current_turn;
 
   this.legacy_queue.push(e);
@@ -833,7 +875,7 @@ Handler.prototype.execute = function() {
       this.queue_resolved_callback.splice(0, 1);
 
       f.f.apply(f.that, f.args);
-      
+
       this.exec_lock = false;
       this.execute();
       return;
@@ -855,33 +897,43 @@ Handler.prototype.execute = function() {
 };
 Handler.prototype.log_event = function(e) {
   var s = '[' + e.event_type + '] ';
-  switch(e.event_type) {
-    case 'attack' :
-      s += e.who.card_data.name + ' attacks ' + e.target.card_data.name; break;
-    case 'deal_dmg' :
-      s += e.attacker.card_data.name + ' deals dmg to ' + e.victim.card_data.name + ' / dmg :: ' + e.dmg; break;
-    case 'take_dmg' :
-      s += e.victim.card_data.name + ' takes dmg from ' + e.attacker.card_data.name + ' / dmg :: ' + e.dmg; break;
-    case 'destroyed' :
-      s += e.destroyed.card_data.name + ' is destroyed';  break;
-    case 'summon' :
-      s += e.card.card_data.name + ' is summoned'; break;
-    case 'draw_card' :
-      s += e.card.card_data.name + ' is drawn from a deck'; break;
-    case 'play_card' :
-      s += e.card.card_data.name + ' is played from hand'; break;
-    case 'after_play' :
-    case 'turn_begin' :
-      s += e.who.card_data.name + ' turn begins'; break;
-    case 'turn_ends' :
-      s += e.who.card_data.name + ' turn ends'; break;
-    case 'deathrattle' :
-      s += e.card.card_data.name + ' deathrattle '; break;
-    case 'propose_attack' :
+  switch (e.event_type) {
+    case 'attack':
+      s += e.who.card_data.name + ' attacks ' + e.target.card_data.name;
       break;
-    case 'pre_dmg' :
+    case 'deal_dmg':
+      s += e.attacker.card_data.name + ' deals dmg to ' + e.victim.card_data.name + ' / dmg :: ' + e.dmg;
       break;
-    case 'heal' :
+    case 'take_dmg':
+      s += e.victim.card_data.name + ' takes dmg from ' + e.attacker.card_data.name + ' / dmg :: ' + e.dmg;
+      break;
+    case 'destroyed':
+      s += e.destroyed.card_data.name + ' is destroyed';
+      break;
+    case 'summon':
+      s += e.card.card_data.name + ' is summoned';
+      break;
+    case 'draw_card':
+      s += e.card.card_data.name + ' is drawn from a deck';
+      break;
+    case 'play_card':
+      s += e.card.card_data.name + ' is played from hand';
+      break;
+    case 'after_play':
+    case 'turn_begin':
+      s += e.who.card_data.name + ' turn begins';
+      break;
+    case 'turn_ends':
+      s += e.who.card_data.name + ' turn ends';
+      break;
+    case 'deathrattle':
+      s += e.card.card_data.name + ' deathrattle ';
+      break;
+    case 'propose_attack':
+      break;
+    case 'pre_dmg':
+      break;
+    case 'heal':
       break;
   }
   console.log(s);
@@ -907,7 +959,7 @@ Handler.prototype.do_event = function(e) {
 Handler.prototype.death_creation = function() {
   console.log('Death Creation ', this.destroyed_queue.length);
   console.log('Callback size, ', this.queue_resolved_callback.length);
-  
+
   this.destroyed_queue_length = this.destroyed_queue.length;
   var dq = this.destroyed_queue;
 
@@ -925,15 +977,15 @@ Handler.prototype.death_creation = function() {
     this.force_add_event(new Event('destroyed', [dq[i].destroyed, dq[i].attacker]));
     this.force_add_event(new Event('deathrattle', [dq[i].destroyed]));
   }
-  
+
   // Clear destroyed queue
   dq.splice(0, dq.length);
 
   // Death Creation step 이 끝나면 end phase 를 실행할 수 있게 된다.
-  if(this.next_phase) this.add_callback(this.end_phase, this, []);
-  
+  if (this.next_phase) this.add_callback(this.end_phase, this, []);
+
   this.exec_lock = false;
-  if(this.queue.length || this.queue_resolved_callback.length) {
+  if (this.queue.length || this.queue_resolved_callback.length) {
     this.execute();
   }
 };
@@ -942,7 +994,7 @@ Handler.prototype.end_phase = function() {
   if (this.next_phase) {
     var f = this.next_phase;
     this.next_phase = null;
-    
+
     f.f.apply(f.that, f.args);
   }
 }
@@ -1026,7 +1078,21 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p1_selection_waiting = false;
   this.p2_selection_waiting = false;
 }
-
+Engine.prototype.find_card_by_id = function(id) {
+  for (var i = 0; i < this.p1.hand.num_card(); i++) {
+    if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
+  }
+  for (var i = 0; i < this.p1.field.num_card(); i++) {
+    if (this.p1.field.card_list[i].id == id) return this.p1.field.card_list[i];
+  }
+  for (var i = 0; i < this.p2.hand.num_card(); i++) {
+    if (this.p2.hand.card_list[i].id == id) return this.p2.hand.card_list[i];
+  }
+  for (var i = 0; i < this.p2.field.num_card(); i++) {
+    if (this.p2.field.card_list[i].id == id) return this.p2.field.card_list[i];
+  }
+  return null; // If no card is found
+}
 Engine.prototype.start_match = function() {
   this.p1.starting_cards = util.rand_select(this.p1.deck.get_card_datas(), 3);
   this.p2.starting_cards = util.rand_select(this.p2.deck.get_card_datas(), 4);
@@ -1197,6 +1263,18 @@ Engine.prototype.set_up_listener = function(p) {
     };
   }(this));
 
+  p.socket.on('hearth-combat', function(e) {
+    return function(data) {
+      var from = e.find_card_by_id(data.from_id);
+      var to = e.find_card_by_id(data.to_id);
+
+      //console.log('combat detected', from.card_data.name, ' vs ', to.card_data.name);
+      if(from && to) {
+        from.owner.combat(from, to);
+      }
+    };
+  }(this));
+
   p.socket.on('hearth-end-turn', function(e) {
     return function(data) {
       if (p == e.current_player) {
@@ -1303,18 +1381,18 @@ Engine.prototype.send_client_data = function(e) {
     });
   }
 
-  //  console.log('[p1 card info]', p1_card_info);
+  // console.log('[p1 card info]', p1_card_info);
   //  console.log('[p2 card info]', p2_card_info);
 
   this.p1_socket.emit('hearth-event', {
     card_info: p1_card_info,
     enemy_num_hand: this.p2.hand.num_card(),
-    event : (e ? e.packer() : null )
+    event: (e ? e.packer() : null)
   });
   this.p2_socket.emit('hearth-event', {
     card_info: p2_card_info,
     enemy_num_hand: this.p1.hand.num_card(),
-    event : (e ? e.packer() : null)
+    event: (e ? e.packer() : null)
   });
 };
 

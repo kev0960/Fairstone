@@ -22,6 +22,8 @@ function Card(id) {
   // Card position on the canvas field
   this.x = 0;
   this.y = 0;
+
+  this.is_selected = false;
 }
 
 var token = localStorage.getItem('hearth-server-token')
@@ -158,19 +160,20 @@ HearthImageDB.prototype.get_image_arr = function(card_name_arr, on_load, on_done
           hearth_img_db.add_image(card_name, img);
 
           num_finish.num--;
-        };
 
-        if (num_finish.num == 0) {
-          if (on_done) on_done();
-        }
+          if (num_finish.num == 0) {
+            if (on_done) on_done();
+          }
+        };
       };
     }(card_name_arr[i], num_finish, on_load, on_done));
   }
 }
-HearthImageDB.prototype.get_image = function(card_name, on_load) {
+HearthImageDB.prototype.get_image = function(card_name, on_load, on_done) {
   for (var j = 0; j < this.img_list.length; j++) {
     if (this.img_list[j].card_name == card_name) {
       on_load(this.img_list[j].img);
+      if(on_done) on_done();
       return;
     }
   }
@@ -184,6 +187,7 @@ HearthImageDB.prototype.get_image = function(card_name, on_load) {
         on_load(img)
 
         hearth_img_db.add_image(card_name, img);
+        if(on_done) on_done();
       };
     };
   }(card_name, on_load));
@@ -317,6 +321,7 @@ function HearthClient() {
       change_to_recv_data(recv_enemy_field, h.enemy_field);
 
       h.draw_field();
+      h.log(data.event.event_type)
     };
   }(this));
 
@@ -403,6 +408,7 @@ function HearthClient() {
   this.field_ctx.fillRect(1200, 200, 150, 50);
 
   this.init_field_click();
+  this.field_selected = null; // If something is selected, then store the id of that card
 
   this.choose_card_list = [];
 }
@@ -415,64 +421,76 @@ HearthClient.prototype.play_card = function(card_id, at) {
     at: at
   });
 };
+HearthClient.prototype.combat = function(from_card_id, to_card_id) {
+  this.socket.emit('hearth-combat', {
+    from_id: from_card_id,
+    to_id: to_card_id
+  });
+}
 HearthClient.prototype.draw_field = function() {
+  this.field_ctx.clearRect(0, 0, 2000, 2000);
+  
   this.field_ctx.save();
-
+  
+  // Turn end button
+  this.field_ctx.fillStyle = 'yellow';
+  this.field_ctx.fillRect(1200, 200, 150, 50);
+  
   var num_field = this.my_field.length;
 
   for (var i = 0; i < this.my_field.length; i++) {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(800 - 200 * (i - Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(500 - 200 * (i - Math.floor(num_field / 2)), 250, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.my_field[i].x = 800 - 200 * (i - Math.floor(num_field / 2));
+    this.my_field[i].x = 500 - 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = 250;
 
-    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 800 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
+    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
     this.field_ctx.restore();
   }
-  
+
   var ene_num_field = this.enemy_field.length;
-  for(var i = 0; i < ene_num_field; i ++) {
+  for (var i = 0; i < ene_num_field; i++) {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(800 - 200 * (i - Math.floor(ene_num_field / 2)), 150, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(500 - 200 * (i - Math.floor(ene_num_field / 2)), 100, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.enemy_field[i].x = 800 - 200 * (i - Math.floor(ene_num_field / 2));
-    this.enemy_field[i].y = 150;
+    this.enemy_field[i].x = 500 - 200 * (i - Math.floor(ene_num_field / 2));
+    this.enemy_field[i].y = 100;
 
-    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 800 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 70, 160, 238);
-    this.field_ctx.restore();    
+    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
+    this.field_ctx.restore();
   }
 };
 HearthClient.prototype.show_card_list = function(card_list) {
- for (var i = 0; i < card_list.length; i++) {
-   hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
-     return function f(img) {
-       h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
-       h.choose_card_list[i].img = img;
-       h.choose_card_list[i].x = img_pos.x;
-       h.choose_card_list[i].y = img_pos.y;
-       h.choose_card_list[i].w = img.width;
-       h.choose_card_list[i].h = img.height;
-     };
-   }({
-     x: i * 300 + 400,
-     y: 200
-   }, this, i));
- }
+  for (var i = 0; i < card_list.length; i++) {
+    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+      return function f(img) {
+        h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
+        h.choose_card_list[i].img = img;
+        h.choose_card_list[i].x = img_pos.x;
+        h.choose_card_list[i].y = img_pos.y;
+        h.choose_card_list[i].w = img.width;
+        h.choose_card_list[i].h = img.height;
+      };
+    }({
+      x: i * 300 + 400,
+      y: 200
+    }, this, i));
+  }
 };
 // card_list is an array of card names
 HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
@@ -498,13 +516,47 @@ HearthClient.prototype.init_field_click = function() {
     hearth_client.field_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
 
     // If some minion on field is selected
-    for (var i = 0; i < hearth_client.my_field.card_list; i++) {
-      if (e.offsetX >= hearth_client.my_field.card_list[i].x && e.offsetX <= hearth_client.my_field.card_list[i].x + 100) {
-        if (e.offsetY >= hearth_client.my_field.card_list[i].y && e.offsetY <= hearth_client.my_field.card_list[i].y + 160) {
-          console.log('Minion #', hearth_client.my_field.card_list[i].id, ' is selected!');
+    for (var i = 0; i < hearth_client.my_field.length; i++) {
+      hearth_client.field_ctx.strokeStyle = 'white';
+      hearth_client.field_ctx.strokeRect(hearth_client.my_field[i].x, hearth_client.my_field[i].y, 100, 160);
 
-          // TODO do something
-          break;
+      if (e.offsetX >= hearth_client.my_field[i].x && e.offsetX <= hearth_client.my_field[i].x + 100) {
+        if (e.offsetY >= hearth_client.my_field[i].y && e.offsetY <= hearth_client.my_field[i].y + 160) {
+          console.log('Minion #', hearth_client.my_field[i].id, ' is selected!');
+
+          if (hearth_client.field_selected) {
+            hearth_client.combat(hearth_client.field_selected.id, hearth_client.my_field[i].id);
+            hearth_client.field_selected.is_selected = false;
+            hearth_client.field_selected = null;
+            return;
+          }
+          hearth_client.field_selected = hearth_client.my_field[i];
+          hearth_client.my_field[i].is_selected = true;
+
+          return;
+        }
+      }
+    }
+
+    for (var i = 0; i < hearth_client.enemy_field.length; i++) {
+            hearth_client.field_ctx.strokeStyle = 'white';
+      hearth_client.field_ctx.strokeRect(hearth_client.enemy_field[i].x, hearth_client.enemy_field[i].y, 100, 160);
+      if (e.offsetX >= hearth_client.enemy_field[i].x && e.offsetX <= hearth_client.enemy_field[i].x + 100) {
+        if (e.offsetY >= hearth_client.enemy_field[i].y && e.offsetY <= hearth_client.enemy_field[i].y + 160) {
+          console.log('Minion #', hearth_client.enemy_field[i].name, ' is selected!');
+
+          if (hearth_client.field_selected) {
+            console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.enemy_field[i].name)
+            hearth_client.combat(hearth_client.field_selected.id, hearth_client.enemy_field[i].id);
+            hearth_client.field_selected.is_selected = false;
+            hearth_client.field_selected = null;
+            return;
+          }
+
+          hearth_client.field_selected = hearth_client.enemy_field[i].id;
+          hearth_client.enemy_field[i].is_selected = true;
+
+          return;
         }
       }
     }
@@ -585,6 +637,33 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
       }
     }
   }
+}
+HearthClient.prototype.log = function(e) {
+  var log = '';
+  if(e) log += '[' + e + '] ';
+
+  this.world_ctx.clearRect(0, 0, 2000, 300);
+  this.world_ctx.strokeStyle = 'white';
+
+  
+  log += 'My Hand :: ';  
+  for(var i = 0; i < my_hand.card_list.length; i ++) {
+    log += '[' + my_hand.card_list[i].id + ' , ' + my_hand.card_list[i].name + '/' + my_hand.card_list[i].mana + '/' + my_hand.card_list[i].dmg + '/' + my_hand.card_list[i].life + '] ';
+  }
+
+  this.world_ctx.strokeText(log, 0, 200);
+  
+  log = 'My Field :: ';
+  
+  for(var i = 0; i < hearth_client.my_field.length; i ++) {
+    log += '[' + hearth_client.my_field[i].id + ' , ' + hearth_client.my_field[i].name + '/' + hearth_client.my_field[i].mana + '/' + hearth_client.my_field[i].dmg + '/' + hearth_client.my_field[i].life + '] ';
+  }
+  log += ' Enemy Field :: ';
+  for(var i = 0; i < hearth_client.enemy_field.length; i ++) {
+    log += '[' + hearth_client.enemy_field[i].id + ' , ' + hearth_client.enemy_field[i].name + '/' + hearth_client.enemy_field[i].mana + '/' + hearth_client.enemy_field[i].dmg + '/' + hearth_client.enemy_field[i].life + '] ';
+  }
+  
+  this.world_ctx.strokeText(log, 0, 250);
 }
 
 // Get card image (Card name must be english)
