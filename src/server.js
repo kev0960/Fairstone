@@ -250,7 +250,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['Fireball', 2, 'War Golem', 2, 'Magma Rager', 2, 'Murloc Raider', 2]
+      cards: ['Fireball', 5, 'War Golem', 2, 'Magma Rager', 2, 'Murloc Raider', 2]
     }]
   }, {
     id: 'Jaebum',

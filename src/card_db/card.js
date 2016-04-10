@@ -10,6 +10,8 @@
   function end_spell(me) {
     me.owner.end_spell_txt(me);
   }
+  function nothing() { }
+  
   var card_do = {
     'Murloc Raider': {
       on_play: function(me, bc, user_play, at) {
@@ -86,12 +88,12 @@
           function select_success(me) { // on select success
             me.owner.play_success(me, -1,
               function(me) {
-                me.owner.deal_dmg(me.calc_spell_dmg(6), me.target, me);
+                me.owner.deal_dmg(me.spell_dmg(6), me, me.target);
                 end_spell(me);
               }
             );
           },
-          null, // on select failure
+          nothing, // on select failure
           forced_target); // if forced_target is enabled then we don't make user to choose
       }
     },
