@@ -56,7 +56,17 @@ CardContainer.prototype.add_card = function(card, img_addr) {
 
   this.position_cards();
 }
-CardContainer.prototype.make_card_first = function(c) {
+CardContainer.prototype.set_card_img = function(card, img_addr) {
+  for(var i = 0; i < this.card_list.length; i ++) {
+    if(this.card_list[i] == card) {
+      var card_id = 'card' + card.id;
+      $('#' + card_id).css('background-image', 'url(' + img_addr + ')');
+      return;
+    }
+  }
+  return; 
+}
+CardContainer.prototype.make_card_first = function(c) { 
   this.o.append(c); // make c to be first img element
 }
 
@@ -186,9 +196,9 @@ HearthImageDB.prototype.get_image = function(card_name, on_load, on_done) {
       img.src = img_addr;
 
       img.onload = function() {
-        on_load(img)
-
         hearth_img_db.add_image(card_name, img);
+        on_load(img);
+
         if (on_done) on_done();
       };
     };
@@ -208,9 +218,9 @@ HearthImageDB.prototype.get_image_addr = function(card_name, on_load) {
       img.src = img_addr;
 
       img.onload = function() {
-        on_load(img.src)
-
         hearth_img_db.add_image(card_name, img);
+
+        on_load(img.src)
       };
     };
   }(card_name, on_load));
@@ -228,8 +238,16 @@ HearthImageDB.prototype.add_image = function(card_name, img) {
     card_name: card_name,
     img: img
   });
+  console.log(card_name, ' image is added');
 }
-
+HearthImageDB.prototype.has_image = function(card_name) {
+  for (var j = 0; j < this.img_list.length; j++) {
+    if (this.img_list[j].card_name == card_name) {
+      return true
+    }
+  }
+  return false;
+}
 var hearth_img_db = new HearthImageDB();
 
 function HearthClient() {
@@ -262,7 +280,7 @@ function HearthClient() {
   // Receiving hearth-event
   this.socket.on('hearth-event', function(h) {
     return function(data) {
-      console.log('Received' , data.event , ' Event!');
+      console.log('Received', data.event, ' Event!');
       if (data.event_type == 'play_card') {
 
       }
@@ -290,7 +308,7 @@ function HearthClient() {
       console.log('[Received hand]', recv_my_hand);
       console.log('[Received field]', recv_my_field);
       console.log('[Received enemy field]', recv_enemy_field);
-      
+
       var my_hand_len = recv_my_hand.length;
       my_hand.card_list = [];
       h.my_field = [];
@@ -301,23 +319,26 @@ function HearthClient() {
 
       function change_to_recv_data(src, dest) {
         for (var i = 0; i < src.length; i++) {
-          hearth_img_db.get_image_addr(src[i].name, function(c) {
-            return function(img_addr) {
-              var card = new Card(c.id);
+          var card = new Card(src[i].id);
 
-              // card_container 는 add_card 로 넣어야 하고,
-              // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
-              // array 이므로 push 로 한다.
-              if (dest.add_card) dest.add_card(card, img_addr);
-              else dest.push(card);
+          card.type = src[i].type;
+          card.life = src[i].life;
+          card.mana = src[i].mana;
+          card.dmg = src[i].dmg;
+          card.name = src[i].name;
 
-              card.type = c.type;
-              card.life = c.life;
-              card.mana = c.mana;
-              card.dmg = c.dmg;
-              card.name = c.name;
-            };
-          }(src[i]));
+          if (!dest.add_card) dest.push(card);
+          else {
+            dest.add_card(card, '');
+            hearth_img_db.get_image_addr(src[i].name, function(c) {
+              return function(img_addr) {
+                // card_container 는 add_card 로 넣어야 하고,
+                // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
+                // array 이므로 push 로 한다.
+                dest.set_card_img(card, img_addr);
+              };
+            }(card));
+          }
         }
       }
 
@@ -397,7 +418,7 @@ function HearthClient() {
     return function(data) {
       var list = data.list;
       console.log('Select one received list ', list);
-      
+
       function is_in_the_list(arr, id) {
         for (var i = 0; i < arr.length; i++) {
           if (arr[i] == id) return true;
@@ -495,7 +516,15 @@ HearthClient.prototype.draw_field = function() {
     this.my_field[i].x = 500 - 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = 250;
 
-    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
+    if (hearth_img_db.has_image(this.my_field[i].name)) {
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
+    }
+    else {
+      hearth_img_db.get_image(this.my_field[i].name, function() {
+        hearth_client.draw_field();
+      });
+    }
+
     if (this.need_to_select && !this.my_field[i].select_avail) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.field_ctx.fillRect(500 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
@@ -518,7 +547,17 @@ HearthClient.prototype.draw_field = function() {
     this.enemy_field[i].x = 500 - 200 * (i - Math.floor(ene_num_field / 2));
     this.enemy_field[i].y = 100;
 
-    this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
+    if (hearth_img_db.has_image(this.enemy_field[i].name)) {
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
+    }
+    else {
+      console.log('It does not have');
+      hearth_img_db.get_image(this.enemy_field[i].name, function() {
+        console.log('Unloaded DRAW FIELD!');
+        hearth_client.draw_field();
+      });
+    }
+
     if (this.need_to_select && !this.enemy_field[i].select_avail) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.field_ctx.fillRect(500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
@@ -634,11 +673,11 @@ HearthClient.prototype.init_field_click = function() {
       // Notify the server that the client has ended its turn
       hearth_client.socket.emit('hearth-end-turn', {});
     }
-    
-    if(hearth_client.need_to_select) {
+
+    if (hearth_client.need_to_select) {
       hearth_client.socket.emit('select-done', {
-        id : null
-      }); 
+        id: null
+      });
       hearth_client.need_to_select = false;
       hearth_client.draw_field();
     }

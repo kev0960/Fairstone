@@ -223,7 +223,7 @@ function Player(player_name, job, engine) {
   // Engine 에서 설정해준다. 
   this.enemy = null;
 
-  this.card_data = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
+  this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
 
   // TODO make it to the default setting
   this.current_mana = 100;
@@ -254,6 +254,9 @@ function Player(player_name, job, engine) {
   this.socket = null;
 
   this.starting_cards = [];
+  
+  // Maximum 8
+  this.exhaust_dmg = 0; 
 
   // 플레이어 역시 하나의 카드로 취급되기 때문에 고유의 ID 번호를 부여받게 된다. 
   this.id = this.g_id.get_id();
@@ -345,7 +348,38 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
-
+// Draw n cards from a deck
+Player.prototype.draw_cards = function(n) {
+  while (n > 0) {
+    if(this.deck.num_card() == 0) {
+      this.exhaust_dmg = this.exhaust_dmg > 8 ? 8 : this.exhaust_dmg + 1;
+      
+      this.deal_dmg(this.exhaust_dmg, this.hero, this.hero);
+      return;
+    }
+    var rand = Math.floor(Math.random() * this.deck.num_card());
+    var c = this.deck.card_list[rand]; 
+    this.deck.remove_card_at(rand);
+    
+    if(this.hand.num_card() >= 10) {
+      this.g_handler.add_event(new Event('card_burnt', [c]));
+      return;
+    }
+    
+    var card = card_manager.load_card(c.card_data.name);
+    
+    c.status = 'hand';
+    c.id = this.g_id.get_id();
+    
+    if(card.on_draw) card.on_draw(c);
+    
+    this.hand.put_card(c, 10);
+    
+    this.g_handler.add_event(new Event('draw_card', [c, this]));
+    n --;
+  }
+  this.g_handler.execute();
+}
 Player.prototype.draw_card = function(c) {
   this.deck.remove_card(c);
   if (this.hand.num_card() >= 10) {
@@ -359,7 +393,12 @@ Player.prototype.draw_card = function(c) {
   c.status = 'hand';
   c.id = this.g_id.get_id(); // ID is issued when the card goes to the user's hand
 
-  card.on_draw(c);
+  if(card.on_draw) card.on_draw(c);
+  
+  this.hand.put_card(c, 10);
+  
+  this.g_handler.add_event(new Event('draw_card', [c, this]));
+  this.g_handler.execute();
 }
 Player.prototype.draw_card_name = function(name) {
     for (var i = 0; i < this.deck.num_card(); i++) {
@@ -941,38 +980,43 @@ Handler.prototype.execute = function() {
   // this.exec_lock = false;
 };
 Handler.prototype.log_event = function(e) {
+  function get_name(c) {
+    if(c.hero) return c.hero.card_data.name;
+    else return c.card_data.name;
+  }
+  
   var s = '[' + e.event_type + '] ';
   switch (e.event_type) {
     case 'attack':
-      s += e.who.card_data.name + '(#' + e.who.id + ') attacks ' + e.target.card_data.name;
+      s += get_name(e.who) + '(#' + e.who.id + ') attacks ' + get_name(e.target);
       break;
     case 'deal_dmg':
-      s += e.attacker.card_data.name + '(#' + e.attacker.id + ') deals a damage to ' + e.victim.card_data.name + ' / dmg :: ' + e.dmg;
+      s += get_name(e.attacker) + '(#' + e.attacker.id + ') deals a damage to ' + get_name(e.victim) + ' / dmg :: ' + e.dmg;
       break;
     case 'take_dmg':
-      s += e.victim.card_data.name + '(#' + e.victim.id + ') takes a damage from ' + e.attacker.card_data.name + ' / dmg :: ' + e.dmg;
+      s += get_name(e.victim) + '(#' + e.victim.id + ') takes a damage from ' + get_name(e.attacker) + ' / dmg :: ' + e.dmg;
       break;
     case 'destroyed':
-      s += e.destroyed.card_data.name + '(#' + e.destroyed.id + ') is destroyed';
+      s += get_name(e.destroyed) + '(#' + e.destroyed.id + ') is destroyed';
       break;
     case 'summon':
-      s += e.card.card_data.name + '(#' + e.card.id + ') is summoned';
+      s += get_name(e.card) + '(#' + e.card.id + ') is summoned';
       break;
     case 'draw_card':
-      s += e.card.card_data.name + '(#' + e.card.id + ') is drawn from a deck';
+      s += get_name(e.card) + '(#' + e.card.id + ') is drawn from a deck';
       break;
     case 'play_card':
-      s += e.card.card_data.name + '(#' + e.card.id + ') is played from hand';
+      s += get_name(e.card) + '(#' + e.card.id + ') is played from hand';
       break;
     case 'after_play':
     case 'turn_begin':
-      s += e.who.card_data.name + '(#' + e.who.id + ') turn begins';
+      s += get_name(e.who) + '(#' + e.who.id + ') turn begins';
       break;
     case 'turn_ends':
-      s += e.who.card_data.name + '(#' + e.who.id + ') turn ends';
+      s += get_name(e.who) + '(#' + e.who.id + ') turn ends';
       break;
     case 'deathrattle':
-      s += e.card.card_data.name + '(#' + e.card.id + ') deathrattle ';
+      s += get_name(e.card) + '(#' + e.card.id + ') deathrattle ';
       break;
     case 'propose_attack':
       break;
@@ -1272,8 +1316,15 @@ Engine.prototype.end_turn = function() {
   this.current_player.next_overload_mana = 0;
 
   this.g_handler.add_event(new Event('turn_begin', [this.current_player]));
+  this.g_handler.add_callback(this.start_turn, this, []);
   this.g_handler.execute();
 };
+Engine.prototype.start_turn = function() {
+  console.log('Turn begins! ', this.current_player.name);
+  
+  // current player draws 1 card from a deck
+  this.current_player.draw_cards(1);
+}
 Engine.prototype.set_up_listener = function(p) {
   p.socket.on('hearth-user-play-card', function(e) {
     return function(data) {
