@@ -25,7 +25,6 @@ function Card(id) {
   this.y = 0;
 
   this.is_selected = false;
-  this.select_avail = false;
 }
 
 var token = localStorage.getItem('hearth-server-token');
@@ -57,16 +56,16 @@ CardContainer.prototype.add_card = function(card, img_addr) {
   this.position_cards();
 }
 CardContainer.prototype.set_card_img = function(card, img_addr) {
-  for(var i = 0; i < this.card_list.length; i ++) {
-    if(this.card_list[i] == card) {
+  for (var i = 0; i < this.card_list.length; i++) {
+    if (this.card_list[i] == card) {
       var card_id = 'card' + card.id;
       $('#' + card_id).css('background-image', 'url(' + img_addr + ')');
       return;
     }
   }
-  return; 
+  return;
 }
-CardContainer.prototype.make_card_first = function(c) { 
+CardContainer.prototype.make_card_first = function(c) {
   this.o.append(c); // make c to be first img element
 }
 
@@ -273,6 +272,9 @@ function HearthClient() {
 
   this.my_field = [];
   this.enemy_field = [];
+  
+  this.my_hero = null;
+  this.enemy_hero = null;
 
   this.current_mana = 1;
   this.total_mana = 1;
@@ -345,6 +347,9 @@ function HearthClient() {
       change_to_recv_data(recv_my_hand, my_hand);
       change_to_recv_data(recv_my_field, h.my_field);
       change_to_recv_data(recv_enemy_field, h.enemy_field);
+      
+      h.my_hero = data.me;
+      h.enemy_hero = data.enemy;
 
       h.draw_field();
       h.log(data.event.event_type)
@@ -419,23 +424,8 @@ function HearthClient() {
       var list = data.list;
       console.log('Select one received list ', list);
 
-      function is_in_the_list(arr, id) {
-        for (var i = 0; i < arr.length; i++) {
-          if (arr[i] == id) return true;
-        }
-        return false;
-      }
+      h.choose_card_list = list;
 
-      for (var i = 0; i < h.my_field.length; i++) {
-        if (is_in_the_list(list, h.my_field[i])) {
-          h.my_field[i].select_avail = true;
-        }
-      }
-      for (var i = 0; i < h.enemy_field.length; i++) {
-        if (is_in_the_list(list, h.enemy_field[i])) {
-          h.enemy_field[i].select_avail = true;
-        }
-      }
       h.need_to_select = true;
       h.draw_field();
     };
@@ -483,6 +473,14 @@ HearthClient.prototype.combat = function(from_card_id, to_card_id) {
     to_id: to_card_id
   });
 }
+
+function is_in_the_list(arr, id) {
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] == id) return true;
+  }
+  return false;
+}
+
 HearthClient.prototype.draw_field = function() {
   this.field_ctx.clearRect(0, 0, 2000, 2000);
 
@@ -525,11 +523,17 @@ HearthClient.prototype.draw_field = function() {
       });
     }
 
-    if (this.need_to_select && !this.my_field[i].select_avail) {
+    if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.my_field[i].id)) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.field_ctx.fillRect(500 - 200 * (i - Math.floor(num_field / 2)) - 80, 170, 160, 238);
     }
     this.field_ctx.restore();
+
+    // Show life and dmg of the minions here
+    this.field_ctx.strokeStyle = 'yellow';
+    this.field_ctx.strokeText(this.my_field[i].dmg, 500 - 200 * (i - Math.floor(num_field / 2)) - 60, 300);
+    this.field_ctx.strokeStyle = 'red'
+    this.field_ctx.strokeText(this.my_field[i].life, 500 - 200 * (i - Math.floor(num_field / 2)) + 60, 300);
   }
 
   var ene_num_field = this.enemy_field.length;
@@ -551,18 +555,22 @@ HearthClient.prototype.draw_field = function() {
       this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
     }
     else {
-      console.log('It does not have');
       hearth_img_db.get_image(this.enemy_field[i].name, function() {
-        console.log('Unloaded DRAW FIELD!');
         hearth_client.draw_field();
       });
     }
 
-    if (this.need_to_select && !this.enemy_field[i].select_avail) {
+    if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.enemy_field[i].id)) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.field_ctx.fillRect(500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, 20, 160, 238);
     }
     this.field_ctx.restore();
+
+    // Show life and dmg of the minions here
+    this.field_ctx.strokeStyle = 'yellow';
+    this.field_ctx.strokeText(this.enemy_field[i].dmg, 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 60, 150);
+    this.field_ctx.strokeStyle = 'red'
+    this.field_ctx.strokeText(this.enemy_field[i].life, 500 - 200 * (i - Math.floor(ene_num_field / 2)) + 60, 150);
   }
 };
 HearthClient.prototype.show_card_list = function(card_list) {
@@ -619,6 +627,7 @@ HearthClient.prototype.init_field_click = function() {
               id: hearth_client.my_field[i].id
             });
             hearth_client.need_to_select = false;
+            hearth_client.choose_card_list = [];
             return;
           }
 
@@ -759,6 +768,7 @@ HearthClient.prototype.log = function(e) {
   this.world_ctx.clearRect(0, 0, 2000, 300);
   this.world_ctx.strokeStyle = 'white';
 
+  log += ' [Me] : ' + this.my_hero.life + ' / ' + this.my_hero.mana + ' [Enemy] ' + this.enemy_hero.life + ' / ' + this.enemy_hero.mana;
 
   log += 'My Hand :: ';
   for (var i = 0; i < my_hand.card_list.length; i++) {

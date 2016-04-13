@@ -4,28 +4,89 @@
       return x + n;
     };
   }
+
   function end(me, non_bc, bc) {
-    if(bc && non_bc) { me.owner.end_bc(me); }
+    if (bc && non_bc) {
+      me.owner.end_bc(me);
+    }
   }
+
   function end_spell(me) {
     me.owner.end_spell_txt(me);
   }
-  function nothing() { }
-  
+
+  function nothing() {}
+
   var card_do = {
+    'Frog': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          me.add_state(function() {}, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Murloc Raider': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Leper Gnome': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card == me) {
+                me.owner.deal_dmg(2, me, me.owner.enemy.hero);
+              }
+            }, 'deathrattle', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Abusive Sergeant': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.target.add_state(function(turn) {
+                    return function(dmg, me) {
+                      if (turn == me.owner.engine.current_turn) {
+                        return dmg + 2;
+                      }
+                      return dmg;
+                    };
+                  }(me.owner.engine.current_turn), 'dmg', me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
       }
     },
     'River Crocolisk': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
       }
     },
     'Magma Rager': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
       }
     },
     'Emperor Thaurissan': {
@@ -47,7 +108,9 @@
     },
     'War Golem': {
       on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
       }
     },
     'Druid of the Claw': {
@@ -76,7 +139,9 @@
           }(me, at));
         }
         else {
-          me.owner.play_success(me, at, function(me, non_bc, bc) { end(me, non_bc, bc); });
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
         }
       }
     },

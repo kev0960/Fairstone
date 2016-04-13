@@ -1,4 +1,12 @@
 var data = {
+  "Frog": {
+    "type": "minion",
+    "level": "token",
+    "job": "neutral",
+    "kind": "beast",
+    "info": [0, 0, 2],
+    "kor": "개구리"
+  },
   "Murloc Raider": {
     "type": "minion",
     "level": "common",
@@ -6,6 +14,22 @@ var data = {
     "kind": "murloc",
     "info": [1, 2, 1],
     "kor": "멀록 약탈꾼"
+  },
+  "Leper Gnome": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [1, 2, 1],
+    "kor": "오염된 노움"
+  },
+  "Abusive Sergeant": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [1, 2, 1],
+    "kor": "가혹한 하사관"
   },
   "River Crocolisk": {
     "type": "minion",

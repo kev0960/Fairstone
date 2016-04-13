@@ -223,7 +223,11 @@ function Player(player_name, job, engine) {
   // Engine 에서 설정해준다. 
   this.enemy = null;
 
-  this.hero = new Card([player_name, 'hero', 'hero', job, 30, 0, 0], this.engine.g_id.get_id(), this);
+  // 플레이어 역시 하나의 카드로 취급되기 때문에 고유의 ID 번호를 부여받게 된다. 
+  this.id = this.engine.g_id.get_id();
+  
+  // Player ID 와 Player.hero.id 를 언제나 싱크 시켜주어야 한다!!!
+  this.hero = new Card([player_name, 'hero', 'hero', job, 0, 0, 30, ''], this.id, this);
 
   // TODO make it to the default setting
   this.current_mana = 100;
@@ -254,12 +258,10 @@ function Player(player_name, job, engine) {
   this.socket = null;
 
   this.starting_cards = [];
-  
-  // Maximum 8
-  this.exhaust_dmg = 0; 
 
-  // 플레이어 역시 하나의 카드로 취급되기 때문에 고유의 ID 번호를 부여받게 된다. 
-  this.id = this.g_id.get_id();
+  // Maximum 8
+  this.exhaust_dmg = 0;
+
 };
 
 Player.prototype.chk_aura = function(aura) {
@@ -305,18 +307,20 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
 
   this.on_select_success = success;
   this.on_select_fail = fail;
-  
+
   this.selection_waiting = true;
   this.who_select_wait = c;
-  
+
   console.log('SELECT ONE!! among ', available_list);
-  this.socket.emit('select-one', {list : available_list});
-  
+  this.socket.emit('select-one', {
+    list: available_list
+  });
+
   this.selection_fail_timer = setTimeout(function(p) {
     return function() {
       if (p.selection_waiting) p.selection_waiting = false;
       p.on_select_fail(c);
-      
+
       p.on_select_success = null;
       p.on_select_fail = null;
     };
@@ -351,32 +355,32 @@ Player.prototype.end_spell_txt = function(c) {
 // Draw n cards from a deck
 Player.prototype.draw_cards = function(n) {
   while (n > 0) {
-    if(this.deck.num_card() == 0) {
+    if (this.deck.num_card() == 0) {
       this.exhaust_dmg = this.exhaust_dmg > 8 ? 8 : this.exhaust_dmg + 1;
-      
+
       this.deal_dmg(this.exhaust_dmg, this.hero, this.hero);
       return;
     }
     var rand = Math.floor(Math.random() * this.deck.num_card());
-    var c = this.deck.card_list[rand]; 
+    var c = this.deck.card_list[rand];
     this.deck.remove_card_at(rand);
-    
-    if(this.hand.num_card() >= 10) {
+
+    if (this.hand.num_card() >= 10) {
       this.g_handler.add_event(new Event('card_burnt', [c]));
       return;
     }
-    
+
     var card = card_manager.load_card(c.card_data.name);
-    
+
     c.status = 'hand';
     c.id = this.g_id.get_id();
-    
-    if(card.on_draw) card.on_draw(c);
-    
+
+    if (card.on_draw) card.on_draw(c);
+
     this.hand.put_card(c, 10);
-    
+
     this.g_handler.add_event(new Event('draw_card', [c, this]));
-    n --;
+    n--;
   }
   this.g_handler.execute();
 }
@@ -393,10 +397,10 @@ Player.prototype.draw_card = function(c) {
   c.status = 'hand';
   c.id = this.g_id.get_id(); // ID is issued when the card goes to the user's hand
 
-  if(card.on_draw) card.on_draw(c);
-  
+  if (card.on_draw) card.on_draw(c);
+
   this.hand.put_card(c, 10);
-  
+
   this.g_handler.add_event(new Event('draw_card', [c, this]));
   this.g_handler.execute();
 }
@@ -646,6 +650,8 @@ Player.prototype.spell_dmg = function(c, dmg) {
 };
 
 Player.prototype.deal_dmg = function(dmg, from, to) {
+  console.log('deal dmg ', from.card_data.name, ' -> ', to.card_data.name);
+
   from.dmg_given = dmg;
   this.g_handler.add_event(new Event('pre_dmg', [from, to, dmg]));
   this.g_handler.add_callback(this.actual_dmg_deal, this, [from, to]);
@@ -981,10 +987,10 @@ Handler.prototype.execute = function() {
 };
 Handler.prototype.log_event = function(e) {
   function get_name(c) {
-    if(c.hero) return c.hero.card_data.name;
+    if (c.hero) return c.hero.card_data.name;
     else return c.card_data.name;
   }
-  
+
   var s = '[' + e.event_type + '] ';
   switch (e.event_type) {
     case 'attack':
@@ -1037,7 +1043,7 @@ Handler.prototype.do_event = function(e) {
   var handler_num = this.event_handler_arr[e.event_type].length;
   var handler_arr = this.event_handler_arr[e.event_type];
   for (var i = 0; i < handler_num; i++) {
-    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.destroyed)) {
+    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.card)) {
       handler_arr[i].f(e, handler_arr[i].me);
     }
   }
@@ -1321,7 +1327,7 @@ Engine.prototype.end_turn = function() {
 };
 Engine.prototype.start_turn = function() {
   console.log('Turn begins! ', this.current_player.name);
-  
+
   // current player draws 1 card from a deck
   this.current_player.draw_cards(1);
 }
@@ -1386,21 +1392,21 @@ Engine.prototype.set_up_listener = function(p) {
     return function(data) {
       var select_id = data.id;
       console.log('Received Selection ', data.id);
-      
+
       if (p == e.current_player && p.selection_waiting) {
         p.selection_waiting = false;
-        
+
         var target = e.find_card_by_id(data.id);
-        
+
         // If target is not actual card on a field
-        if(!target) {
+        if (!target) {
           p.on_select_fail(p.who_select_wait);
           return;
         }
-        
+
         console.log('Who was a target? :: ', target.card_data.name);
         console.log('Who was waiting for a selection :: ', p.who_select_wait.card_data.name);
-        
+
         p.who_select_wait.target = target;
         p.on_select_success(p.who_select_wait);
         clearTimeout(p.selection_fail_timer);
@@ -1420,6 +1426,28 @@ Engine.prototype.send_client_minion_action = function(c, action) {
 };
 // e : the event that we just handled
 Engine.prototype.send_client_data = function(e) {
+  function hero_info(p) {
+    return {
+      life : p.hero.current_life,
+      mana : p.current_mana
+    }
+  }
+
+  function put_deck_info(arr, deck, where, owner) {
+    for (var i = 0; i < deck.length; i++) {
+      arr.push({
+        where: where,
+        owner: owner,
+        id: deck[i].id,
+        life: deck[i].current_life,
+        mana: deck[i].mana(),
+        dmg: deck[i].dmg(),
+        name: deck[i].card_data.name,
+        type: deck[i].card_data.type
+      });
+    }
+  }
+
   // Do not show SECRET card to the opponent player
   if (e && (e.event_type == 'draw_card' || e.event_type == 'spwan_card')) {
 
@@ -1437,93 +1465,34 @@ Engine.prototype.send_client_data = function(e) {
   var p1_field = this.p1.field.card_list;
   var p2_field = this.p2.field.card_list;
 
-  for (var i = 0; i < p1_hand.length; i++) {
-    p1_card_info.push({
-      where: 'hand',
-      owner: 'me',
-      id: p1_hand[i].id,
-      life: p1_hand[i].current_life,
-      mana: p1_hand[i].mana(),
-      dmg: p1_hand[i].dmg(),
-      name: p1_hand[i].card_data.name,
-      type: p1_hand[i].card_data.type
-    });
-  }
+  put_deck_info(p1_card_info, p1_hand, 'hand', 'me');
+  put_deck_info(p2_card_info, p2_hand, 'hand', 'me');
 
-  // We should give info about the cards that are on the field
-  for (var i = 0; i < p1_field.length; i++) {
-    p1_card_info.push({
-      where: 'field',
-      owner: 'me',
-      id: p1_field[i].id,
-      life: p1_field[i].current_life,
-      mana: p1_field[i].mana(),
-      dmg: p1_field[i].dmg(),
-      name: p1_field[i].card_data.name,
-      type: p1_field[i].card_data.type
-    });
-    p2_card_info.push({
-      where: 'field',
-      owner: 'enemy',
-      id: p1_field[i].id,
-      life: p1_field[i].current_life,
-      mana: p1_field[i].mana(),
-      dmg: p1_field[i].dmg(),
-      name: p1_field[i].card_data.name,
-      type: p1_field[i].card_data.type
-    });
-  }
+  put_deck_info(p1_card_info, p1_field, 'field', 'me');
+  put_deck_info(p2_card_info, p1_field, 'field', 'enemy');
 
-  for (var i = 0; i < p2_hand.length; i++) {
-    p2_card_info.push({
-      where: 'hand',
-      owner: 'me',
-      id: p2_hand[i].id,
-      life: p2_hand[i].current_life,
-      mana: p2_hand[i].mana(),
-      dmg: p2_hand[i].dmg(),
-      name: p2_hand[i].card_data.name,
-      type: p2_hand[i].card_data.type
-    });
-  }
-  for (var i = 0; i < p2_field.length; i++) {
-    p2_card_info.push({
-      where: 'field',
-      owner: 'me',
-      id: p2_field[i].id,
-      life: p2_field[i].current_life,
-      mana: p2_field[i].mana(),
-      dmg: p2_field[i].dmg(),
-      name: p2_field[i].card_data.name,
-      type: p2_field[i].card_data.type
-    });
-    p1_card_info.push({
-      where: 'field',
-      owner: 'enemy',
-      id: p2_field[i].id,
-      life: p2_field[i].current_life,
-      mana: p2_field[i].mana(),
-      dmg: p2_field[i].dmg(),
-      name: p2_field[i].card_data.name,
-      type: p2_field[i].card_data.type
-    });
-  }
+  put_deck_info(p1_card_info, p2_field, 'field', 'enemy');
+  put_deck_info(p2_card_info, p2_field, 'field', 'me');
 
   // console.log('[p1 card info]', p1_card_info);
   //  console.log('[p2 card info]', p2_card_info);
 
-  if(e) {
+  if (e) {
     console.log(e.packer(), ' event has sent!');
   }
   this.p1_socket.emit('hearth-event', {
     card_info: p1_card_info,
     enemy_num_hand: this.p2.hand.num_card(),
-    event: (e ? e.packer() : null)
+    event: (e ? e.packer() : null),
+    me : hero_info(this.p1),
+    enemy : hero_info(this.p2)
   });
   this.p2_socket.emit('hearth-event', {
     card_info: p2_card_info,
     enemy_num_hand: this.p1.hand.num_card(),
-    event: (e ? e.packer() : null)
+    event: (e ? e.packer() : null),
+    me : hero_info(this.p2),
+    enemy : hero_info(this.p1)
   });
 };
 
