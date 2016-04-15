@@ -1,4 +1,21 @@
+// 여기서는 Basic set 의 카드들만 다룬다.
 var data = {
+  "The Coin": {
+    "type": "spell",
+    "level": "token",
+    "job": "neutral",
+    "kind": "",
+    "info": [0, 0, 0],
+    "kor": "동전 한 닢"
+  },
+  "Murloc Scout": {
+    "type": "minion",
+    "level": "token",
+    "job": "neutral",
+    "kind": "murloc",
+    "info": [0, 1, 1],
+    "kor": "멀록 정찰병"
+  },
   "Frog": {
     "type": "minion",
     "level": "token",
@@ -7,6 +24,14 @@ var data = {
     "info": [0, 0, 2],
     "kor": "개구리"
   },
+  "Stonetusk Boar": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "beast",
+    "info": [1, 1, 1],
+    "kor": "돌엄니 멧돼지"
+  },
   "Murloc Raider": {
     "type": "minion",
     "level": "common",
@@ -14,6 +39,38 @@ var data = {
     "kind": "murloc",
     "info": [1, 2, 1],
     "kor": "멀록 약탈꾼"
+  },
+  "Voodoo Doctor": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [1, 2, 1],
+    "kor": "부두교 의술사"
+  },
+  "Grimscale Oracle": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "murloc",
+    "info": [1, 1, 1],
+    "kor": "성난비늘 수련사"
+  },
+  "Elven Archer": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [1, 1, 1],
+    "kor": "엘프 궁수"
+  },
+  "Goldshire Footman": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [1, 1, 2],
+    "kor": "황금골 보병"
   },
   "Leper Gnome": {
     "type": "minion",
@@ -31,6 +88,14 @@ var data = {
     "info": [1, 2, 1],
     "kor": "가혹한 하사관"
   },
+  "Murloc Tidehunter": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "murloc",
+    "info": [2, 2, 1],
+    "kor": "멀록 바다사냥꾼"
+  },
   "River Crocolisk": {
     "type": "minion",
     "level": "common",
@@ -38,6 +103,14 @@ var data = {
     "kind": "beast",
     "info": [2, 2, 3],
     "kor": "민물 악어"
+  },
+  "Bloodfen Raptor": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "beast",
+    "info": [2, 3, 2],
+    "kor": "붉은늪지랩터"
   },
   "Magma Rager": {
     "type": "minion",

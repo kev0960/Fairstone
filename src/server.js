@@ -177,6 +177,10 @@ app.get('/match/:id', function(req, res) {
 
   if (match_maker.is_valid_match(match_token)) {
     io.of('/match/' + match_maker.get_full_token(match_token)).on('connection', function(socket) {
+      // To prevent adding identical socket event listeners to be added into same player-info event
+      // from the user client browser's RELOAD
+      socket.removeAllListeners('player-info'); 
+      
       socket.on('player-info', function(socket, match_maker) {
         return function(data) {
           var m = match_maker.get_match(data.match_token);
@@ -249,7 +253,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['Fireball', 2, 'War Golem', 2, 'Magma Rager', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2]
+      cards: ['Fireball', 2, 'War Golem', 2, 'Magma Rager', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Murloc Tidehunter', 2]
     }]
   }, {
     id: 'Jaebum',

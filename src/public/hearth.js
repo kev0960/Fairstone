@@ -616,10 +616,10 @@ HearthClient.prototype.init_field_click = function() {
     // If some minion on field is selected
     for (var i = 0; i < hearth_client.my_field.length; i++) {
       hearth_client.field_ctx.strokeStyle = 'white';
-      hearth_client.field_ctx.strokeRect(hearth_client.my_field[i].x, hearth_client.my_field[i].y, 100, 160);
+      hearth_client.field_ctx.strokeRect(hearth_client.my_field[i].x - 50, hearth_client.my_field[i].y - 80, 100, 160);
 
-      if (e.offsetX >= hearth_client.my_field[i].x && e.offsetX <= hearth_client.my_field[i].x + 100) {
-        if (e.offsetY >= hearth_client.my_field[i].y && e.offsetY <= hearth_client.my_field[i].y + 160) {
+      if (e.offsetX >= hearth_client.my_field[i].x - 50 && e.offsetX <= hearth_client.my_field[i].x + 50) {
+        if (e.offsetY >= hearth_client.my_field[i].y - 80 && e.offsetY <= hearth_client.my_field[i].y + 80) {
           console.log('Minion #', hearth_client.my_field[i].id, ' is selected!');
 
           if (hearth_client.need_to_select) {
@@ -647,9 +647,9 @@ HearthClient.prototype.init_field_click = function() {
 
     for (var i = 0; i < hearth_client.enemy_field.length; i++) {
       hearth_client.field_ctx.strokeStyle = 'white';
-      hearth_client.field_ctx.strokeRect(hearth_client.enemy_field[i].x, hearth_client.enemy_field[i].y, 100, 160);
-      if (e.offsetX >= hearth_client.enemy_field[i].x && e.offsetX <= hearth_client.enemy_field[i].x + 100) {
-        if (e.offsetY >= hearth_client.enemy_field[i].y && e.offsetY <= hearth_client.enemy_field[i].y + 160) {
+      hearth_client.field_ctx.strokeRect(hearth_client.enemy_field[i].x - 50, hearth_client.enemy_field[i].y - 80, 100, 160);
+      if (e.offsetX >= hearth_client.enemy_field[i].x - 50 && e.offsetX <= hearth_client.enemy_field[i].x + 50) {
+        if (e.offsetY >= hearth_client.enemy_field[i].y - 80 && e.offsetY <= hearth_client.enemy_field[i].y + 80) {
           console.log('Minion #', hearth_client.enemy_field[i].name, ' is selected!');
 
           if (hearth_client.need_to_select) {
@@ -689,6 +689,12 @@ HearthClient.prototype.init_field_click = function() {
       });
       hearth_client.need_to_select = false;
       hearth_client.draw_field();
+    }
+    
+    // If none is clicked after some minion is clicked
+    if(hearth_client.field_selected) {
+      hearth_client.field_selected.is_selected = false;
+      hearth_client.field_selected = null;
     }
   }
 };

@@ -512,7 +512,7 @@ Player.prototype.summon_phase = function(c) {
   this.g_handler.execute();
 };
 
-Player.prototype.summon_card = function(name, at, after_summon) {
+Player.prototype.summon_card = function(name, at) {
   var c = create_card(name);
 
   c.field_summon_turn = this.engine.current_turn;
@@ -522,9 +522,6 @@ Player.prototype.summon_card = function(name, at, after_summon) {
 
   this.field.put_card(c, at);
   var card = card_manager.load_card(c.card_data.name);
-
-  // Optional argument - after_summon; which is called after the card is summoned
-  if (after_summon) this.g_handler.add_callback(after_summon, this, [c]);
 
   card.on_play(c, false, false, at);
 };
@@ -1173,6 +1170,14 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p1_selection_waiting = false;
   this.p2_selection_waiting = false;
 }
+Engine.prototype.add_aura = function(f, state, who) {
+  this.g_aura.push({
+    f: f,
+    state: state,
+    who: who,
+    when: this.g_when.get_id()
+  });
+};
 Engine.prototype.find_card_by_id = function(id) {
   for (var i = 0; i < this.p1.hand.num_card(); i++) {
     if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
