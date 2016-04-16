@@ -176,6 +176,8 @@ app.get('/match/:id', function(req, res) {
   console.log('MATCH TOKEN :: ' + match_token);
 
   if (match_maker.is_valid_match(match_token)) {
+    io.of('/match/' + match_maker.get_full_token(match_token)).removeAllListeners('connection');
+    
     io.of('/match/' + match_maker.get_full_token(match_token)).on('connection', function(socket) {
       // To prevent adding identical socket event listeners to be added into same player-info event
       // from the user client browser's RELOAD

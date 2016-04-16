@@ -673,7 +673,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
     this.g_handler.add_event(new Event('destroyed', [to, from]));
 };
 
-// Do not specify increased healling amount into 'heal'
+// Do not specify increased healing amount into 'heal'
 Player.prototype.heal = function(heal, from, to) {
   if (this.chk_aura('auchenai_soulpriest')) {
     this.deal_dmg(this.spell_dmg(from, heal), from, to);
@@ -1178,7 +1178,7 @@ Engine.prototype.add_aura = function(f, state, who) {
     when: this.g_when.get_id()
   });
 };
-Engine.prototype.find_card_by_id = function(id) {
+Engine.prototype.find_card_by_id = function(id, p) {
   for (var i = 0; i < this.p1.hand.num_card(); i++) {
     if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
   }
@@ -1191,6 +1191,10 @@ Engine.prototype.find_card_by_id = function(id) {
   for (var i = 0; i < this.p2.field.num_card(); i++) {
     if (this.p2.field.card_list[i].id == id) return this.p2.field.card_list[i];
   }
+  
+  if(id == 'me') return p.hero;
+  if(id == 'enemy') return p.enemy.hero;
+  
   return null; // If no card is found
 }
 Engine.prototype.start_match = function() {
@@ -1372,11 +1376,11 @@ Engine.prototype.set_up_listener = function(p) {
 
   p.socket.on('hearth-combat', function(e) {
     return function(data) {
-      var from = e.find_card_by_id(data.from_id);
-      var to = e.find_card_by_id(data.to_id);
+      var from = e.find_card_by_id(data.from_id, p);
+      var to = e.find_card_by_id(data.to_id, p);
 
       //console.log('combat detected', from.card_data.name, ' vs ', to.card_data.name);
-      if (from && to) {
+      if (from && to) {11
         from.owner.combat(from, to);
       }
     };
@@ -1401,7 +1405,7 @@ Engine.prototype.set_up_listener = function(p) {
       if (p == e.current_player && p.selection_waiting) {
         p.selection_waiting = false;
 
-        var target = e.find_card_by_id(data.id);
+        var target = e.find_card_by_id(data.id, p);
 
         // If target is not actual card on a field
         if (!target) {
@@ -1434,7 +1438,8 @@ Engine.prototype.send_client_data = function(e) {
   function hero_info(p) {
     return {
       life : p.hero.current_life,
-      mana : p.current_mana
+      mana : p.current_mana,
+      id : p.hero.id
     }
   }
 

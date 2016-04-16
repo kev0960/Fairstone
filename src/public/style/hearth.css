@@ -16,7 +16,7 @@ body {
 
 #battlefield {
   position : absolute;
-  top : 250;
+  top : 0;
   left : 200;
 }
 #player-card-container {
