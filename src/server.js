@@ -255,7 +255,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['Fireball', 2, 'War Golem', 2, 'Magma Rager', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Murloc Tidehunter', 2]
+      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Murloc Tidehunter', 2]
     }]
   }, {
     id: 'Jaebum',
@@ -264,7 +264,7 @@ function UserManager() {
     deck_list: [{
       name: '전사 덱',
       job: 'warrior',
-      cards: ['Emperor Thaurissan', 2, 'War Golem', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2]
+      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Voodoo Doctor', 2]
     }]
   }];
 }

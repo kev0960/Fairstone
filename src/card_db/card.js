@@ -166,7 +166,7 @@
     'Murloc Tidehunter': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if(bc) {
+          if (bc) {
             me.owner.summon_card('Murloc Scout', at + 1);
           }
           end(me, non_bc, bc);
@@ -183,6 +183,68 @@
     'Bloodfen Raptor': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Frostwolf Grunt': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(function() {}, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Kobold Geomancer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if(c.owner == me.owner) return d + 1;
+              return d;
+            }, 'spell_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Bluegill Warrior': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'charge', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Novice Engineer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.draw_cards(1);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Razorfen Boar': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.summon_card('Boar', at + 1);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Raid Leader': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if(c.owner == me.owner) return d + 1;
+              return d;
+            }, 'dmg', me);
+          }
           end(me, non_bc, bc);
         });
       }

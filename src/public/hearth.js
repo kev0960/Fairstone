@@ -85,9 +85,9 @@ CardContainer.prototype.on_selection = function(selected) {
 }
 CardContainer.prototype.on_selection_end = function(selected) {
   // if card is dropped on my field
-  console.log('Offset :: ', this.selected_card.offsetTop)
+  console.log('Offset :: ', this.selected_card.offsetTop, ' and ', this.selected_card.offsetLeft)
   if (-200 > this.selected_card.offsetTop && this.selected_card.offsetTop > -600) {
-    hearth_client.play_card(this.selected_card.id, 0);
+    hearth_client.play_card(this.selected_card.id, hearth_client.where_to_put(this.selected_card.offsetLeft));
   }
 
   // When things are good
@@ -446,22 +446,27 @@ function HearthClient() {
   this.field_canvas = document.getElementById('battlefield');
   this.field_ctx = this.field_canvas.getContext('2d');
 
+  this.field_ctx.canvas.width = window.innerWidth;
+  this.field_ctx.canvas.height = window.innerHeight;
+
   this.init_field_click();
   this.field_selected = null; // If something is selected, then store the id of that card
 
   this.choose_card_list = [];
   this.need_to_select = false;
-  
+
   this.my_field_card_y = 500;
   this.enemy_field_card_y = 300;
   this.turn_end_btn_y = 400;
-  this.my_hero_y = 600;
+  this.my_hero_y = 700;
   this.enemy_hero_y = 30;
+  this.my_field_center = window.innerWidth / 2;
 }
 HearthClient.prototype.init = function() {};
 HearthClient.prototype.play_card = function(card_id, at) {
   var id = parseInt(card_id.substr(4));
 
+  console.log('put card ', at);
   this.socket.emit('hearth-user-play-card', {
     id: id,
     at: at
@@ -496,7 +501,7 @@ HearthClient.prototype.draw_field = function() {
   }
 
   this.field_ctx.fillStyle = 'yellow';
-  this.field_ctx.fillRect(1200, this.turn_end_btn_y, 150, 50);
+  this.field_ctx.fillRect(1400, this.turn_end_btn_y, 150, 50);
 
   var num_field = this.my_field.length;
 
@@ -504,18 +509,18 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(500 - 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.my_field[i].x = 500 - 200 * (i - Math.floor(num_field / 2));
+    this.my_field[i].x = this.my_field_center + 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = this.my_field_card_y;
 
     if (hearth_img_db.has_image(this.my_field[i].name)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), 500 - 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     else {
       hearth_img_db.get_image(this.my_field[i].name, function() {
@@ -525,15 +530,15 @@ HearthClient.prototype.draw_field = function() {
 
     if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.my_field[i].id)) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      this.field_ctx.fillRect(500 - 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     this.field_ctx.restore();
 
     // Show life and dmg of the minions here
     this.field_ctx.strokeStyle = 'yellow';
-    this.field_ctx.strokeText(this.my_field[i].dmg, 500 - 200 * (i - Math.floor(num_field / 2)) - 60, this.my_field_card_y + 100);
+    this.field_ctx.strokeText(this.my_field[i].dmg, this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 60, this.my_field_card_y + 100);
     this.field_ctx.strokeStyle = 'red'
-    this.field_ctx.strokeText(this.my_field[i].life, 500 - 200 * (i - Math.floor(num_field / 2)) + 60, this.my_field_card_y + 100);
+    this.field_ctx.strokeText(this.my_field[i].life, this.my_field_center + 200 * (i - Math.floor(num_field / 2)) + 60, this.my_field_card_y + 100);
   }
 
   var ene_num_field = this.enemy_field.length;
@@ -541,18 +546,18 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(500 - 200 * (i - Math.floor(ene_num_field / 2)), this.enemy_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)), this.enemy_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.enemy_field[i].x = 500 - 200 * (i - Math.floor(ene_num_field / 2));
+    this.enemy_field[i].x = this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2));
     this.enemy_field[i].y = this.enemy_field_card_y;
 
     if (hearth_img_db.has_image(this.enemy_field[i].name)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
     }
     else {
       hearth_img_db.get_image(this.enemy_field[i].name, function() {
@@ -562,15 +567,15 @@ HearthClient.prototype.draw_field = function() {
 
     if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.enemy_field[i].id)) {
       this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      this.field_ctx.fillRect(500 - 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
+      this.field_ctx.fillRect(500 + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
     }
     this.field_ctx.restore();
 
     // Show life and dmg of the minions here
     this.field_ctx.strokeStyle = 'yellow';
-    this.field_ctx.strokeText(this.enemy_field[i].dmg, 500 - 200 * (i - Math.floor(ene_num_field / 2)) - 60, this.enemy_field_card_y + 100);
+    this.field_ctx.strokeText(this.enemy_field[i].dmg, this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 60, this.enemy_field_card_y + 100);
     this.field_ctx.strokeStyle = 'red'
-    this.field_ctx.strokeText(this.enemy_field[i].life, 500 - 200 * (i - Math.floor(ene_num_field / 2)) + 60, this.enemy_field_card_y + 100);
+    this.field_ctx.strokeText(this.enemy_field[i].life, this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) + 60, this.enemy_field_card_y + 100);
   }
 };
 HearthClient.prototype.show_card_list = function(card_list) {
@@ -608,6 +613,18 @@ HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
     }, this, i), on_done);
   }
 };
+HearthClient.prototype.where_to_put = function(x) {
+  var prev_x = 0;
+  console.log('where :: ', x);
+  for (var i = 0; i < hearth_client.my_field.length; i++) {
+    console.log('my field cards #', i, ' : ', hearth_client.my_field[i].x)
+    if (x >= prev_x && x < hearth_client.my_field[i].x + 80) {
+      return i;
+    }
+    else prev_x = hearth_client.my_field[i].x + 80;
+  }
+  return hearth_client.my_field.length + 1;
+}
 HearthClient.prototype.init_field_click = function() {
   this.field_canvas.onclick = function(e) {
     hearth_client.field_ctx.fillStyle = 'red';
@@ -672,7 +689,7 @@ HearthClient.prototype.init_field_click = function() {
       }
     }
 
-    if (e.offsetX >= 1200 && e.offsetX <= 1350 && e.offsetY >= hearth_client.turn_end_btn_y && e.offsetY <= hearth_client.turn_end_btn_y + 50) {
+    if (e.offsetX >= 1400 && e.offsetX <= 1550 && e.offsetY >= hearth_client.turn_end_btn_y && e.offsetY <= hearth_client.turn_end_btn_y + 50) {
       console.log('Turn ended!');
 
       // Notify the server that the client has ended its turn
@@ -681,10 +698,10 @@ HearthClient.prototype.init_field_click = function() {
 
     // My Hero
     hearth_client.field_ctx.strokeStyle = 'white';
-    hearth_client.field_ctx.strokeRect(570, hearth_client.my_hero_y, 200, 150);
-    hearth_client.field_ctx.strokeRect(570, hearth_client.enemy_hero_y, 200, 150);
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.my_hero_y, 200, 150);
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150);
 
-    if (e.offsetX >= 570 && e.offsetX <= 570 + 200 && e.offsetY >= hearth_client.my_hero_y && e.offsetY <= hearth_client.my_hero_y + 150) {
+    if (e.offsetX >= hearth_client.my_field_center - 100 && e.offsetX <= hearth_client.my_field_center + 100 && e.offsetY >= hearth_client.my_hero_y && e.offsetY <= hearth_client.my_hero_y + 150) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'me'
@@ -694,20 +711,21 @@ HearthClient.prototype.init_field_click = function() {
       }
       if (hearth_client.field_selected) {
         console.log('Minion #', hearth_client.field_selected.name, ' vs Me')
-        if(hearth_client.field_selected.id) {
+        if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'me');
-        } else {
+        }
+        else {
           hearth_client.combat(hearth_client.field_selected, 'me');
         }
-        
+
         hearth_client.field_selected = null;
         return;
       }
-      
+
       hearth_client.field_selected = 'me';
     }
     // Enemy hero
-    else if (e.offsetX >= 570 && e.offsetX <= 570 + 200 && e.offsetY >= hearth_client.enemy_hero_y && e.offsetY <= hearth_client.enemy_hero_y + 150) {
+    else if (e.offsetX >= hearth_client.my_field_center - 100 && e.offsetX <= hearth_client.my_field_center + 100 && e.offsetY >= hearth_client.enemy_hero_y && e.offsetY <= hearth_client.enemy_hero_y + 150) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'enemy'
@@ -717,9 +735,10 @@ HearthClient.prototype.init_field_click = function() {
       }
       if (hearth_client.field_selected) {
         console.log('Minion #', hearth_client.field_selected.id, ' vs Enemy Hero')
-        if(hearth_client.field_selected.id) { 
+        if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'enemy');
-        } else {
+        }
+        else {
           hearth_client.combat(hearth_client.field_selected, 'enemy');
         }
         hearth_client.field_selected = null;

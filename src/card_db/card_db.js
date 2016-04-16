@@ -24,6 +24,14 @@ var data = {
     "info": [0, 0, 2],
     "kor": "개구리"
   },
+  "Boar": {
+    "type": "minion",
+    "level": "token",
+    "job": "neutral",
+    "kind": "beast",
+    "info": [1, 1, 1],
+    "kor": "멧돼지"
+  },
   "Stonetusk Boar": {
     "type": "minion",
     "level": "common",
@@ -111,6 +119,54 @@ var data = {
     "kind": "beast",
     "info": [2, 3, 2],
     "kor": "붉은늪지랩터"
+  },
+  "Frostwolf Grunt": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [2, 2, 2],
+    "kor": "서리늑대 그런트"
+  },
+  "Kobold Geomancer": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [2, 2, 2],
+    "kor": "코볼드 흙점쟁이"
+  },
+  "Bluegill Warrior": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "murloc",
+    "info": [2, 2, 1],
+    "kor": "푸른아가미 전사"
+  },
+  "Novice Engineer": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [2, 1, 2],
+    "kor": "풋내기 기술자"
+  },
+  "Razorfen Hunter": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [3, 2, 3],
+    "kor": "가시덩굴 사냥꾼"
+  },
+  "Raid Leader": {
+    "type": "minion",
+    "level": "common",
+    "job": "neutral",
+    "kind": "",
+    "info": [3, 2, 2],
+    "kor": "공격대장"
   },
   "Magma Rager": {
     "type": "minion",
