@@ -43,6 +43,13 @@
         });
       }
     },
+    'Boar': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Stonetusk Boar': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -200,7 +207,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.engine.add_aura(function(d, c) {
-              if(c.owner == me.owner) return d + 1;
+              if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
           }
@@ -226,7 +233,7 @@
         });
       }
     },
-    'Razorfen Boar': {
+    'Razorfen Hunter': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
@@ -241,7 +248,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.engine.add_aura(function(d, c) {
-              if(c.owner == me.owner) return d + 1;
+              if (c.owner == me.owner) return d + 1;
               return d;
             }, 'dmg', me);
           }
@@ -249,11 +256,196 @@
         });
       }
     },
+    'Wolf Rider': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'charge', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Dalaran Mage': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if (c.owner == me.owner) return d + 1;
+              return d;
+            }, 'spell_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Shattered Sun Cleric': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.target.add_state(inc(1), 'dmg', me);
+                  me.target.add_state(inc(1), 'life', me);
+                  me.target.current_life += 1;
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+      }
+    },
+    'Ironfur Grizzly': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ironforge Rifleman': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              return true;
+            }, // can target anything
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.deal_dmg(1, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+      }
+    },
     'Magma Rager': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           end(me, non_bc, bc);
         });
+      }
+    },
+    'Silverback Patriarch': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Gnomish Inventor': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.draw_cards(1);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Sen\'jin Shieldmasta': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Chillwind Yeti': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Stormwind Knight': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'charge', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Oasis Snapjaw': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ogre Magi': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if (c.owner == me.owner) return d + 1;
+              return d;
+            }, 'spell_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Gurubashi Berserker': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.victim == me) {
+                me.add_state(inc(3), 'dmg', me);
+              }
+            }, 'take_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Frostwolf Warlord': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            for (var i = 0; i < me.owner.field.num_card(); i++) {
+              if (me.owner.field.card_list[i] != me) {
+                me.add_state(inc(1), 'dmg', me);
+                me.add_state(inc(1), 'life', me);
+                me.current_life += 1;
+              }
+            }
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Stormpike Commando': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              return true;
+            }, // can target anything
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.deal_dmg(2, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
       }
     },
     'Emperor Thaurissan': {

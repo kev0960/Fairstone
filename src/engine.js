@@ -1,5 +1,5 @@
 const card_manager = require('./card_db/card');
-const card_db = require('./card_db/card_db');
+const card_db = require('./card_api.js');
 const util = require('./utility');
 const colors = require('colors');
 
@@ -177,7 +177,7 @@ Card.prototype.copy_to_other_card = function(c) {
   }
 };
 Card.prototype.is_good = function() {
-  if(this.state != 'destroyed') {
+  if(this.status != 'destroyed') {
     return true;
   }
   return false; 
@@ -364,6 +364,19 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
+Player.prototype.hand_card = function(name) {
+  var card = card_manager.load_card(name);
+  var c = create_card(name, this);
+  
+  c.status = 'hand';
+  c.id = this.g_id.get_id();
+  
+  if(card.on_draw) card.on_draw(c);
+  this.hand.put_card(c, 10);
+  
+  this.g_handler.add_event(new Event('draw_card', [c, this]));
+  this.g_handler.execute();
+}
 // Draw n cards from a deck
 Player.prototype.draw_cards = function(n) {
   while (n > 0) {
@@ -1534,11 +1547,46 @@ Engine.prototype.socket = function(p) {
   }
   throw "SOCKET ERROR";
 };
+
+var current_working_engine = null;
 module.exports = {
   start_match: function(p1_socket, p2_socket, p1, p2) {
     var e = new Engine(p1_socket, p2_socket, p1, p2);
     e.start_match();
 
+    // FOR THE DEBUG !! 
+    // PLEASE REMOVE FOR THE ACTUAL RELEASE
+    current_working_engine = e;
+    
     return e;
   }
 };
+
+/*
+
+Here is a support for the Debugging procedures
+
+*/
+
+var stdin = process.openStdin();
+stdin.addListener('data', function(d) {
+  var input = d.toString().trim();
+  
+  // split into commands
+  var args = input.split(' ');
+  console.log(args);
+  
+  if(args[0] == 'add') {
+    var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
+    
+    var card_name = args[2];
+    for(var i = 3; i < args.length; i ++) card_name += (' ' + args[i]);
+    
+    to.hand_card(card_name);
+  }
+  else if(args[0] == 'mana') {
+    var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
+    to.current_mana = 100;
+  }
+})
+

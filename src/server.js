@@ -255,7 +255,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Murloc Tidehunter', 2]
+      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Gnomish Inventor', 2]
     }]
   }, {
     id: 'Jaebum',
@@ -264,7 +264,7 @@ function UserManager() {
     deck_list: [{
       name: '전사 덱',
       job: 'warrior',
-      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Voodoo Doctor', 2]
+      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2]
     }]
   }];
 }
@@ -497,3 +497,20 @@ MatchMaker.prototype.get_match = function(match_token) {
 // Keep searching for the available game!
 var match_maker = new MatchMaker();
 setTimeout(match_maker.matching_queue.bind(match_maker), 1000);
+
+
+/*
+
+For Debugging
+
+*/
+
+var hearth_api= require('./card_api');
+var stdin = process.openStdin();
+stdin.addListener('data', function(d) {
+  var input = d.toString().trim();
+  
+  var args = input.split(' ')
+  if(args[0] == 'db') hearth_api.get_db();
+})
+

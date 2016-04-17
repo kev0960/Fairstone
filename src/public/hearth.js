@@ -85,9 +85,14 @@ CardContainer.prototype.on_selection = function(selected) {
 }
 CardContainer.prototype.on_selection_end = function(selected) {
   // if card is dropped on my field
-  console.log('Offset :: ', this.selected_card.offsetTop, ' and ', this.selected_card.offsetLeft)
+  console.log('Offset :: ', this.selected_card.offsetTop, ' and ', this.selected_card.offsetLeft + this.selected_card.parentElement.offsetLeft)
+  
+  hearth_client.field_ctx.strokeStyle = 'white';
+  hearth_client.field_ctx.clearRect(0, 0, 1000, 50);
+ // hearth_client.field_ctx.strokeText('Offset :: ' + this.selected_card.offsetTop +' and ' + this.selected_card.offsetLeft, 0, 50);
+  
   if (-200 > this.selected_card.offsetTop && this.selected_card.offsetTop > -600) {
-    hearth_client.play_card(this.selected_card.id, hearth_client.where_to_put(this.selected_card.offsetLeft));
+    hearth_client.play_card(this.selected_card.id, hearth_client.where_to_put(this.selected_card.offsetLeft + this.selected_card.parentElement.offsetLeft));
   }
 
   // When things are good
@@ -616,12 +621,15 @@ HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
 HearthClient.prototype.where_to_put = function(x) {
   var prev_x = 0;
   console.log('where :: ', x);
+  for(var i = 0; i < hearth_client.my_field.length; i ++) {
+    console.log('my field cards #', i, ' : ', hearth_client.my_field[i].x) 
+  }
+  
   for (var i = 0; i < hearth_client.my_field.length; i++) {
-    console.log('my field cards #', i, ' : ', hearth_client.my_field[i].x)
-    if (x >= prev_x && x < hearth_client.my_field[i].x + 80) {
+    if (x >= prev_x && x < hearth_client.my_field[i].x) {
       return i;
     }
-    else prev_x = hearth_client.my_field[i].x + 80;
+    else prev_x = hearth_client.my_field[i].x;
   }
   return hearth_client.my_field.length + 1;
 }
