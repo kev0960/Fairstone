@@ -60,6 +60,9 @@ function Card(card_data, id, owner) {
 
   // Proposed damage that may be given to the target (can be changed)
   this.dmg_given = 0;
+
+  // Life Aura Points
+  this.life_aura = [];
 }
 Card.prototype.add_state = function(f, state, who) {
   this.state.push({
@@ -78,7 +81,8 @@ Card.prototype.chk_state = function(state) {
 Card.prototype.do_action = function(action) {
   this.owner.engine.send_client_minion_action(this.id, action);
 }
-Card.prototype.calc_state = function(state, init_value) {
+
+Card.prototype.calc_state = function(state, init_value, should_sort) {
   var x = init_value;
   var modifiers = [];
 
@@ -96,10 +100,14 @@ Card.prototype.calc_state = function(state, init_value) {
       });
     }
   }
-  // Sort by ascending order
-  modifiers.sort(function(a, b) {
-    return a.when > b.when
-  });
+
+  // Mana is only case we should sort as a chornical order
+  if (should_sort) {
+    // Sort by ascending order
+    modifiers.sort(function(a, b) {
+      return a.when > b.when
+    });
+  }
 
   for (i = 0; i < modifiers.length; i++) {
     x = modifiers[i].f(x, this);
@@ -107,20 +115,39 @@ Card.prototype.calc_state = function(state, init_value) {
   return x;
 };
 Card.prototype.dmg = function() {
-  var d = this.calc_state('dmg', this.card_data.dmg);
+  var d = this.calc_state('dmg', this.card_data.dmg, false);
   if (d < 0) return 0;
-
   return d;
 }
+
 // Calculates the maximum possible life point
+// Enchantment has a higher priority over Auras 
 Card.prototype.life = function() {
-  return this.calc_state('life', this.card_data.life);
+  var x = this.card_data.life;
+  var modifiers = [];
+  for (var i = 0; i < this.state.length; i++) {
+    if (this.state[i].state === 'life') modifiers.push({
+      f: this.state[i].f,
+      when: this.state[i].when
+    });
+  }
+  for (i = 0; i < this.life_aura.length; i++) {
+    modifiers.push({
+      f: this.life_aura[i].f,
+      when: this.life_aura[i].when
+    });
+  }
+
+  for (i = 0; i < modifiers.length; i++) {
+    x = modifiers[i].f(x, this);
+  }
+  return x;
 }
 Card.prototype.spell_dmg = function(dmg) {
-  return this.owner.spell_dmg(this, dmg);
+  return this.owner.spell_dmg(this, dmg, false);
 }
 Card.prototype.mana = function() {
-  var m = this.calc_state('mana', this.card_data.mana);
+  var m = this.calc_state('mana', this.card_data.mana, true);
   if (m < 0) return 0;
 
   return m;
@@ -136,11 +163,15 @@ Card.prototype.update_atk_cnt = function() {
 Card.prototype.is_attackable = function() {
   if (this.is_frozen.until >= this.owner.engine.current_turn) return false;
   this.update_atk_cnt();
-  
-  if(this.atk_info.did < this.atk_info.cnt) return true;
-  
-  return false; 
+
+  if (this.atk_info.did < this.atk_info.cnt) return true;
+
+  return false;
 };
+Card.prototype.stealth = function() {
+  if (this.is_stealth.until >= this.owner.engine.current_turn) return false;
+  return true;
+}
 Card.prototype.make_charge = function(who) {
   this.add_state(null, 'charge', who);
   this.update_atk_cnt();
@@ -177,10 +208,10 @@ Card.prototype.copy_to_other_card = function(c) {
   }
 };
 Card.prototype.is_good = function() {
-  if(this.status != 'destroyed') {
+  if (this.status != 'destroyed') {
     return true;
   }
-  return false; 
+  return false;
 }
 
 function create_card(name, owner) {
@@ -304,6 +335,7 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
     success(c)
   }
 
+  // Cannot Target the Stealth Ones
   var available_list = [];
   for (var i = 0; i < this.field.num_card(); i++) {
     if (select_cond(this.field.card_list[i])) {
@@ -311,8 +343,9 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
     }
   }
 
+  // Cannot target Enemy Stealth minion (but can target mine)
   for (var i = 0; i < this.enemy.field.num_card(); i++) {
-    if (select_cond(this.enemy.field.card_list[i])) {
+    if (select_cond(this.enemy.field.card_list[i]) && !this.enemy.field.card_list[i].stealth()) {
       available_list.push(this.enemy.field.card_list[i].id);
     }
   }
@@ -365,19 +398,19 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
 Player.prototype.hand_card = function(name) {
-  var card = card_manager.load_card(name);
-  var c = create_card(name, this);
-  
-  c.status = 'hand';
-  c.id = this.g_id.get_id();
-  
-  if(card.on_draw) card.on_draw(c);
-  this.hand.put_card(c, 10);
-  
-  this.g_handler.add_event(new Event('draw_card', [c, this]));
-  this.g_handler.execute();
-}
-// Draw n cards from a deck
+    var card = card_manager.load_card(name);
+    var c = create_card(name, this);
+
+    c.status = 'hand';
+    c.id = this.g_id.get_id();
+
+    if (card.on_draw) card.on_draw(c);
+    this.hand.put_card(c, 10);
+
+    this.g_handler.add_event(new Event('draw_card', [c, this]));
+    this.g_handler.execute();
+  }
+  // Draw n cards from a deck
 Player.prototype.draw_cards = function(n) {
   while (n > 0) {
     if (this.deck.num_card() == 0) {
@@ -430,14 +463,14 @@ Player.prototype.draw_card = function(c) {
   this.g_handler.execute();
 }
 Player.prototype.draw_card_name = function(name) {
-  for (var i = 0; i < this.deck.num_card(); i++) {
-    if (this.deck.card_list[i].card_data.name == name) {
-      this.draw_card(this.deck.card_list[i]);
-      return;
+    for (var i = 0; i < this.deck.num_card(); i++) {
+      if (this.deck.card_list[i].card_data.name == name) {
+        this.draw_card(this.deck.card_list[i]);
+        return;
+      }
     }
   }
-}
-// Play a card from a hand
+  // Play a card from a hand
 Player.prototype.play_minion = function(c, at) {
   console.log(colors.blue('[play minion] mana : '), this.current_mana, ' vs ', c.mana());
 
@@ -470,7 +503,7 @@ Player.prototype.play_success = function(c, at, next) {
   this.emit_play_card_success(c, at, c.mana());
 
   if (c.card_data.type == 'minion') {
-    console.log('PUT ', c.card_data.name , ' at ', at);
+    console.log('PUT ', c.card_data.name, ' at ', at);
     this.field.put_card(c, at);
 
     this.g_handler.add_event(new Event('play_card', [c, this]));
@@ -704,12 +737,63 @@ Player.prototype.heal = function(heal, from, to) {
   if (this.chk_aura('prophet_velen')) {
     heal *= 2;
   }
-  
-  to.current_life += heal;
-  if(to.current_life > to.life()) to.current_life = to.life();
-  this.g_handler.add_event(new Event('heal', [from, to, heal]));
-};
 
+  if (to.current_life != to.life) {
+    var bef = to.current_life;
+
+    to.current_life += heal;
+    if (to.current_life > to.life()) to.current_life = to.life();
+
+    this.g_handler.add_event(new Event('heal', [from, to, to.current_life - bef]));
+  }
+
+  this.g_handler.execute();
+};
+Player.prototype.heal_many = function(heal_arr, from, to_arr, done) {
+  if (this.chk_aura('auchenai_soulpriest')) {
+    var dmg_arr = [];
+    for (var i = 0; i < heal_arr.length; i++) {
+      dmg_arr.push(this.spell_dmg(from, heal_arr[i]));
+    }
+    this.deal_dmg_many(dmg_arr, from, to_arr);
+    return;
+  }
+
+  if (this.chk_aura('prophet_velen')) {
+    for (var i = 0; i < heal_arr.length; i++) heal_arr[i] *= 2;
+  }
+
+  // sort the list of targes in order of play
+  var temp_arr = [];
+  for (var i = 0; i < heal_arr.length; i++) {
+    temp_arr.push({
+      h: heal_arr[i],
+      to: to_arr[i]
+    });
+  }
+  temp_arr.sort(function(a, b) {
+    return a.to.summon_order > b.to.summon_order
+  });
+
+  // Rearrange dmg_arr and to_arr according to the summon_order
+  for (i = 0; i < temp_arr.length; i++) {
+    heal_arr[i] = temp_arr[i].h;
+    to_arr[i] = temp_arr[i].to;
+  }
+
+  for (var i = 0; i < temp_arr.length; i++) {
+    if (temp_arr[i].to.current_life != temp_arr[i].to.life) {
+      var bef = temp_arr[i].to.current_life;
+
+      temp_arr[i].to.current_life += temp_arr[i].h;
+      if (temp_arr[i].to.current_life > temp_arr[i].to.life()) temp_arr[i].to.current_life = temp_arr[i].to.life();
+
+      this.g_handler.add_event(new Event('heal', [from, temp_arr[i].to, temp_arr[i].to.current_life - bef]));
+    }
+  }
+
+  this.g_handler.execute();
+};
 // Deals damage to many targets
 Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
   if (!done) {
@@ -793,6 +877,14 @@ Player.prototype.silence = function(from, target) {
 
   this.g_handler.add_event(new Event('silenced', [from, target]));
 };
+Player.prototype.get_all_character = function() {
+  var ret = [];
+  for (var i = 0; i < this.field.num_card(); i++) {
+    ret.push(this.field.card_list[i]);
+  }
+  ret.push(this.hero);
+  return ret;
+}
 
 function Event(event_type, args) {
   this.event_type = event_type;
@@ -953,7 +1045,7 @@ Handler.prototype.add_handler = function(f, event, me, is_secret, must) {
     f: f,
     me: me,
     'is_secret': (is_secret ? true : false),
-    'must' : (must ? true : false)
+    'must': (must ? true : false)
   });
 };
 Handler.prototype.force_add_event = function(e) {
@@ -1082,6 +1174,8 @@ Handler.prototype.death_creation = function() {
   console.log('Death Creation ', this.destroyed_queue.length);
   console.log('Callback size, ', this.queue_resolved_callback.length);
 
+  this.engine.update_aura();
+
   this.destroyed_queue_length = this.destroyed_queue.length;
   var dq = this.destroyed_queue;
 
@@ -1113,6 +1207,8 @@ Handler.prototype.death_creation = function() {
 };
 Handler.prototype.end_phase = function() {
   console.log('end phase invoked!');
+  this.engine.update_aura();
+
   if (this.next_phase) {
     var f = this.next_phase;
     this.next_phase = null;
@@ -1206,9 +1302,57 @@ Engine.prototype.add_aura = function(f, state, who, must) {
     state: state,
     who: who,
     when: this.g_when.get_id(),
-    'must' : (must ? true : false)
+    'must': (must ? true : false)
   });
 };
+Engine.prototype.update_life_aura = function(p) {
+  // Health Update
+  for (var i = 0; i < p.field.num_card(); i++) {
+    var card = p.field.card_list[i];
+    var bef = card.current_life;
+
+    // First check the existence of nullified Aura effecting this minion
+    for (var j = 0; j < card.life_aura.length; j++) {
+      if (!(card.life_aura[j].who.is_good() || card.life_aura[j].must) || card.life_aura[j].f(bef, card) == bef) {
+        card.life_aura.splice(j, 1);
+        j--;
+      }
+    }
+
+    var max = card.life();
+
+    // Recalculate Max Life and compares
+    if (card.current_life > max) {
+      card.current_life = max;
+    }
+
+    // Search for all available auras.
+    for (var j = 0; j < this.g_aura.length; j++) {
+      // After removing unnecessary aura, we now seek for possible new Aura for the minion
+      if (this.g_aura[j].state == 'life') {
+        // When this Health Aura is effecting this card
+        // Check whether this Aura effect has taken into account
+        if ((this.g_aura[j].who.is_good() || this.g_aura[j].must) && this.g_aura[j].f(bef, card) != bef) {
+          for (var k = 0; k < card.life_aura.length; k++) {
+            if (card.life_aura[k] == this.g_aura[j]) break;
+          }
+
+          // If that life Aura is not registered
+          // Register as a card health aura and give it a BUFF 
+          // This process makes sure that the card is given a health buff only single time
+          if (k == card.life_aura.length) {
+            card.life_aura.push(this.g_aura[j]);
+            card.current_life = this.g_aura[j].f(card.current_life, card);
+          }
+        }
+      }
+    }
+  }
+};
+Engine.prototype.update_aura = function() {
+  this.update_life_aura(this.p1);
+  this.update_life_aura(this.p2);
+}
 Engine.prototype.find_card_by_id = function(id, p) {
   for (var i = 0; i < this.p1.hand.num_card(); i++) {
     if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
@@ -1557,7 +1701,7 @@ module.exports = {
     // FOR THE DEBUG !! 
     // PLEASE REMOVE FOR THE ACTUAL RELEASE
     current_working_engine = e;
-    
+
     return e;
   }
 };
@@ -1571,22 +1715,21 @@ Here is a support for the Debugging procedures
 var stdin = process.openStdin();
 stdin.addListener('data', function(d) {
   var input = d.toString().trim();
-  
+
   // split into commands
   var args = input.split(' ');
   console.log(args);
-  
-  if(args[0] == 'add') {
+
+  if (args[0] == 'add') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
-    
+
     var card_name = args[2];
-    for(var i = 3; i < args.length; i ++) card_name += (' ' + args[i]);
-    
+    for (var i = 3; i < args.length; i++) card_name += (' ' + args[i]);
+
     to.hand_card(card_name);
   }
-  else if(args[0] == 'mana') {
+  else if (args[0] == 'mana') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     to.current_mana = 100;
   }
 })
-

@@ -128,48 +128,6 @@
         });
       }
     },
-    'Leper Gnome': {
-      on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if (non_bc) {
-            me.owner.g_handler.add_handler(function(e, me) {
-              if (e.card == me) {
-                me.owner.deal_dmg(2, me, me.owner.enemy.hero);
-              }
-            }, 'deathrattle', me);
-          }
-          end(me, non_bc, bc);
-        });
-      }
-    },
-    'Abusive Sergeant': {
-      on_play: function(me, bc, user_play, at) {
-        if (user_play) {
-          me.owner.select_one(me,
-            function(c) {
-              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
-            },
-            function() {
-              me.owner.play_success(me, at, function(me, non_bc, bc) {
-                if (bc) {
-                  me.target.add_state(function(turn) {
-                    return function(dmg, me) {
-                      if (turn == me.owner.engine.current_turn) {
-                        return dmg + 2;
-                      }
-                      return dmg;
-                    };
-                  }(me.owner.engine.current_turn), 'dmg', me);
-                }
-                end(me, non_bc, bc);
-              });
-            },
-            function() {},
-            false
-          );
-        }
-      }
-    },
     'Murloc Tidehunter': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -448,6 +406,181 @@
         }
       }
     },
+    'Nightblade': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.deal_dmg(3, me, me.owner.enemy.hero);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Darkscale Healer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var target = me.owner.get_all_character();
+            var heal = [];
+            for(var i = 0; i < target.length; i ++) {
+              heal.push(2);  
+            }
+            me.owner.heal_many(heal, me, me.owner.get_all_character());
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Archmage': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if (c.owner == me.owner) return d + 1;
+              return d;
+            }, 'spell_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Boulderfist Ogre': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Reckless Rocketeer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'charge', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Lord of the Arena': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Stormwind Champion': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if (c.owner == me.owner && c != me) return d + 1;
+              return d;
+            }, 'dmg', me);
+            me.owner.engine.add_aura(function(d, c) {
+              if (c.owner == me.owner && c != me) return d + 1;
+              return d;
+            }, 'life', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Core Hound': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'War Golem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Wisp': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Abusive Sergeant': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.target.add_state(function(turn) {
+                    return function(dmg, me) {
+                      if (turn == me.owner.engine.current_turn) {
+                        return dmg + 2;
+                      }
+                      return dmg;
+                    };
+                  }(me.owner.engine.current_turn), 'dmg', me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+      }
+    },
+    'Worgen Infiltrator': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if(non_bc) {
+            me.is_stealth.until = 1000; // Infinitely stealth 
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Shieldbearer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'charge', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Young Dragonhawk': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(function() { return 2; }, 'atk_num', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Leper Gnome': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card == me) {
+                me.owner.deal_dmg(2, me, me.owner.enemy.hero);
+              }
+            }, 'deathrattle', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Argent Squire': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.is_shielded.until = 1000; 
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Emperor Thaurissan': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -461,13 +594,6 @@
               }
             }, 'turn_end', me, false);
           }
-          end(me, non_bc, bc);
-        });
-      }
-    },
-    'War Golem': {
-      on_play: function(me, bc, user_play, at) {
-        me.owner.play_success(me, at, function(me, non_bc, bc) {
           end(me, non_bc, bc);
         });
       }
