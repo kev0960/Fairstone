@@ -1,6 +1,6 @@
 # 흙스스톤 - Fairstone #
 
-흙스스톤은 본인과 같은 하스스톤에 과금할 여력이 없는 사람들을 위한 하스스톤 서버로, 모든 사용자들이 자유롭게 모든 카드들을
+흙스스톤은 본인과 같은 하스스톤에 과금할 생각이 없는 사람들을 위한 하스스톤 서버로, 모든 사용자들이 자유롭게 모든 카드들을
 이용할 수 있도록 하는 것을 목표로 합니다. 또한, 등급전 보다 좀 더 실질적으로 내 등급을 알려주기 위해 MMR 을 기반으로 한 매칭을
 수행하며, 특히 각 직업 별 MMR 을 따로 기록 해서, Rank Match 에서 승률이 낮은 직업을 사용하더라도, 그 직업을 플레이 
 하는 사람 들 중에서 내가 얼마나 돋보이는지를 평가할 수 있게 하였습니다. 
@@ -36,7 +36,7 @@ page.
 ## Basic Info ##
 
 This Hearthstone Server - Fairstone is based on Node.js and Express engine. It uses Socket.io to communicate between
-the server and a client. Entire source is purely written in Javascript and CSS. 
+the server and a client. Entire source is purely written in Javascript. 
 
 All of source files are located in /src folder.
 
@@ -49,6 +49,18 @@ Download the Fairstone source files
 Start the server
 
 `npm start`
+
+As the server starts, card_api will automatically download the latest Hearthstone card infos through the Hearthstone API. 
+
+## Admin Commands ##
+
+To debug, you can type several admin commands to the Fairstone server. The supporting commands are
+
+`add <p1 or p2> <Name of the Card>`
+
+`mana <p1 or p2> <Mana you want to give>`
+
+These commands will be applied to the latest matching game.
 
 ## Contributors ##
 

@@ -20,7 +20,7 @@ HearthAPI.prototype.get_card_db = function() {
         if (!data[collection][i].name) continue;
 
         var t = data[collection][i].type;
-        if (t == 'Minion' || t == 'Weapon' || t == 'Spell') {
+        if (t == 'Minion' || t == 'Weapon' || t == 'Spell' || t == 'Hero Power') {
           var c = data[collection][i];
           hearth_api.card_db.push({
               name : c.name.replace('\\', ''),
@@ -29,7 +29,7 @@ HearthAPI.prototype.get_card_db = function() {
               kind: (c.race ? c.race.toLowerCase() : null),
               job: (c.playerClass ? c.playerClass.toLowerCase() : null),
               img: c.img,
-              info: [c.cost, (c.attack ? c.attack : 0), (c.health ? c.health : 0)],
+              info: [(c.cost ? c.cost : c.durability), (c.attack ? c.attack : 0), (c.health ? c.health : 0)],
               unique : c.cardId,
               is_token : (c.collectible ? false : true)
           });
@@ -39,7 +39,16 @@ HearthAPI.prototype.get_card_db = function() {
     console.log('Done downloading ..');
   });
 }
-
+HearthAPI.prototype.chk_not_found = function(name) {
+  var not_found = {
+    'Dagger' : {
+      type : 'weapon',
+      level : 'basic',
+      job : 'rogue',
+      info : [0, 1, 2]
+    }
+  }
+}
 var hearth_api = new HearthAPI();
 
 module.exports = {
@@ -52,8 +61,13 @@ module.exports = {
         break;
       }
     }
-    if(card) {
-      
+    
+    // Check for the unregistered ones
+    if(!card) card = hearth_api.chk_not_found(name);
+    
+    if(!card) {
+      console.log('Card :: ' , name, ' is not found!');
+      return ;
     }
     console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
     return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind];

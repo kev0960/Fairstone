@@ -63,6 +63,12 @@ function Card(card_data, id, owner) {
 
   // Life Aura Points
   this.life_aura = [];
+
+  // Armor (For Hero)
+  this.armor = 0;
+
+  // Check whether this minion is already destroyed. 
+  this.already_destroyed = false;
 }
 Card.prototype.add_state = function(f, state, who) {
   this.state.push({
@@ -257,6 +263,17 @@ Deck.prototype.get_card_datas = function() {
   }
   return data;
 }
+Deck.prototype.get_distance = function(from, to) {
+  var from_loc = -1,
+    to_loc = -1
+  for (var i = 0; i < this.card_list.length; i++) {
+    if (this.card_list[i] == from) from_loc = i;
+    if (this.card_list[i] == to) to_loc = i;
+  }
+
+  if (from_loc == -1 || to_loc == -1) return -1;
+  return Math.abs(from_loc - to_loc);
+}
 
 function Player(player_name, job, engine) {
   this.player_name = player_name;
@@ -305,7 +322,31 @@ function Player(player_name, job, engine) {
   // Maximum 8
   this.exhaust_dmg = 0;
 
-};
+  // Hero Powers 
+  this.hero_power = null;
+  this.power_used = {
+    max: 1,
+    did: 0,
+    turn: -1
+  };
+
+  this.init_hero_power(); // Set Hero POWER 
+
+  // Hero Weapon
+  this.weapon = null;
+
+  this.weapon_used = {
+    max: 1,
+    did: 0,
+    turn: -1
+  };
+
+  // Damage added to the hero
+  this.turn_dmg = {
+    dmg: 0,
+    turn: -1
+  };
+}
 
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.g_aura.length; i++) {
@@ -387,12 +428,11 @@ Player.prototype.chk_target = function(c, next) {
   }
 
   this.g_handler.add_callback(next, this, [c]);
+  this.g_handler.execute();
 };
-Player.prototype.spell_txt_phase = function(c, next) {
-  this.g_handler.add_phase_block = true;
-
-  next(c);
-};
+Player.prototype.end_hero_power = function() {
+  this.g_handler.execute();
+}
 Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
@@ -513,6 +553,16 @@ Player.prototype.play_success = function(c, at, next) {
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
   }
+  else if (c.card_data.type == 'hero power') {
+    this.g_handler.add_event(new Event('inspire', [this]));
+    this.g_handler.add_phase(this.chk_target, this, [c, next]);
+  }
+  else if (c.card_data.type == 'weapon') {
+    this.load_weapon(c);
+
+    this.g_handler.add_event(new Event('play_card', [c, this]));
+    this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
+  }
 
   this.g_handler.execute();
 };
@@ -575,8 +625,12 @@ Player.prototype.summon_card = function(name, at) {
   c.summon_order = this.g_when.get_id();
   c.id = this.engine.g_id.get_id();
 
-  this.field.put_card(c, at);
   var card = card_manager.load_card(c.card_data.name);
+
+  if (c.card_data.type == 'minion') this.field.put_card(c, at);
+  else if (c.card_data.type == 'weapon') {
+    this.load_weapon(c);
+  }
 
   card.on_play(c, false, false, at);
 };
@@ -615,7 +669,7 @@ Player.prototype.combat = function(c, target) {
   if (!c.is_attackable() // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
     || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
-    || this.chk_invincible(target)) return false; // chks whether the attacker is attacking invincible target
+    || this.chk_invincible(target) || !target.stealth()) return false; // chks whether the attacker is attacking invincible target
 
   c.target = target;
   c.is_stealth.until = -1; // stealth is gone!
@@ -662,8 +716,29 @@ Player.prototype.actual_combat = function(c) {
     target.is_shielded.until = -1;
   }
 
-  c.current_life -= target.dmg_given;
-  target.current_life -= c.dmg_given;
+  c.already_destroyed = false;
+  target.already_destroyed = false;
+
+  // Mark whether any one of minion has destroyed before ( to prevent duplicated Event queing)
+  if (c.current_life <= 0) c.already_destroyed = true;
+  if (target.current_life <= 0) target.already_destroyed = true;
+
+  if (c.armor > target.dmg_given) {
+    c.armor -= target.dmg_given;
+  }
+  else {
+    c.armor = 0;
+    c.current_life -= (target.dmg_given - c.armor);
+  }
+
+  // Check for the Armor
+  if (target.armor > c.dmg_given) {
+    target.armor -= c.dmg_given;
+  }
+  else {
+    target.armor = 0;
+    target.current_life -= (c.dmg_given - target.armor);
+  }
 
   if (c.dmg_given > 0) {
     this.g_handler.add_event(new Event('take_dmg', [target, c, c.dmg_given]));
@@ -679,12 +754,13 @@ Player.prototype.actual_combat = function(c) {
 
   console.log('First :: ', first.card_data.name, ' life : ', first.current_life);
   console.log('Second :: ', second.card_data.name, ' life : ', second.current_life);
+
   // Minion must be alive before this attack in order to invoke destroyed event!
   // (DESTROYED EVENT IS NOT CREATED TWICE)
-  if (first.current_life <= 0 && first.current_life + second.dmg_given > 0 && first.status != 'destroyed')
+  if (first.current_life <= 0 && !first.already_destroyed && first.status != 'destroyed')
     this.g_handler.add_event(new Event('destroyed', [first, second]));
 
-  if (second.current_life <= 0 && second.current_life + first.dmg_given > 0 && second.status != 'destroyed')
+  if (second.current_life <= 0 && !second.already_destroyed && second.status != 'destroyed')
     this.g_handler.add_event(new Event('destroyed', [second, first]));
 
   this.g_handler.execute();
@@ -719,12 +795,23 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   }
   if (dmg == 0) return; // May be we should at least create an animation for this too..
 
-  to.current_life -= dmg;
+  to.already_destroyed = false;
+  if (to.current_life <= 0) to.already_destroyed = true;
+
+  // Check for the Armor
+  if (to.armor > dmg) {
+    to.armor -= dmg;
+  }
+  else {
+    to.armor = 0;
+    to.current_life -= (dmg - to.armor);
+  }
+
 
   this.g_handler.add_event(new Event('take_dmg', [to, from, dmg]));
   this.g_handler.add_event(new Event('deal_dmg', [from, to, dmg]));
 
-  if (to.current_life <= 0 && to.current_life + dmg > 0 && to.status != 'destroyed')
+  if (to.current_life <= 0 && !to.already_destroyed && to.status != 'destroyed')
     this.g_handler.add_event(new Event('destroyed', [to, from]));
 };
 
@@ -838,17 +925,101 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
 
       // We only create dmg event when dmg is over 0
       if (dmg_arr[i] > 0) {
-        to_arr[i].current_life -= dmg_arr[i];
+
+        to_arr[i].already_destroyed = false;
+        if (to_arr[i].current_life <= 0) to_arr[i].already_destroyed = true;
+
+        // Check for the Armor
+        if (to_arr[i].armor > dmg_arr[i]) {
+          to_arr[i].armor -= dmg_arr[i];
+        }
+        else {
+          to_arr[i].armor = 0;
+          to_arr[i].current_life -= (dmg_arr[i] - to_arr[i].armor);
+        }
 
         this.g_handler.add_event(new Event('deal_dmg', [from, to_arr[i], dmg_arr[i]]));
         this.g_handler.add_event(new Event('take_dmg', [to_arr[i], from, dmg_arr[i]]));
 
-        if (to_arr[i].current_life <= 0 && to_arr[i].current_life + dmg_arr[i] > 0 && to_arr[i].status != 'destroyed')
+        if (to_arr[i].current_life <= 0 && !to_arr[i].already_destroyed && to_arr[i].status != 'destroyed')
           this.g_handler.add_event(new Event('destroyed', [to_arr[i], from]));
       }
     }
   }
 };
+Player.prototype.use_hero_power = function() {
+  var default_max = 1;
+  if (this.power_used.turn != this.engine.current_turn) {
+    for (var i = 0; i < this.engine.g_aura.length; i++) {
+      if (this.engine.g_aura[i].state == 'hero_power_num') {
+        default_max = this.engine.g_aura[i].f(default_max, this);
+      }
+    }
+    this.power_used.turn = this.engine.current_turn;
+    this.power_used.max = default_max;
+    this.power_used.did = 0;
+  }
+
+  if (this.power_used.did >= this.power_used.max) {
+    return;
+  }
+
+  if (this.current_mana < this.hero_power.mana()) {
+    return;
+  }
+
+  this.current_mana -= this.hero_power.mana();
+  this.power_used.did++;
+
+  var c = card_manager.load_card(this.hero_power.card_data.name);
+  c.on_play(this.hero_power);
+  
+  this.engine.g_handler.execute();
+};
+Player.prototype.change_hero_power = function(name) {
+  var default_max = 1;
+  for (var i = 0; i < this.engine.g_aura.length; i++) {
+    if (this.engine.g_aura[i].state == 'hero_power_num') {
+      default_max = this.engine.g_aura[i].f(default_max, this);
+    }
+  }
+  this.power_used.turn = this.engine.current_turn;
+  this.power_used.max = default_max;
+  this.power_used.did = 0;
+
+  this.hero_power = create_card(name, this);
+}
+Player.prototype.init_hero_power = function() {
+  switch (this.hero.card_data.job) {
+    case 'warlock':
+      this.change_hero_power('Life Tap');
+      break;
+    case 'paladin':
+      this.change_hero_power('Reinforce');
+      break;
+    case 'priest':
+      this.change_hero_power('Lesser Heal');
+      break;
+    case 'druid':
+      this.change_hero_power('Shapeshift');
+      break;
+    case 'hunter':
+      this.change_hero_power('Steady Shot');
+      break;
+    case 'shaman':
+      this.change_hero_power('Totemic Call');
+      break;
+    case 'warrior':
+      this.change_hero_power('Armor Up!');
+      break;
+    case 'rogue':
+      this.change_hero_power('Dagger Mastery');
+      break;
+    case 'mage':
+      this.change_hero_power('Fireblast');
+      break;
+  }
+}
 
 // Silence a minion
 Player.prototype.silence = function(from, target) {
@@ -876,7 +1047,27 @@ Player.prototype.silence = function(from, target) {
   }
 
   this.g_handler.add_event(new Event('silenced', [from, target]));
+  this.g_handler.execute();
 };
+Player.prototype.add_armor = function(armor, who) {
+  this.hero.armor += armor;
+  this.g_handler.add_event(new Event('armor', [who, this.hero, armor]));
+
+  this.g_handler.execute();
+};
+Player.prototype.load_weapon = function(weapon) {
+  if (this.weapon) {
+    this.weapon.status = 'destroyed';
+    this.g_handler.add_event(new Event('destroyed', [this.weapon, weapon]));
+  }
+
+  this.weapon = weapon;
+  this.weapon_used.max = this.weapon.calc_state('atk_num', 1, false);
+
+  if (this.weapon_used.turn != this.engine.current_turn) {
+    this.weapon_used.did = 0;
+  }
+}
 Player.prototype.get_all_character = function() {
   var ret = [];
   for (var i = 0; i < this.field.num_card(); i++) {
@@ -884,7 +1075,7 @@ Player.prototype.get_all_character = function() {
   }
   ret.push(this.hero);
   return ret;
-}
+};
 
 function Event(event_type, args) {
   this.event_type = event_type;
@@ -958,6 +1149,14 @@ function Event(event_type, args) {
     this.target = args[1];
     this.heal = args[2];
   }
+  else if (event_type == 'inspire') {
+    this.who = args[0];
+  }
+  else if (event_type == 'armor') {
+    this.who = args[0];
+    this.target = args[1];
+    this.armor = args[2];
+  }
 }
 Event.prototype.packer = function() {
     if (this.args.length == 0) {
@@ -1006,7 +1205,7 @@ function Handler(engine) {
 
   var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon',
     'draw_card', 'play_card', 'after_play', 'turn_begin', 'turn_end', 'deathrattle',
-    'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt', 'target'
+    'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt', 'target', 'inspire', 'armor'
   ];
 
   // initialize event handler array
@@ -1148,6 +1347,12 @@ Handler.prototype.log_event = function(e) {
       break;
     case 'heal':
       s += get_name(e.who) + '(#' + e.who.id + ') heals ' + get_name(e.target) + ' / heal :: ' + e.heal;
+      break;
+    case 'inspire':
+      s += get_name(e.who) + ' used Hero Power';
+      break;
+    case 'armor':
+      s += get_name(e.who) + '(#' + e.who.id + ') gives armor to ' + get_name(e.target) + ' / Armor :: ' + e.armor;
       break;
   }
   console.log(colors.red(s));
@@ -1352,7 +1557,8 @@ Engine.prototype.update_life_aura = function(p) {
 Engine.prototype.update_aura = function() {
   this.update_life_aura(this.p1);
   this.update_life_aura(this.p2);
-}
+};
+
 Engine.prototype.find_card_by_id = function(id, p) {
   for (var i = 0; i < this.p1.hand.num_card(); i++) {
     if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
@@ -1598,6 +1804,15 @@ Engine.prototype.set_up_listener = function(p) {
       }
     }
   }(this));
+
+  p.socket.on('hero_power', function(e) {
+    return function(data) {
+      if (p == e.current_player) {
+        console.log('Player Used Hero Power');
+        p.use_hero_power();
+      }
+    }
+  }(this));
 };
 Engine.prototype.send_client_minion_action = function(c, action) {
   this.p1_socket.emit('hearth-minion-action', {
@@ -1615,7 +1830,8 @@ Engine.prototype.send_client_data = function(e) {
     return {
       life: p.hero.current_life,
       mana: p.current_mana,
-      id: p.hero.id
+      id: p.hero.id,
+      armor : p.hero.armor
     }
   }
 

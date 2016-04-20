@@ -86,11 +86,11 @@ CardContainer.prototype.on_selection = function(selected) {
 CardContainer.prototype.on_selection_end = function(selected) {
   // if card is dropped on my field
   console.log('Offset :: ', this.selected_card.offsetTop, ' and ', this.selected_card.offsetLeft + this.selected_card.parentElement.offsetLeft)
-  
+
   hearth_client.field_ctx.strokeStyle = 'white';
   hearth_client.field_ctx.clearRect(0, 0, 1000, 50);
- // hearth_client.field_ctx.strokeText('Offset :: ' + this.selected_card.offsetTop +' and ' + this.selected_card.offsetLeft, 0, 50);
-  
+  // hearth_client.field_ctx.strokeText('Offset :: ' + this.selected_card.offsetTop +' and ' + this.selected_card.offsetLeft, 0, 50);
+
   if (-200 > this.selected_card.offsetTop && this.selected_card.offsetTop > -600) {
     hearth_client.play_card(this.selected_card.id, hearth_client.where_to_put(this.selected_card.offsetLeft + this.selected_card.parentElement.offsetLeft));
   }
@@ -621,10 +621,10 @@ HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
 HearthClient.prototype.where_to_put = function(x) {
   var prev_x = 0;
   console.log('where :: ', x);
-  for(var i = 0; i < hearth_client.my_field.length; i ++) {
-    console.log('my field cards #', i, ' : ', hearth_client.my_field[i].x) 
+  for (var i = 0; i < hearth_client.my_field.length; i++) {
+    console.log('my field cards #', i, ' : ', hearth_client.my_field[i].x)
   }
-  
+
   for (var i = 0; i < hearth_client.my_field.length; i++) {
     if (x >= prev_x && x < hearth_client.my_field[i].x) {
       return i;
@@ -634,6 +634,11 @@ HearthClient.prototype.where_to_put = function(x) {
   return hearth_client.my_field.length + 1;
 }
 HearthClient.prototype.init_field_click = function() {
+  function is_in_rect(e, x, y, w, h) {
+    if (e.offsetX >= x && e.offsetX <= x + w && e.offsetY >= y && e.offsetY <= y + h) return true;
+    return false;
+  }
+
   this.field_canvas.onclick = function(e) {
     hearth_client.field_ctx.fillStyle = 'red';
     hearth_client.field_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
@@ -643,61 +648,58 @@ HearthClient.prototype.init_field_click = function() {
       hearth_client.field_ctx.strokeStyle = 'white';
       hearth_client.field_ctx.strokeRect(hearth_client.my_field[i].x - 50, hearth_client.my_field[i].y - 80, 100, 160);
 
-      if (e.offsetX >= hearth_client.my_field[i].x - 50 && e.offsetX <= hearth_client.my_field[i].x + 50) {
-        if (e.offsetY >= hearth_client.my_field[i].y - 80 && e.offsetY <= hearth_client.my_field[i].y + 80) {
-          console.log('Minion #', hearth_client.my_field[i].id, ' is selected!');
-
-          if (hearth_client.need_to_select) {
-            hearth_client.socket.emit('select-done', {
-              id: hearth_client.my_field[i].id
-            });
-            hearth_client.need_to_select = false;
-            hearth_client.choose_card_list = [];
-            return;
-          }
-
-          if (hearth_client.field_selected) {
-            hearth_client.combat(hearth_client.field_selected.id, hearth_client.my_field[i].id);
-            hearth_client.field_selected = null;
-            return;
-          }
-          hearth_client.field_selected = hearth_client.my_field[i];
-
+      if (is_in_rect(e, hearth_client.my_field[i].x - 50, hearth_client.my_field[i].y - 80, 100, 160)) {
+        console.log('Minion #', hearth_client.my_field[i].id, ' is selected!');
+        if (hearth_client.need_to_select) {
+          hearth_client.socket.emit('select-done', {
+            id: hearth_client.my_field[i].id
+          });
+          hearth_client.need_to_select = false;
+          hearth_client.choose_card_list = [];
           return;
         }
+
+        if (hearth_client.field_selected) {
+          hearth_client.combat(hearth_client.field_selected.id, hearth_client.my_field[i].id);
+          hearth_client.field_selected = null;
+          return;
+        }
+        hearth_client.field_selected = hearth_client.my_field[i];
+
+        return;
       }
+
     }
 
     for (var i = 0; i < hearth_client.enemy_field.length; i++) {
       hearth_client.field_ctx.strokeStyle = 'white';
       hearth_client.field_ctx.strokeRect(hearth_client.enemy_field[i].x - 50, hearth_client.enemy_field[i].y - 80, 100, 160);
-      if (e.offsetX >= hearth_client.enemy_field[i].x - 50 && e.offsetX <= hearth_client.enemy_field[i].x + 50) {
-        if (e.offsetY >= hearth_client.enemy_field[i].y - 80 && e.offsetY <= hearth_client.enemy_field[i].y + 80) {
-          console.log('Minion #', hearth_client.enemy_field[i].name, ' is selected!');
 
-          if (hearth_client.need_to_select) {
-            hearth_client.socket.emit('select-done', {
-              id: hearth_client.enemy_field[i].id
-            });
-            hearth_client.need_to_select = false;
-            return;
-          }
+      if (is_in_rect(e, hearth_client.enemy_field[i].x - 50, hearth_client.enemy_field[i].y - 80, 100, 160)) {
+        console.log('Minion #', hearth_client.enemy_field[i].name, ' is selected!');
 
-          if (hearth_client.field_selected) {
-            console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.enemy_field[i].name)
-            hearth_client.combat(hearth_client.field_selected.id, hearth_client.enemy_field[i].id);
-            hearth_client.field_selected = null;
-            return;
-          }
-
-          hearth_client.field_selected = hearth_client.enemy_field[i].id;
-
+        if (hearth_client.need_to_select) {
+          hearth_client.socket.emit('select-done', {
+            id: hearth_client.enemy_field[i].id
+          });
+          hearth_client.need_to_select = false;
           return;
         }
+
+        if (hearth_client.field_selected) {
+          console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.enemy_field[i].name)
+          hearth_client.combat(hearth_client.field_selected.id, hearth_client.enemy_field[i].id);
+          hearth_client.field_selected = null;
+          return;
+        }
+
+        hearth_client.field_selected = hearth_client.enemy_field[i].id;
+
+        return;
       }
     }
 
-    if (e.offsetX >= 1400 && e.offsetX <= 1550 && e.offsetY >= hearth_client.turn_end_btn_y && e.offsetY <= hearth_client.turn_end_btn_y + 50) {
+    if (is_in_rect(e, 1400, hearth_client.turn_end_btn_y, 150, 50)) {
       console.log('Turn ended!');
 
       // Notify the server that the client has ended its turn
@@ -709,7 +711,7 @@ HearthClient.prototype.init_field_click = function() {
     hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.my_hero_y, 200, 150);
     hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150);
 
-    if (e.offsetX >= hearth_client.my_field_center - 100 && e.offsetX <= hearth_client.my_field_center + 100 && e.offsetY >= hearth_client.my_hero_y && e.offsetY <= hearth_client.my_hero_y + 150) {
+    if (is_in_rect(e, hearth_client.my_field_center - 100, hearth_client.my_hero_y, 200, 150)) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'me'
@@ -733,7 +735,7 @@ HearthClient.prototype.init_field_click = function() {
       hearth_client.field_selected = 'me';
     }
     // Enemy hero
-    else if (e.offsetX >= hearth_client.my_field_center - 100 && e.offsetX <= hearth_client.my_field_center + 100 && e.offsetY >= hearth_client.enemy_hero_y && e.offsetY <= hearth_client.enemy_hero_y + 150) {
+    else if (is_in_rect(e, hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150)) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'enemy'
@@ -753,6 +755,13 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       hearth_client.field_selected = 'enemy';
+    }
+
+    // Hero Power
+    hearth_client.field_ctx.strokeStyle = 'white';
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center + 300, hearth_client.my_hero_y, 50, 50);
+    if (is_in_rect(e, hearth_client.my_field_center + 300, hearth_client.my_hero_y, 50, 50)) {
+      hearth_client.socket.emit('hero_power');
     }
 
     if (hearth_client.need_to_select) {
@@ -845,7 +854,7 @@ HearthClient.prototype.log = function(e) {
   this.world_ctx.clearRect(0, 0, 2000, 300);
   this.world_ctx.strokeStyle = 'white';
 
-  log += ' [Me] : ' + this.my_hero.life + ' / ' + this.my_hero.mana + ' [Enemy] ' + this.enemy_hero.life + ' / ' + this.enemy_hero.mana;
+  log += ' [Me] : ' + this.my_hero.life + '(' + this.my_hero.armor + ') / ' + this.my_hero.mana + ' [Enemy] ' + this.enemy_hero.life + '(' + this.enemy_hero.armor + ') / ' + this.enemy_hero.mana;
 
   log += 'My Hand :: ';
   for (var i = 0; i < my_hand.card_list.length; i++) {

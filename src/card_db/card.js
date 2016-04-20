@@ -18,6 +18,91 @@
   function nothing() {}
 
   var card_do = {
+    'Life Tap': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.deal_dmg(2, me, me.owner.hero);
+          me.owner.draw_cards(1);
+        });
+      }
+    },
+    'Silver Hand Recruit': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Reinforce': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.summon_card('Silver Hand Recruit', 10);
+        });
+      }
+    },
+    'Lesser Heal': {
+      on_play: function(me, forced_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.heal(2, me, me.target);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target); // if forced_target is enabled then we don't make user to choose
+      }
+    },
+    'Shape Shift': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.turn_dmg.dmg += 1;
+          me.owner.turn_dmg.turn = me.owner.engine.current_turn;
+          
+          me.owner.add_armor(1, me);
+        });
+      }
+    },
+    'Steady Shot': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.deal_dmg(2, me, me.owner.enemy.hero);
+        });
+      }
+    },
+    'Armor Up!': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.add_armor(2, me);
+        });
+      }
+    },
+    'Dagger Mastery': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.summon_card('Dagger');
+        });
+      }
+    },
+    'Fireblast': {
+      on_play: function(me, forced_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.deal_dmg(1, me, me.target);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target); // if forced_target is enabled then we don't make user to choose
+      }
+    },
     'The Coin': {
       on_play: function(me) {
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
@@ -84,6 +169,11 @@
             false
           );
         }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
       }
     },
     'Grimscale Oracle': {
@@ -117,6 +207,11 @@
             function() {},
             false
           );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
         }
       }
     },
@@ -256,6 +351,11 @@
             false
           );
         }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
       }
     },
     'Ironfur Grizzly': {
@@ -284,6 +384,11 @@
             function() {},
             false
           );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
         }
       }
     },
@@ -404,6 +509,11 @@
             false
           );
         }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
       }
     },
     'Nightblade': {
@@ -422,8 +532,8 @@
           if (bc) {
             var target = me.owner.get_all_character();
             var heal = [];
-            for(var i = 0; i < target.length; i ++) {
-              heal.push(2);  
+            for (var i = 0; i < target.length; i++) {
+              heal.push(2);
             }
             me.owner.heal_many(heal, me, me.owner.get_all_character());
           }
@@ -531,12 +641,17 @@
             false
           );
         }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
       }
     },
     'Worgen Infiltrator': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if(non_bc) {
+          if (non_bc) {
             me.is_stealth.until = 1000; // Infinitely stealth 
           }
           end(me, non_bc, bc);
@@ -554,7 +669,9 @@
     'Young Dragonhawk': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if (non_bc) me.add_state(function() { return 2; }, 'atk_num', me);
+          if (non_bc) me.add_state(function() {
+            return 2;
+          }, 'atk_num', me);
           end(me, non_bc, bc);
         });
       }
@@ -576,9 +693,48 @@
     'Argent Squire': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if (non_bc) me.is_shielded.until = 1000; 
+          if (non_bc) me.is_shielded.until = 1000;
           end(me, non_bc, bc);
         });
+      }
+    },
+    'Dire Wolf Alpha': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.engine.add_aura(function(d, c) {
+              if (me.owner.field.get_distance(me, c) == 1) return d + 1;
+              return d;
+            }, 'dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ironbeak Owl': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion') return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.silence(me, me.target)
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
       }
     },
     'Emperor Thaurissan': {
