@@ -5,6 +5,17 @@ function HearthAPI() {
   this.get_card_db();
 }
 HearthAPI.prototype.get_card_db = function() {
+  function is_secret(m) {
+   // console.log(m)
+    if(m) {
+      for(var i = 0; i < m.length; i ++) {
+        if(m[i].name == 'Secret') { 
+          return true;
+        }
+      }
+    }
+    return false; 
+  }
   unirest.get("https://omgvamp-hearthstone-v1.p.mashape.com/cards").header("X-Mashape-Key", "nPCuh0xMwxmshf9ZGfRS2p3lF7Jip1pJbjYjsn67kOlM4TTr7j").end(function(result) {
     var data = result.body;
     var collection;
@@ -31,8 +42,10 @@ HearthAPI.prototype.get_card_db = function() {
               img: c.img,
               info: [(c.cost ? c.cost : c.durability), (c.attack ? c.attack : 0), (c.health ? c.health : 0)],
               unique : c.cardId,
-              is_token : (c.collectible ? false : true)
+              is_token : (c.collectible ? false : true),
+              'is_secret' : is_secret(c.mechanics)
           });
+          if(is_secret(c.mechanics)) console.log('Secret :: ', c.name);
         }
       }
     }
@@ -70,6 +83,6 @@ module.exports = {
       return ;
     }
     console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
-    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind];
+    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret];
   }
 };

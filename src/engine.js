@@ -12,9 +12,11 @@ function CardData(args) {
   this.dmg = args[5];
   this.life = args[6];
   this.kind = args[7];
+  this.is_token = args[8];
+  this.is_secret = args[9];
 }
 CardData.prototype.to_array = function() {
-  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind];
+  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind, this.is_token, this.is_secret];
   return arr;
 };
 
@@ -69,6 +71,9 @@ function Card(card_data, id, owner) {
 
   // Check whether this minion is already destroyed. 
   this.already_destroyed = false;
+  
+  // Last position before gets destroyed
+  this.last_position = -1;
 }
 Card.prototype.add_state = function(f, state, who) {
   this.state.push({
@@ -265,7 +270,7 @@ Deck.prototype.get_card_datas = function() {
 }
 Deck.prototype.get_distance = function(from, to) {
   var from_loc = -1,
-    to_loc = -1
+    to_loc = -1;
   for (var i = 0; i < this.card_list.length; i++) {
     if (this.card_list[i] == from) from_loc = i;
     if (this.card_list[i] == to) to_loc = i;
@@ -273,8 +278,13 @@ Deck.prototype.get_distance = function(from, to) {
 
   if (from_loc == -1 || to_loc == -1) return -1;
   return Math.abs(from_loc - to_loc);
+};
+Deck.prototype.get_pos = function(c) {
+  for(var i = 0; i < this.card_list.length; i ++) {
+    if(this.card_list[i] == c) return i;
+  }
+  return -1;
 }
-
 function Player(player_name, job, engine) {
   this.player_name = player_name;
   this.player_job = job;
@@ -881,6 +891,21 @@ Player.prototype.heal_many = function(heal_arr, from, to_arr, done) {
 
   this.g_handler.execute();
 };
+
+// to is a function that returns possible targets every time
+Player.prototype.deal_multiple_dmg = function(total_dmg, from, to_f, done) {
+  if(!done) done = 0; 
+  
+  if(done < total_dmg) {
+    var possible_target = to_f(); 
+    if(possible_target.length == 0) return; 
+    
+    this.g_handler.add_callback(this.deal_multiple_dmg, this, [total_dmg, from, to_f, done + 1]);
+    this.deal_dmg(1, from, possible_target[Math.floor(Math.random() * possible_target.length)]);
+  }
+  
+  this.g_handler.execute();
+};
 // Deals damage to many targets
 Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
   if (!done) {
@@ -947,6 +972,39 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
     }
   }
 };
+// Brings card on field to hand
+Player.prototype.return_to_hand = function(c, who) {
+  // Card will be marked as destroyed but will not queued into
+  // destroyed_queue unless the hand is full
+  c.status = 'destroyed';
+  
+  // Remove Card from field
+  this.field.remove_card(c); 
+  
+  if(this.hand.num_card() >= 10) {
+    this.g_handler.add_event(new Event('destroyed', [c, who]));
+  }
+  
+  this.hand_card(c.card_data.name);
+};
+Player.prototype.hero_dmg = function() {
+  var dmg = 0;
+  if(this.weapon) {
+    dmg = this.weapon.dmg();
+  }
+  if(this.turn_dmg.turn == this.engine.current_turn) dmg += this.turn_dmg.dmg;
+  
+  return dmg;
+};
+Player.prototype.weapon_dec_durability = function(d, who) {
+  if(this.weapon) {
+    this.weapon.current_life -= d;
+  }
+  if(this.weapon.current_life <= 0) {
+    this.weapon.status = 'destroyed';
+    this.g_handler.add_event(new Event('destroyed', [this.weapon, who]));
+  }
+};
 Player.prototype.use_hero_power = function() {
   var default_max = 1;
   if (this.power_used.turn != this.engine.current_turn) {
@@ -988,7 +1046,7 @@ Player.prototype.change_hero_power = function(name) {
   this.power_used.did = 0;
 
   this.hero_power = create_card(name, this);
-}
+};
 Player.prototype.init_hero_power = function() {
   switch (this.hero.card_data.job) {
     case 'warlock':
@@ -1068,10 +1126,16 @@ Player.prototype.load_weapon = function(weapon) {
     this.weapon_used.did = 0;
   }
 }
-Player.prototype.get_all_character = function() {
+Player.prototype.get_all_character = function(exclude) {
   var ret = [];
   for (var i = 0; i < this.field.num_card(); i++) {
-    ret.push(this.field.card_list[i]);
+    var pass = true;
+    for(var j = 0; j < exclude.length; j ++) {
+      if(this.field.card_list[i] == exclude[j]) {
+        pass = false; break;
+      }
+    }
+    if(pass) ret.push(this.field.card_list[i]);
   }
   ret.push(this.hero);
   return ret;
@@ -1389,14 +1453,18 @@ Handler.prototype.death_creation = function() {
     var dead = dq[i].destroyed;
     if (dead.current_life <= 0 || dead.status == 'destroyed') {
       dead.status = 'destroyed'; // Mark it as destroyed
+      dead.last_position = dead.owner.field.get_pos(dead); // Mark the last location of the dead
       dead.owner.field.remove_card(dead); // Remove card from the field
     }
   }
   // Since Event queue is already flushed out, we can comfortably
   // force push events
+  
+  // Deathrattle 을 Destroyed 와 동일한 이벤트로 봐야할듯 (실제론 다르지만)
+  // 즉 Destroyed Handler 에 Deathrattle 을 시간 순으로 정렬하여 집어넣어야됨
   for (i = 0; i < this.destroyed_queue.length; i++) {
-    this.force_add_event(new Event('destroyed', [dq[i].destroyed, dq[i].attacker]));
     this.force_add_event(new Event('deathrattle', [dq[i].destroyed]));
+    this.force_add_event(new Event('destroyed', [dq[i].destroyed, dq[i].attacker]));
   }
 
   // Clear destroyed queue

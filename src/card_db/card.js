@@ -61,7 +61,7 @@
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
           me.owner.turn_dmg.dmg += 1;
           me.owner.turn_dmg.turn = me.owner.engine.current_turn;
-          
+
           me.owner.add_armor(1, me);
         });
       }
@@ -114,6 +114,13 @@
       }
     },
     'Murloc Scout': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Damaged Golem': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           end(me, non_bc, bc);
@@ -737,6 +744,462 @@
         }
       }
     },
+    'Bloodsail Raider': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc && me.owner.weapon) {
+            me.add_state(inc(me.owner.hero_dmg()), 'dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Amani Berserker': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function(d, c) {
+              if (me.current_life != me.life()) {
+                return d + 3;
+              }
+              return d;
+            }, 'dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Loot Hoarder': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card == me) {
+                me.owner.draw_cards(1);
+              }
+            }, 'deathrattle', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Youthful Brewmaster': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.return_to_hand(me.target, me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Mad Bomber': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.deal_multiple_dmg(3, me, function() {
+              var l = me.owner.get_all_character([me]); 
+              return l.concat(me.owner.enemy.get_all_character());
+            });
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Acolyte of Pain': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.g_handler.add_handler(function(e, me) {
+              if(e.victim == me) me.owner.draw_cards(1);
+            }, 'take_dmg', me)
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Flesheating Ghoul': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.g_handler.add_handler(function(e, me) {
+              me.add_state(inc(1), 'dmg', me)
+            }, 'destroyed', me)
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Earthen Ring Farseer': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' || c.card_data.type == 'hero') return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.heal(3, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Jungle Panther': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.is_stealth.until = 1000; // Infinitely stealth 
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Scarlet Crusader': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.is_shielded.until = 1000;
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Thrallmar Farseer': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(function() {
+            return 2;
+          }, 'atk_num', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Tauren Warrior': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function(d, c) {
+              if (me.current_life != me.life()) {
+                return d + 3;
+              }
+              return d;
+            }, 'dmg', me);
+            me.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Harvest Golem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card == me) {
+                me.owner.summon_card('Damaged Golem', me.last_position);
+              }
+            }, 'deathrattle', me, false);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Dark Iron Dwarf': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.target.add_state(function(turn) {
+                    return function(dmg, me) {
+                      if (turn == me.owner.engine.current_turn) {
+                        return dmg + 2;
+                      }
+                      return dmg;
+                    };
+                  }(me.owner.engine.current_turn), 'dmg', me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Ancient Brewmaster': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.return_to_hand(me.target, me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Dread Corsair': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      },
+      on_draw : function(me) {
+        me.add_state(function(m, c) {
+          if(c.weapon) { return m - c.owner.hero_dmg(); } return m; 
+        }, 'mana', me);
+      }
+    },
+    'Mogu\'shan Warden': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) { me.add_state(null, 'taunt', me); }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Silvermoon Guardian': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.is_shielded.until = 1000;
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Cult Master': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.g_handler.add_handler(function(e, me) {
+              if(e.destroyed.owner == me.owner && e.destroyed != me) {
+                me.owner.draw_cards(1);
+              }
+            }, 'destroyed', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Spell Breaker': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion') return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.owner.silence(me, me.target)
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Stranglethorn Tiger': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.is_stealth.until = 1000; // Infinitely stealth 
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Fen Creeper': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Spiteful Smith': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c) {
+              if(me.owner.weapon && c == me.owner.weapon && me.current_life != me.life()) return d + 2;
+              return d;
+            }, 'dmg', me)
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Squire': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Silver Hand Knight': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.summon_card('Squire', at + 1);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Venture Co. Mercenary': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(m, c) { 
+              if(c.card_data.type == 'minion' && c.owner == me.owner) return m + 3;
+              return m;
+            }, 'mana', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Frost Elemental': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc) {
+                  me.target.is_frozen.until = me.owner.engine.current_turn + 1;
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Windfury Harpy': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(function() { return 2; }, 'atk_num', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Priestess of Elune': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc){
+            me.owner.heal(4, me, me.owner.hero);
+          } 
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Murloc Tidecaller': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc){
+            me.owner.g_handler.add_handler(function(e, me) {
+              if(e.card.card_data.kind == 'murloc') me.add_state(inc(1), 'dmg', me);
+            }, 'summon', me)
+          } 
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Bloodsail Corsair': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc && me.owner.enemy.weapon) {
+            me.owner.enemy.weapon_dec_durability(1, me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Secretkeeper': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if(e.card.owner == me.owner && e.card.card_data.is_secret) {
+                me.add_state(inc(1), 'dmg', me);
+                me.add_state(inc(1), 'life', me);
+                me.current_life += 1;
+              }
+            }, 'summon', me)
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Emperor Thaurissan': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -825,6 +1288,12 @@
     load_card: function(c) {
       if (card_do[c]) return card_do[c];
       return null;
+    },
+    // Check whether certain card is implemented or not
+    is_implemented : function(name) {
+      if(name[c]) return true;
+      return false;
     }
   }
 }());
+
