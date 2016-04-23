@@ -71,7 +71,7 @@ function Card(card_data, id, owner) {
 
   // Check whether this minion is already destroyed. 
   this.already_destroyed = false;
-  
+
   // Last position before gets destroyed
   this.last_position = -1;
 }
@@ -153,16 +153,16 @@ Card.prototype.life = function() {
     x = modifiers[i].f(x, this);
   }
   return x;
-}
+};
 Card.prototype.spell_dmg = function(dmg) {
   return this.owner.spell_dmg(this, dmg, false);
-}
+};
 Card.prototype.mana = function() {
   var m = this.calc_state('mana', this.card_data.mana, true);
   if (m < 0) return 0;
 
   return m;
-}
+};
 Card.prototype.update_atk_cnt = function() {
   if (this.atk_info.turn == this.owner.engine.current_turn) return;
   var atk_num = this.calc_state('atk_num', 1);
@@ -180,9 +180,13 @@ Card.prototype.is_attackable = function() {
   return false;
 };
 Card.prototype.stealth = function() {
-  if (this.is_stealth.until >= this.owner.engine.current_turn) return false;
-  return true;
-}
+  if (this.is_stealth.until >= this.owner.engine.current_turn) return true;
+  return false;
+};
+Card.prototype.shield = function() {
+  if (this.is_shielded.until >= this.owner.engine.current_turn) return true;
+  return false;
+};
 Card.prototype.make_charge = function(who) {
   this.add_state(null, 'charge', who);
   this.update_atk_cnt();
@@ -280,11 +284,12 @@ Deck.prototype.get_distance = function(from, to) {
   return Math.abs(from_loc - to_loc);
 };
 Deck.prototype.get_pos = function(c) {
-  for(var i = 0; i < this.card_list.length; i ++) {
-    if(this.card_list[i] == c) return i;
+  for (var i = 0; i < this.card_list.length; i++) {
+    if (this.card_list[i] == c) return i;
   }
   return -1;
 }
+
 function Player(player_name, job, engine) {
   this.player_name = player_name;
   this.player_job = job;
@@ -380,10 +385,12 @@ Player.prototype.choose_one = function(options, on_success) {
 // success 함수, 혹은 fail 함수를 호출하면 된다.
 // 참고로 force_target 의 경우 이 것이 설정되어 있다면 target 을 유저로 부터 받는게
 // 아니라 자동으로 force_target 으로 설정된다. 
-Player.prototype.select_one = function(c, select_cond, success, fail, forced_target) {
+// random_target 의 경우, 주문이 랜덤하게 고르게 된다. 
+Player.prototype.select_one = function(c, select_cond, success, fail, forced_target, random_target) {
   if (forced_target) {
     c.target = forced_target;
-    success(c)
+    success(c);
+    return;
   }
 
   // Cannot Target the Stealth Ones
@@ -399,6 +406,15 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
     if (select_cond(this.enemy.field.card_list[i]) && !this.enemy.field.card_list[i].stealth()) {
       available_list.push(this.enemy.field.card_list[i].id);
     }
+  }
+
+  // Randomly choose target if available  
+  if (random_target) {
+    if (available_list.length) {
+      c.target = available_list[Math.floor(available_list.length * Math.random())];
+      success(c);
+    }
+    return;
   }
 
   this.on_select_success = success;
@@ -442,12 +458,14 @@ Player.prototype.chk_target = function(c, next) {
 };
 Player.prototype.end_hero_power = function() {
   this.g_handler.execute();
-}
+};
 Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
-Player.prototype.hand_card = function(name) {
+Player.prototype.hand_card = function(name, n) {
+  if(!n) n = 1;
+  while (n--) {
     var card = card_manager.load_card(name);
     var c = create_card(name, this);
 
@@ -460,7 +478,8 @@ Player.prototype.hand_card = function(name) {
     this.g_handler.add_event(new Event('draw_card', [c, this]));
     this.g_handler.execute();
   }
-  // Draw n cards from a deck
+};
+// Draw n cards from a deck
 Player.prototype.draw_cards = function(n) {
   while (n > 0) {
     if (this.deck.num_card() == 0) {
@@ -491,7 +510,7 @@ Player.prototype.draw_cards = function(n) {
     n--;
   }
   this.g_handler.execute();
-}
+};
 Player.prototype.draw_card = function(c) {
   this.deck.remove_card(c);
   if (this.hand.num_card() >= 10) {
@@ -730,8 +749,8 @@ Player.prototype.actual_combat = function(c) {
   target.already_destroyed = false;
 
   // Mark whether any one of minion has destroyed before ( to prevent duplicated Event queing)
-  if (c.current_life <= 0) c.already_destroyed = true;
-  if (target.current_life <= 0) target.already_destroyed = true;
+  if (c.current_life <= 0 || c.status == 'destroyed') c.already_destroyed = true;
+  if (target.current_life <= 0 || target.status == 'destroyed') target.already_destroyed = true;
 
   if (c.armor > target.dmg_given) {
     c.armor -= target.dmg_given;
@@ -806,7 +825,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   if (dmg == 0) return; // May be we should at least create an animation for this too..
 
   to.already_destroyed = false;
-  if (to.current_life <= 0) to.already_destroyed = true;
+  if (to.current_life <= 0 || to.status == 'destroyed') to.already_destroyed = true;
 
   // Check for the Armor
   if (to.armor > dmg) {
@@ -894,16 +913,16 @@ Player.prototype.heal_many = function(heal_arr, from, to_arr, done) {
 
 // to is a function that returns possible targets every time
 Player.prototype.deal_multiple_dmg = function(total_dmg, from, to_f, done) {
-  if(!done) done = 0; 
-  
-  if(done < total_dmg) {
-    var possible_target = to_f(); 
-    if(possible_target.length == 0) return; 
-    
+  if (!done) done = 0;
+
+  if (done < total_dmg) {
+    var possible_target = to_f();
+    if (possible_target.length == 0) return;
+
     this.g_handler.add_callback(this.deal_multiple_dmg, this, [total_dmg, from, to_f, done + 1]);
     this.deal_dmg(1, from, possible_target[Math.floor(Math.random() * possible_target.length)]);
   }
-  
+
   this.g_handler.execute();
 };
 // Deals damage to many targets
@@ -952,7 +971,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
       if (dmg_arr[i] > 0) {
 
         to_arr[i].already_destroyed = false;
-        if (to_arr[i].current_life <= 0) to_arr[i].already_destroyed = true;
+        if (to_arr[i].current_life <= 0 || to_arr[i].status == 'destroyed') to_arr[i].already_destroyed = true;
 
         // Check for the Armor
         if (to_arr[i].armor > dmg_arr[i]) {
@@ -977,30 +996,110 @@ Player.prototype.return_to_hand = function(c, who) {
   // Card will be marked as destroyed but will not queued into
   // destroyed_queue unless the hand is full
   c.status = 'destroyed';
-  
+
   // Remove Card from field
-  this.field.remove_card(c); 
-  
-  if(this.hand.num_card() >= 10) {
+  this.field.remove_card(c);
+
+  if (this.hand.num_card() >= 10) {
     this.g_handler.add_event(new Event('destroyed', [c, who]));
   }
-  
+
   this.hand_card(c.card_data.name);
+};
+// 'who' takes control of c
+Player.prototype.take_control = function(c, who) {
+  c.owner.field.remove_card(c);
+  c.owner = who.owner;
+
+  who.owner.field.put_card(c, 10);
+
+  c.atk_info.turn = this.engine.current_turn;
+  c.atk_info.max = c.calc_state('atk_num', 1, false);
+
+  if (c.chk_state('charge')) {
+    c.atk_info.did = 0;
+  }
+  else c.atk_info.did = c.atk_info.max;
+};
+// Everything about src copies to dest
+Player.prototype.copy_minion = function(src, dest) {
+  // First Copy all the Card datas
+  dest.card_data = new CardData(src.card_data.to_array());
+  
+  dest.owner = src.owner;
+  dest.status = src.status;
+  
+  dest.is_frozen = src.is_frozen;
+  dest.is_stealth = src.is_stealth;
+  dest.is_shielded = src.is_shielded;
+  dest.is_invincible = src.is_invincible;
+  
+  dest.atk_info = src.atk_info;
+  dest.current_life = src.current_life;
+  
+  for(var i = 0; i < src.state.length; i ++) {
+    dest.push({
+      f : src.state[i].f, 
+      state : src.state[i].state,
+      who : (src.state[i].who == src) ? dest : src.state[i].who,
+      when : src.state[i].when });
+  }
+  
+  dest.life_aura = src.life_aura.slice();
+  
+  // Now We are copying the Handlers that are registered By/For src
+  for(var arr in this.g_handler.event_handler_arr) {
+    for(var i = 0; i < arr.length; i ++) {
+      // If there is a handler that targets our src 
+      // then we have to make that handler to target our dest too 
+      if(arr[i].target == src || arr[i].me == src) {
+        arr.push({
+          f : arr[i].f,
+          me : (arr[i].me == src ? dest : arr[i].me),
+          is_secret : arr[i].is_secret,
+          must : arr[i].must,
+          target : (arr[i].target == src ? dest : arr[i].target)
+        });
+      }
+    }
+  }
+};
+Player.prototype.instant_kill = function(from, target) {
+  if (target.status != 'destroyed') {
+    target.status = 'destroyed';
+    if(target.current_life > 0) this.g_handler.add_event(new Event('destroyed', [target, from]));
+  }
+
+  this.g_handler.execute();
+};
+Player.prototype.instant_kill_many = function(from, target_arr) {
+  target_arr.sort(function(a, b) {
+    return a.to.summon_order > b.to.summon_order
+  });
+
+  for (var i = 0; i < target_arr.length; i++) {
+    if (target_arr[i].status != 'destroyed') {
+      target_arr[i].status = 'destroyed';
+      if(target_arr[i].current_life > 0) this.g_handler.add_event(new Event('destroyed', [target_arr[i], from]));
+    }
+  }
+
+  this.g_handler.execute();
 };
 Player.prototype.hero_dmg = function() {
   var dmg = 0;
-  if(this.weapon) {
+  if (this.weapon) {
     dmg = this.weapon.dmg();
   }
-  if(this.turn_dmg.turn == this.engine.current_turn) dmg += this.turn_dmg.dmg;
-  
+  if (this.turn_dmg.turn == this.engine.current_turn) dmg += this.turn_dmg.dmg;
+
   return dmg;
 };
 Player.prototype.weapon_dec_durability = function(d, who) {
-  if(this.weapon) {
+  if (this.weapon) {
     this.weapon.current_life -= d;
   }
-  if(this.weapon.current_life <= 0) {
+  if (this.weapon.current_life <= 0) {
     this.weapon.status = 'destroyed';
     this.g_handler.add_event(new Event('destroyed', [this.weapon, who]));
   }
@@ -1031,7 +1130,7 @@ Player.prototype.use_hero_power = function() {
 
   var c = card_manager.load_card(this.hero_power.card_data.name);
   c.on_play(this.hero_power);
-  
+
   this.engine.g_handler.execute();
 };
 Player.prototype.change_hero_power = function(name) {
@@ -1104,8 +1203,40 @@ Player.prototype.silence = function(from, target) {
     }
   }
 
+  // Non Attacking Minions can attack when they are silenced (in that turn)
+  if (this.atk_info.max == 0 && this.field_summon_turn != this.engine.current_turn) {
+    this.atk_info.max = 1;
+    this.turn = this.engine.current_turn;
+  }
+
   this.g_handler.add_event(new Event('silenced', [from, target]));
   this.g_handler.execute();
+};
+// TODO 상대방에 필드의 하수인을 변신 시킬 때 상대방이 그 변신된 하수인을 
+// 소환한다고 하는 문제가 있습니다. 
+Player.prototype.transform = function(who, target, name) {
+  target.status = 'destroyed';
+  var loc = target.owner.field.get_pos(target);
+  
+  target.owner.field.remove_card(target);
+  target.owner.summon_card(name, loc);
+};
+Player.prototype.swap_life_dmg = function(from, target) {
+  var life = target.current_life();
+  var dmg = target.dmg();
+
+  target.add_state(function() {
+    return dmg;
+  }, 'life', from);
+  target.current_life = dmg;
+
+  target.add_state(function() {
+    return life;
+  }, 'dmg', from);
+
+  if (target.current_life == 0) {
+    this.g_handler.add_event(new Event('destroyed', [target, from]));
+  }
 };
 Player.prototype.add_armor = function(armor, who) {
   this.hero.armor += armor;
@@ -1126,18 +1257,37 @@ Player.prototype.load_weapon = function(weapon) {
     this.weapon_used.did = 0;
   }
 }
-Player.prototype.get_all_character = function(exclude) {
+Player.prototype.get_all_character = function(exclude, cond) {
   var ret = [];
+  var pass = true;
+
   for (var i = 0; i < this.field.num_card(); i++) {
-    var pass = true;
-    for(var j = 0; j < exclude.length; j ++) {
-      if(this.field.card_list[i] == exclude[j]) {
-        pass = false; break;
+    if (exclude) {
+      for (var j = 0; j < exclude.length; j++) {
+        if (this.field.card_list[i] == exclude[j]) {
+          pass = false;
+          break;
+        }
       }
     }
-    if(pass) ret.push(this.field.card_list[i]);
+    if (pass) {
+      // Check for the condition if specified
+      if (!cond || (cond(this.field.card_list[i]))) ret.push(this.field.card_list[i]);
+    }
   }
-  ret.push(this.hero);
+
+  pass = true;
+  if (exclude) {
+    for (var j = 0; j < exclude.length; j++) {
+      if (this.field.card_list[j] == this.hero) {
+        pass = false;
+        break;
+      }
+    }
+  }
+  if (pass) {
+    if (!cond || (cond(this.field.card_list[i]))) ret.push(this.hero);
+  }
   return ret;
 };
 
@@ -1303,12 +1453,16 @@ Handler.prototype.add_event = function(e) {
     this.queue.splice(0, 0, e);
   }
 };
-Handler.prototype.add_handler = function(f, event, me, is_secret, must) {
+// Target :: If this handler targets certain Minion, then we (optionally) set 
+// This is for 'Copying' minion effect can also copy the handlers that are registered
+// to target minion 
+Handler.prototype.add_handler = function(f, event, me, is_secret, must, target) {
   this.event_handler_arr[event].push({
     f: f,
     me: me,
     'is_secret': (is_secret ? true : false),
-    'must': (must ? true : false)
+    'must': (must ? true : false),
+    target : target
   });
 };
 Handler.prototype.force_add_event = function(e) {
@@ -1459,7 +1613,7 @@ Handler.prototype.death_creation = function() {
   }
   // Since Event queue is already flushed out, we can comfortably
   // force push events
-  
+
   // Deathrattle 을 Destroyed 와 동일한 이벤트로 봐야할듯 (실제론 다르지만)
   // 즉 Destroyed Handler 에 Deathrattle 을 시간 순으로 정렬하여 집어넣어야됨
   for (i = 0; i < this.destroyed_queue.length; i++) {
@@ -1899,7 +2053,7 @@ Engine.prototype.send_client_data = function(e) {
       life: p.hero.current_life,
       mana: p.current_mana,
       id: p.hero.id,
-      armor : p.hero.armor
+      armor: p.hero.armor
     }
   }
 

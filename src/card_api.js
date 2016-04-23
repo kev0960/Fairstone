@@ -45,7 +45,6 @@ HearthAPI.prototype.get_card_db = function() {
               is_token : (c.collectible ? false : true),
               'is_secret' : is_secret(c.mechanics)
           });
-          if(is_secret(c.mechanics)) console.log('Secret :: ', c.name);
         }
       }
     }
