@@ -1,3 +1,4 @@
+"use strict";
 const card_manager = require('./card_db/card');
 const card_db = require('./card_api.js');
 const util = require('./utility');
@@ -35,6 +36,10 @@ function Card(card_data, id, owner) {
 
   this.field_summon_turn = -1;
   this.summon_order = -1;
+  
+  // If some minion has transformed, it does not create SUMMON event 
+  // when it is summoned
+  this.transformed = false; 
 
   this.current_life = this.card_data.life;
 
@@ -630,7 +635,7 @@ Player.prototype.after_play_phase = function(c) {
   this.g_handler.execute();
 };
 Player.prototype.summon_phase = function(c) {
-  this.g_handler.add_event(new Event('summon', [c]));
+  if(!c.transformed) this.g_handler.add_event(new Event('summon', [c]));
 
   c.atk_info.cnt = c.calc_state('atk_num', 1);
   c.atk_info.turn = this.engine.current_turn;
@@ -645,7 +650,12 @@ Player.prototype.summon_phase = function(c) {
   this.g_handler.execute();
 };
 
-Player.prototype.summon_card = function(name, at) {
+// transform 이 true 인 경우는, 어떤 하수인이 다른 하수인으로 transform
+// 된 경우를 의미한다 (copy 와는 다르다) 이 경우에 SUMMON 이벤트가 
+// 발생하지 않는다. 
+Player.prototype.summon_card = function(name, at, transformed) {
+  if(!transformed) transformed = false; 
+  
   var c = create_card(name);
 
   c.field_summon_turn = this.engine.current_turn;
@@ -653,6 +663,8 @@ Player.prototype.summon_card = function(name, at) {
   c.owner = this;
   c.summon_order = this.g_when.get_id();
   c.id = this.engine.g_id.get_id();
+  
+  if(transformed) this.transformed = true;
 
   var card = card_manager.load_card(c.card_data.name);
 
@@ -670,7 +682,7 @@ Player.prototype.emit_play_card_success = function(card, at, mana) {
     at: at,
     cost: mana
   })
-}
+};
 Player.prototype.emit_play_card_fail = function(card) {
   this.socket.emit('hearth-play-card', {
     result: false,
@@ -698,7 +710,7 @@ Player.prototype.combat = function(c, target) {
   if (!c.is_attackable() // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
     || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
-    || this.chk_invincible(target) || !target.stealth()) return false; // chks whether the attacker is attacking invincible target
+    || this.chk_invincible(target) || target.stealth()) return false; // chks whether the attacker is attacking invincible target
 
   c.target = target;
   c.is_stealth.until = -1; // stealth is gone!
@@ -888,7 +900,7 @@ Player.prototype.heal_many = function(heal_arr, from, to_arr, done) {
     });
   }
   temp_arr.sort(function(a, b) {
-    return a.to.summon_order > b.to.summon_order
+    return a.to.summon_order > b.to.summon_order;
   });
 
   // Rearrange dmg_arr and to_arr according to the summon_order
@@ -939,7 +951,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
       });
     }
     temp_arr.sort(function(a, b) {
-      return a.to.summon_order > b.to.summon_order
+      return a.to.summon_order > b.to.summon_order;
     });
 
     // Rearrange dmg_arr and to_arr according to the summon_order
@@ -1037,7 +1049,7 @@ Player.prototype.copy_minion = function(src, dest) {
   dest.atk_info = src.atk_info;
   dest.current_life = src.current_life;
   
-  for(var i = 0; i < src.state.length; i ++) {
+  for(let i = 0; i < src.state.length; i ++) {
     dest.push({
       f : src.state[i].f, 
       state : src.state[i].state,
@@ -1049,7 +1061,7 @@ Player.prototype.copy_minion = function(src, dest) {
   
   // Now We are copying the Handlers that are registered By/For src
   for(var arr in this.g_handler.event_handler_arr) {
-    for(var i = 0; i < arr.length; i ++) {
+    for(let i = 0; i < arr.length; i ++) {
       // If there is a handler that targets our src 
       // then we have to make that handler to target our dest too 
       if(arr[i].target == src || arr[i].me == src) {
@@ -1074,7 +1086,7 @@ Player.prototype.instant_kill = function(from, target) {
 };
 Player.prototype.instant_kill_many = function(from, target_arr) {
   target_arr.sort(function(a, b) {
-    return a.to.summon_order > b.to.summon_order
+    return a.to.summon_order > b.to.summon_order;
   });
 
   for (var i = 0; i < target_arr.length; i++) {
@@ -1176,7 +1188,7 @@ Player.prototype.init_hero_power = function() {
       this.change_hero_power('Fireblast');
       break;
   }
-}
+};
 
 // Silence a minion
 Player.prototype.silence = function(from, target) {
@@ -1212,14 +1224,13 @@ Player.prototype.silence = function(from, target) {
   this.g_handler.add_event(new Event('silenced', [from, target]));
   this.g_handler.execute();
 };
-// TODO 상대방에 필드의 하수인을 변신 시킬 때 상대방이 그 변신된 하수인을 
-// 소환한다고 하는 문제가 있습니다. 
+
 Player.prototype.transform = function(who, target, name) {
   target.status = 'destroyed';
   var loc = target.owner.field.get_pos(target);
   
   target.owner.field.remove_card(target);
-  target.owner.summon_card(name, loc);
+  target.owner.summon_card(name, loc, true);
 };
 Player.prototype.swap_life_dmg = function(from, target) {
   var life = target.current_life();
@@ -1256,7 +1267,7 @@ Player.prototype.load_weapon = function(weapon) {
   if (this.weapon_used.turn != this.engine.current_turn) {
     this.weapon_used.did = 0;
   }
-}
+};
 Player.prototype.get_all_character = function(exclude, cond) {
   var ret = [];
   var pass = true;
@@ -1488,7 +1499,7 @@ Handler.prototype.add_phase = function(f, that, args) {
   else {
     this.add_callback(f, that, args);
   }
-}
+};
 Handler.prototype.execute = function() {
   console.log('execute!');
   if (this.exec_lock) return;
@@ -1642,7 +1653,7 @@ Handler.prototype.end_phase = function() {
 
     f.f.apply(f.that, f.args);
   }
-}
+};
 
 function UserInterface(engine, p1_socket, p2_socket) {
   this.p1_socket = p1_socket;
@@ -1696,20 +1707,20 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p1.enemy = this.p2;
   this.p2.enemy = this.p1;
 
-  for (var i = 0; i < p1.deck_list[0].cards.length / 2; i++) {
-    var c = p1.deck_list[0].cards[2 * i];
-    var num = p1.deck_list[0].cards[2 * i + 1];
+  for (let i = 0; i < p1.deck_list[0].cards.length / 2; i++) {
+    let c = p1.deck_list[0].cards[2 * i];
+    let num = p1.deck_list[0].cards[2 * i + 1];
 
-    for (var j = 0; j < num; j++) {
+    for (let j = 0; j < num; j++) {
       this.p1.deck.card_list.push(create_card(c, this.p1));
     }
   }
 
-  for (var i = 0; i < p2.deck_list[0].cards.length / 2; i++) {
-    var c = p2.deck_list[0].cards[2 * i];
-    var num = p2.deck_list[0].cards[2 * i + 1];
+  for (let i = 0; i < p2.deck_list[0].cards.length / 2; i++) {
+    let c = p2.deck_list[0].cards[2 * i];
+    let num = p2.deck_list[0].cards[2 * i + 1];
 
-    for (var j = 0; j < num; j++) {
+    for (let j = 0; j < num; j++) {
       this.p2.deck.card_list.push(create_card(c, this.p2));
     }
   }
@@ -1984,7 +1995,7 @@ Engine.prototype.set_up_listener = function(p) {
 
       //console.log('combat detected', from.card_data.name, ' vs ', to.card_data.name);
       if (from && to) {
-        11
+        console.log('combat detected', from.card_data.name, ' vs ', to.card_data.name);
         from.owner.combat(from, to);
       }
     };

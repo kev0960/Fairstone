@@ -2020,7 +2020,8 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
-            me.owner.enemy.hand_card('Bananas', 2);
+            var target = me.owner.get_all_character([me.owner.hero]).concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+            me.owner.transform(me, rand(target), (chance(0.5) ? 'Devilsaur' : 'Squirrel'));
           }
           end(me, non_bc, bc);
         });
