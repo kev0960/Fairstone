@@ -253,7 +253,7 @@ function UserManager() {
     deck_list: [{
       name: '법사 덱',
       job: 'mage',
-      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 
+      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Murloc Raider', 2, 'Abusive Sergeant', 2, 'Deathwing', 2, 'Tinkmaster Overspark', 2,
       'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Gnomish Inventor', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2]
     }]
   }, {
@@ -263,7 +263,7 @@ function UserManager() {
     deck_list: [{
       name: '전사 덱',
       job: 'warrior',
-      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 
+      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Ysera', 2, 'Big Game Hunter', 2,
       'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2]
     }]
   }];

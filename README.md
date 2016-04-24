@@ -52,6 +52,10 @@ Start the server
 
 As the server starts, card_api will automatically download the latest Hearthstone card infos through the Hearthstone API. 
 
+## Current Progress ##
+
+As of April 24 '16, Most of the neutral original cards are created (total 178)
+
 ## Admin Commands ##
 
 To debug, you can type several admin commands to the Fairstone server. The supporting commands are

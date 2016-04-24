@@ -19,7 +19,8 @@ function Card(id) {
   this.mana = 0;
   this.name = '';
   this.type = '';
-
+  this.img_path = '';  // Path to the img file
+  
   // Card position on the canvas field
   this.x = 0;
   this.y = 0;
@@ -142,114 +143,49 @@ function HearthImageDB() {
   this.img_list = []; // { card_name, img }
 }
 
-// 보여고자 하는 카드들을 리스트를 받아 이미지 정보가 얻어지면 그 img 에 대해 on_load
-// 함수를 호출한다. 모든 img 들이 load 되었으면 on_done 함수를 호출한다 (optional)
-HearthImageDB.prototype.get_image_arr = function(card_name_arr, on_load, on_done) {
-  var num_finish = {
-    num: card_name_arr.length
-  };
-
-  for (var i = 0; i < card_name_arr.length; i++) {
-    for (var j = 0; j < this.img_list.length; j++) {
-      if (this.img_list[j].card_name == card_name_arr[i]) {
-        on_load(this.img_list[j].img);
-        card_name_arr.splice(i, 1);
-
-        i--;
-        num_finish.num--;
-
-        break;
-      }
-    }
-  }
-
-  for (var i = 0; i < card_name_arr.length; i++) {
-    hearth_client.get_card_image(card_name_arr[i], function(card_name, num_finish, on_load, on_done) {
-      return function(img_addr) {
-        var img = new Image;
-        img.src = img_addr;
-
-        img.onload = function() {
-          on_load(img)
-          hearth_img_db.add_image(card_name, img);
-
-          num_finish.num--;
-
-          if (num_finish.num == 0) {
-            if (on_done) on_done();
-          }
-        };
-      };
-    }(card_name_arr[i], num_finish, on_load, on_done));
-  }
-}
-HearthImageDB.prototype.get_image = function(card_name, on_load, on_done) {
+HearthImageDB.prototype.get_image = function(c, on_load, on_done) {
   for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == card_name) {
+    if (this.img_list[j].card_name == c.name) {
       on_load(this.img_list[j].img);
       if (on_done) on_done();
       return;
     }
   }
 
-  hearth_client.get_card_image(card_name, function(card_name, on_load) {
-    return function(img_addr) {
-      var img = new Image;
-      img.src = img_addr;
+  var img = new Image();
+  img.src = c.img_path;
+  console.log('Image Path :: ', c.img_path)
 
-      img.onload = function() {
-        hearth_img_db.add_image(card_name, img);
-        on_load(img);
+  img.onload = function() {
+    hearth_img_db.add_image(c.name, img);
+    on_load(img);
 
-        if (on_done) on_done();
-      };
-    };
-  }(card_name, on_load));
-}
-HearthImageDB.prototype.get_image_addr = function(card_name, on_load) {
+    if (on_done) on_done();
+  };
+};
+HearthImageDB.prototype.async_get_image = function(c) {
   for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == card_name) {
-      on_load(this.img_list[j].img.src);
-      return;
-    }
-  }
-
-  hearth_client.get_card_image(card_name, function(card_name, on_load) {
-    return function(img_addr) {
-      var img = new Image;
-      img.src = img_addr;
-
-      img.onload = function() {
-        hearth_img_db.add_image(card_name, img);
-
-        on_load(img.src)
-      };
-    };
-  }(card_name, on_load));
-}
-HearthImageDB.prototype.async_get_image = function(card_name) {
-  for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == card_name) {
+    if (this.img_list[j].card_name == c.name) {
       return this.img_list[j].img;
     }
   }
-  throw Error('[async-get_image] ', card_name, ' does not exist');
-}
+  throw Error('[async-get_image] ', c.name, ' does not exist');
+};
 HearthImageDB.prototype.add_image = function(card_name, img) {
   this.img_list.push({
     card_name: card_name,
     img: img
   });
   console.log(card_name, ' image is added');
-}
+};
 HearthImageDB.prototype.has_image = function(card_name) {
   for (var j = 0; j < this.img_list.length; j++) {
     if (this.img_list[j].card_name == card_name) {
-      return true
+      return true;
     }
   }
   return false;
-}
+};
 var hearth_img_db = new HearthImageDB();
 
 function HearthClient() {
@@ -331,18 +267,12 @@ function HearthClient() {
           card.mana = src[i].mana;
           card.dmg = src[i].dmg;
           card.name = src[i].name;
+          card.img_path = src[i].img_path
 
           if (!dest.add_card) dest.push(card);
           else {
             dest.add_card(card, '');
-            hearth_img_db.get_image_addr(src[i].name, function(c) {
-              return function(img_addr) {
-                // card_container 는 add_card 로 넣어야 하고,
-                // 필드에 대한 정보를 보관하는 my_field 나 enemy_field 는 그냥
-                // array 이므로 push 로 한다.
-                dest.set_card_img(card, img_addr);
-              };
-            }(card));
+            dest.set_card_img(card, card.img_path);
           }
         }
       }
@@ -525,10 +455,10 @@ HearthClient.prototype.draw_field = function() {
     this.my_field[i].y = this.my_field_card_y;
 
     if (hearth_img_db.has_image(this.my_field[i].name)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i].name), this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i]), this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     else {
-      hearth_img_db.get_image(this.my_field[i].name, function() {
+      hearth_img_db.get_image(this.my_field[i], function() {
         hearth_client.draw_field();
       });
     }
@@ -562,10 +492,10 @@ HearthClient.prototype.draw_field = function() {
     this.enemy_field[i].y = this.enemy_field_card_y;
 
     if (hearth_img_db.has_image(this.enemy_field[i].name)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i].name), this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i]), this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
     }
     else {
-      hearth_img_db.get_image(this.enemy_field[i].name, function() {
+      hearth_img_db.get_image(this.enemy_field[i], function() {
         hearth_client.draw_field();
       });
     }
@@ -585,7 +515,7 @@ HearthClient.prototype.draw_field = function() {
 };
 HearthClient.prototype.show_card_list = function(card_list) {
   for (var i = 0; i < card_list.length; i++) {
-    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+    hearth_img_db.get_image(card_list[i], function(img_pos, h, i) {
       return function f(img) {
         h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
         h.choose_card_list[i].img = img;
@@ -603,7 +533,7 @@ HearthClient.prototype.show_card_list = function(card_list) {
 // card_list is an array of card names
 HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
   for (var i = 0; i < card_list.length; i++) {
-    hearth_img_db.get_image(card_list[i].name, function(img_pos, h, i) {
+    hearth_img_db.get_image(card_list[i], function(img_pos, h, i) {
       return function f(img) {
         h.world_ctx.drawImage(img, img_pos.x, img_pos.y);
         h.choose_card_list[i].img = img;
@@ -816,7 +746,7 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
             hearth_client.world_ctx.stroke();
           }
           else {
-            hearth_client.world_ctx.drawImage(hearth_img_db.async_get_image(card_list[i].name), card_list[i].x, card_list[i].y);
+            hearth_client.world_ctx.drawImage(hearth_img_db.async_get_image(card_list[i]), card_list[i].x, card_list[i].y);
             card_list[i].selected = false;
           }
         }
@@ -874,24 +804,5 @@ HearthClient.prototype.log = function(e) {
   }
 
   this.world_ctx.strokeText(log, 0, 250);
-}
-
-// Get card image (Card name must be english)
-HearthClient.prototype.get_card_image = function(card_name, f) {
-  $.ajax({
-    type: "GET",
-    headers: {
-      'X-Mashape-Key': 'nPCuh0xMwxmshf9ZGfRS2p3lF7Jip1pJbjYjsn67kOlM4TTr7j'
-    },
-    url: "https://omgvamp-hearthstone-v1.p.mashape.com/cards/search/" + window.encodeURI(card_name),
-    success: function(response) {
-      for (var i = 0; i < response.length; i++) {
-        if (response[i].type != 'Hero') {
-          f(response[i].img);
-          break;
-        }
-      }
-    }
-  });
 }
 var hearth_client = new HearthClient();

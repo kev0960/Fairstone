@@ -15,9 +15,10 @@ function CardData(args) {
   this.kind = args[7];
   this.is_token = args[8];
   this.is_secret = args[9];
+  this.img_path = args[10];
 }
 CardData.prototype.to_array = function() {
-  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind, this.is_token, this.is_secret];
+  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind, this.is_token, this.is_secret, this.img_path];
   return arr;
 };
 
@@ -54,6 +55,11 @@ function Card(card_data, id, owner) {
   };
   this.is_invincible = {
     until: -1
+  };
+  
+  // Spell & Hero Power Immune? 
+  this.is_not_target = {
+    until : -1
   };
 
   this.atk_info = {
@@ -192,6 +198,10 @@ Card.prototype.shield = function() {
   if (this.is_shielded.until >= this.owner.engine.current_turn) return true;
   return false;
 };
+Card.prototype.not_target = function() {
+  if (this.is_not_target.until >= this.owner.engine.current_turn) return true;
+  return false;
+}
 Card.prototype.make_charge = function(who) {
   this.add_state(null, 'charge', who);
   this.update_atk_cnt();
@@ -210,23 +220,7 @@ Card.prototype.make_windfury = function(who) {
   if (this.atk_info.turn == this.atk_info.field_summon_turn && !this.chk_state('charge')) return;
   this.atk_info.cnt = 2;
 };
-Card.prototype.copy_to_other_card = function(c) {
-  this.card_data = c.card_data;
-  this.status = c.status;
 
-  this.is_frozen.until = c.is_frozen.until;
-  this.is_shielded.until = c.is_shielded.until;
-
-  this.atk_info = {
-    cnt: c.atk_info.cnt,
-    turn: c.atk_info.turn,
-    did: c.atk_info.did
-  };
-  this.state = [];
-  for (var i = 0; i < c.state.length; i++) {
-    this.add_state(c.state[i].f, c.state[i].state, (c.state[i].who == c ? this : c.state[i].who));
-  }
-};
 Card.prototype.is_good = function() {
   if (this.status != 'destroyed') {
     return true;
@@ -401,14 +395,14 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
   // Cannot Target the Stealth Ones
   var available_list = [];
   for (var i = 0; i < this.field.num_card(); i++) {
-    if (select_cond(this.field.card_list[i])) {
+    if (select_cond(this.field.card_list[i]) && !this.field.card_list[i].not_target()) {
       available_list.push(this.field.card_list[i].id);
     }
   }
 
   // Cannot target Enemy Stealth minion (but can target mine)
   for (var i = 0; i < this.enemy.field.num_card(); i++) {
-    if (select_cond(this.enemy.field.card_list[i]) && !this.enemy.field.card_list[i].stealth()) {
+    if (select_cond(this.enemy.field.card_list[i]) && !this.enemy.field.card_list[i].stealth() && !this.enemy.field.card_list[i].not_target()) {
       available_list.push(this.enemy.field.card_list[i].id);
     }
   }
@@ -972,7 +966,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
   else { // Now pre_dmg events are done
     dmg_arr[done - 1] = from.dmg_given;
 
-    for (i = 0; i < from.length; i++) {
+    for (i = 0; i < to_arr.length; i++) {
       // shield is dispelled
       if (dmg_arr[i] > 0 && to_arr[i].is_shielded.until >= this.engine.current_turn) {
         to_arr[i].is_shielded.until = -1;
@@ -1018,6 +1012,14 @@ Player.prototype.return_to_hand = function(c, who) {
 
   this.hand_card(c.card_data.name);
 };
+// Discard a card on hand
+Player.prototype.discard_card = function(c, who) {
+  c.status = 'destroyed';
+  
+  this.hand.remove_card(c);
+  this.g_handler.add_event(new Event('discard', [c, who]));
+  this.g_handler.execute();
+};
 // 'who' takes control of c
 Player.prototype.take_control = function(c, who) {
   c.owner.field.remove_card(c);
@@ -1060,7 +1062,8 @@ Player.prototype.copy_minion = function(src, dest) {
   dest.life_aura = src.life_aura.slice();
   
   // Now We are copying the Handlers that are registered By/For src
-  for(var arr in this.g_handler.event_handler_arr) {
+  for(var e_name in this.g_handler.event_handler_arr) {
+    var arr = this.g_handler.event_handler_arr[e_name];
     for(let i = 0; i < arr.length; i ++) {
       // If there is a handler that targets our src 
       // then we have to make that handler to target our dest too 
@@ -1086,7 +1089,7 @@ Player.prototype.instant_kill = function(from, target) {
 };
 Player.prototype.instant_kill_many = function(from, target_arr) {
   target_arr.sort(function(a, b) {
-    return a.to.summon_order > b.to.summon_order;
+    return a.summon_order > b.summon_order;
   });
 
   for (var i = 0; i < target_arr.length; i++) {
@@ -1297,7 +1300,7 @@ Player.prototype.get_all_character = function(exclude, cond) {
     }
   }
   if (pass) {
-    if (!cond || (cond(this.field.card_list[i]))) ret.push(this.hero);
+    if (!cond || (cond(this.hero))) ret.push(this.hero);
   }
   return ret;
 };
@@ -1382,6 +1385,10 @@ function Event(event_type, args) {
     this.target = args[1];
     this.armor = args[2];
   }
+  else if (event_type == 'discard') {
+    this.card = args[0];
+    this.who = args[1];
+  }
 }
 Event.prototype.packer = function() {
     if (this.args.length == 0) {
@@ -1430,7 +1437,7 @@ function Handler(engine) {
 
   var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon',
     'draw_card', 'play_card', 'after_play', 'turn_begin', 'turn_end', 'deathrattle',
-    'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt', 'target', 'inspire', 'armor'
+    'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt', 'target', 'inspire', 'armor', 'discard'
   ];
 
   // initialize event handler array
@@ -1597,7 +1604,7 @@ Handler.prototype.do_event = function(e) {
   var handler_arr = this.event_handler_arr[e.event_type];
   for (var i = 0; i < handler_num; i++) {
     if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.card)) {
-      handler_arr[i].f(e, handler_arr[i].me);
+      handler_arr[i].f(e, handler_arr[i].me, handler_arr[i].target);
     }
   }
 
@@ -2078,7 +2085,8 @@ Engine.prototype.send_client_data = function(e) {
         mana: deck[i].mana(),
         dmg: deck[i].dmg(),
         name: deck[i].card_data.name,
-        type: deck[i].card_data.type
+        type: deck[i].card_data.type,
+        img_path: deck[i].card_data.img_path
       });
     }
   }

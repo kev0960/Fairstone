@@ -82,6 +82,6 @@ module.exports = {
       return ;
     }
     console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
-    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret];
+    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img];
   }
 };
