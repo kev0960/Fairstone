@@ -37,10 +37,10 @@ function Card(card_data, id, owner) {
 
   this.field_summon_turn = -1;
   this.summon_order = -1;
-  
+
   // If some minion has transformed, it does not create SUMMON event 
   // when it is summoned
-  this.transformed = false; 
+  this.transformed = false;
 
   this.current_life = this.card_data.life;
 
@@ -56,10 +56,10 @@ function Card(card_data, id, owner) {
   this.is_invincible = {
     until: -1
   };
-  
+
   // Spell & Hero Power Immune? 
   this.is_not_target = {
-    until : -1
+    until: -1
   };
 
   this.atk_info = {
@@ -463,7 +463,7 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
 Player.prototype.hand_card = function(name, n) {
-  if(!n) n = 1;
+  if (!n) n = 1;
   while (n--) {
     var card = card_manager.load_card(name);
     var c = create_card(name, this);
@@ -629,7 +629,7 @@ Player.prototype.after_play_phase = function(c) {
   this.g_handler.execute();
 };
 Player.prototype.summon_phase = function(c) {
-  if(!c.transformed) this.g_handler.add_event(new Event('summon', [c]));
+  if (!c.transformed) this.g_handler.add_event(new Event('summon', [c]));
 
   c.atk_info.cnt = c.calc_state('atk_num', 1);
   c.atk_info.turn = this.engine.current_turn;
@@ -648,8 +648,8 @@ Player.prototype.summon_phase = function(c) {
 // 된 경우를 의미한다 (copy 와는 다르다) 이 경우에 SUMMON 이벤트가 
 // 발생하지 않는다. 
 Player.prototype.summon_card = function(name, at, transformed) {
-  if(!transformed) transformed = false; 
-  
+  if (!transformed) transformed = false;
+
   var c = create_card(name);
 
   c.field_summon_turn = this.engine.current_turn;
@@ -657,8 +657,8 @@ Player.prototype.summon_card = function(name, at, transformed) {
   c.owner = this;
   c.summon_order = this.g_when.get_id();
   c.id = this.engine.g_id.get_id();
-  
-  if(transformed) this.transformed = true;
+
+  if (transformed) this.transformed = true;
 
   var card = card_manager.load_card(c.card_data.name);
 
@@ -1015,7 +1015,7 @@ Player.prototype.return_to_hand = function(c, who) {
 // Discard a card on hand
 Player.prototype.discard_card = function(c, who) {
   c.status = 'destroyed';
-  
+
   this.hand.remove_card(c);
   this.g_handler.add_event(new Event('discard', [c, who]));
   this.g_handler.execute();
@@ -1039,41 +1039,42 @@ Player.prototype.take_control = function(c, who) {
 Player.prototype.copy_minion = function(src, dest) {
   // First Copy all the Card datas
   dest.card_data = new CardData(src.card_data.to_array());
-  
+
   dest.owner = src.owner;
   dest.status = src.status;
-  
+
   dest.is_frozen = src.is_frozen;
   dest.is_stealth = src.is_stealth;
   dest.is_shielded = src.is_shielded;
   dest.is_invincible = src.is_invincible;
-  
+
   dest.atk_info = src.atk_info;
   dest.current_life = src.current_life;
-  
-  for(let i = 0; i < src.state.length; i ++) {
+
+  for (let i = 0; i < src.state.length; i++) {
     dest.push({
-      f : src.state[i].f, 
-      state : src.state[i].state,
-      who : (src.state[i].who == src) ? dest : src.state[i].who,
-      when : src.state[i].when });
+      f: src.state[i].f,
+      state: src.state[i].state,
+      who: (src.state[i].who == src) ? dest : src.state[i].who,
+      when: src.state[i].when
+    });
   }
-  
+
   dest.life_aura = src.life_aura.slice();
-  
+
   // Now We are copying the Handlers that are registered By/For src
-  for(var e_name in this.g_handler.event_handler_arr) {
+  for (var e_name in this.g_handler.event_handler_arr) {
     var arr = this.g_handler.event_handler_arr[e_name];
-    for(let i = 0; i < arr.length; i ++) {
+    for (let i = 0; i < arr.length; i++) {
       // If there is a handler that targets our src 
       // then we have to make that handler to target our dest too 
-      if(arr[i].target == src || arr[i].me == src) {
+      if (arr[i].target == src || arr[i].me == src) {
         arr.push({
-          f : arr[i].f,
-          me : (arr[i].me == src ? dest : arr[i].me),
-          is_secret : arr[i].is_secret,
-          must : arr[i].must,
-          target : (arr[i].target == src ? dest : arr[i].target)
+          f: arr[i].f,
+          me: (arr[i].me == src ? dest : arr[i].me),
+          is_secret: arr[i].is_secret,
+          must: arr[i].must,
+          target: (arr[i].target == src ? dest : arr[i].target)
         });
       }
     }
@@ -1082,7 +1083,7 @@ Player.prototype.copy_minion = function(src, dest) {
 Player.prototype.instant_kill = function(from, target) {
   if (target.status != 'destroyed') {
     target.status = 'destroyed';
-    if(target.current_life > 0) this.g_handler.add_event(new Event('destroyed', [target, from]));
+    if (target.current_life > 0) this.g_handler.add_event(new Event('destroyed', [target, from]));
   }
 
   this.g_handler.execute();
@@ -1095,7 +1096,7 @@ Player.prototype.instant_kill_many = function(from, target_arr) {
   for (var i = 0; i < target_arr.length; i++) {
     if (target_arr[i].status != 'destroyed') {
       target_arr[i].status = 'destroyed';
-      if(target_arr[i].current_life > 0) this.g_handler.add_event(new Event('destroyed', [target_arr[i], from]));
+      if (target_arr[i].current_life > 0) this.g_handler.add_event(new Event('destroyed', [target_arr[i], from]));
     }
   }
 
@@ -1231,7 +1232,7 @@ Player.prototype.silence = function(from, target) {
 Player.prototype.transform = function(who, target, name) {
   target.status = 'destroyed';
   var loc = target.owner.field.get_pos(target);
-  
+
   target.owner.field.remove_card(target);
   target.owner.summon_card(name, loc, true);
 };
@@ -1275,9 +1276,10 @@ Player.prototype.get_all_character = function(exclude, cond) {
   var ret = [];
   var pass = true;
 
-  for (var i = 0; i < this.field.num_card(); i++) {
+  for (let i = 0; i < this.field.num_card(); i++) {
+    pass = true;
     if (exclude) {
-      for (var j = 0; j < exclude.length; j++) {
+      for (let j = 0; j < exclude.length; j++) {
         if (this.field.card_list[i] == exclude[j]) {
           pass = false;
           break;
@@ -1292,8 +1294,8 @@ Player.prototype.get_all_character = function(exclude, cond) {
 
   pass = true;
   if (exclude) {
-    for (var j = 0; j < exclude.length; j++) {
-      if (this.field.card_list[j] == this.hero) {
+    for (let i = 0; i < exclude.length; i++) {
+      if (exclude[i] == this.hero) {
         pass = false;
         break;
       }
@@ -1480,7 +1482,7 @@ Handler.prototype.add_handler = function(f, event, me, is_secret, must, target) 
     me: me,
     'is_secret': (is_secret ? true : false),
     'must': (must ? true : false),
-    target : target
+    target: target
   });
 };
 Handler.prototype.force_add_event = function(e) {
