@@ -1,5 +1,5 @@
 "use strict";
-const card_manager = require('./card_db/card');
+const card_manager = require('./card_db/all_cards');
 const card_db = require('./card_api.js');
 const util = require('./utility');
 const colors = require('colors');
@@ -111,14 +111,16 @@ Card.prototype.calc_state = function(state, init_value, should_sort) {
   for (var i = 0; i < this.state.length; i++) {
     if (this.state[i].state === state) modifiers.push({
       f: this.state[i].f,
-      when: this.state[i].when
+      when: this.state[i].when,
+      me: this.state[i].me
     });
   }
   for (i = 0; i < this.owner.engine.g_aura.length; i++) {
     if (this.owner.engine.g_aura[i].who.is_good() && this.owner.engine.g_aura[i].state === state) {
       modifiers.push({
         f: this.owner.engine.g_aura[i].f,
-        when: this.owner.engine.g_aura[i].when
+        when: this.owner.engine.g_aura[i].when,
+        me : this.owner.engine.g_aura[i].who
       });
     }
   }
@@ -132,7 +134,7 @@ Card.prototype.calc_state = function(state, init_value, should_sort) {
   }
 
   for (i = 0; i < modifiers.length; i++) {
-    x = modifiers[i].f(x, this);
+    x = modifiers[i].f(x, this, modifiers[i].me);
   }
   return x;
 };
@@ -325,6 +327,7 @@ function Player(player_name, job, engine) {
   this.selection_waiting = false;
   this.who_select_wait = null;
   this.selection_fail_timer = null;
+  this.available_list = [];
 
   this.on_select_success = null;
   this.on_select_fail = null;
@@ -396,14 +399,14 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
   var available_list = [];
   for (var i = 0; i < this.field.num_card(); i++) {
     if (select_cond(this.field.card_list[i]) && !this.field.card_list[i].not_target()) {
-      available_list.push(this.field.card_list[i].id);
+      available_list.push(this.field.card_list[i]);
     }
   }
 
   // Cannot target Enemy Stealth minion (but can target mine)
   for (var i = 0; i < this.enemy.field.num_card(); i++) {
     if (select_cond(this.enemy.field.card_list[i]) && !this.enemy.field.card_list[i].stealth() && !this.enemy.field.card_list[i].not_target()) {
-      available_list.push(this.enemy.field.card_list[i].id);
+      available_list.push(this.enemy.field.card_list[i]);
     }
   }
 
@@ -421,10 +424,20 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
 
   this.selection_waiting = true;
   this.who_select_wait = c;
+  this.available_list = available_list;
 
-  console.log(colors.green('[select one] among'), available_list);
+  console.log(colors.green('[select one] among'), to_id(available_list));
+  
+  function to_id (arr) {
+    var x = [];
+    for(var i = 0; i < arr.length; i ++) {
+      x.push(arr[i].id);
+    }
+    return x;
+  }
+  
   this.socket.emit('select-one', {
-    list: available_list
+    list: to_id(available_list)
   });
 
   this.selection_fail_timer = setTimeout(function(p) {
@@ -1102,6 +1115,14 @@ Player.prototype.instant_kill_many = function(from, target_arr) {
 
   this.g_handler.execute();
 };
+Player.prototype.add_hero_dmg = function(d) {
+  if(this.turn_dmg.turn == this.engine.current_turn) {
+    this.turn_dmg.dmg += d;
+  } else {
+    this.turn_dmg.turn = this.engine.current_turn;
+    this.turn_dmg.dmg = d;
+  }
+}
 Player.prototype.hero_dmg = function() {
   var dmg = 0;
   if (this.weapon) {
@@ -1141,7 +1162,6 @@ Player.prototype.use_hero_power = function() {
     return;
   }
 
-  this.current_mana -= this.hero_power.mana();
   this.power_used.did++;
 
   var c = card_manager.load_card(this.hero_power.card_data.name);
@@ -2023,7 +2043,6 @@ Engine.prototype.set_up_listener = function(p) {
 
   p.socket.on('select-done', function(e) {
     return function(data) {
-      var select_id = data.id;
       console.log('Received Selection ', data.id);
 
       if (p == e.current_player && p.selection_waiting) {
@@ -2036,6 +2055,21 @@ Engine.prototype.set_up_listener = function(p) {
           p.on_select_fail(p.who_select_wait);
           return;
         }
+        
+        // Check again whether the user has chosen the correct one
+        // (which was available for the selection)
+        var select_correct = false;
+        for(var i = 0; i < p.available_list.length; i ++) {
+          if(target == p.available_list[i]) {
+            select_correct = true;
+            break;
+          }
+        }
+        
+        if(!select_correct) {
+          p.on_select_fail(p.who_select_wait); 
+          return; 
+        }
 
         console.log('Who was a target? :: ', target.card_data.name);
         console.log('Who was waiting for a selection :: ', p.who_select_wait.card_data.name);
@@ -2044,7 +2078,7 @@ Engine.prototype.set_up_listener = function(p) {
         p.on_select_success(p.who_select_wait);
         clearTimeout(p.selection_fail_timer);
       }
-    }
+    };
   }(this));
 
   p.socket.on('hero_power', function(e) {
@@ -2053,7 +2087,7 @@ Engine.prototype.set_up_listener = function(p) {
         console.log('Player Used Hero Power');
         p.use_hero_power();
       }
-    }
+    };
   }(this));
 };
 Engine.prototype.send_client_minion_action = function(c, action) {
@@ -2074,7 +2108,7 @@ Engine.prototype.send_client_data = function(e) {
       mana: p.current_mana,
       id: p.hero.id,
       armor: p.hero.armor
-    }
+    };
   }
 
   function put_deck_info(arr, deck, where, owner) {

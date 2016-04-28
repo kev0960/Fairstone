@@ -43,7 +43,7 @@ app.use(function(req, res, next) {
         req.decoded = '';
       }
       next();
-    })
+    });
   } else {
     req.decoded = '';
     next();
@@ -284,7 +284,7 @@ UserManager.prototype.add_user = function(user_id, password) {
   return {
     result: true
   };
-}
+};
 UserManager.prototype.chk_user = function(user_id, password) {
   for (var i = 0; i < this.user_list.length; i++) {
     if (this.user_list[i].id === user_id) {
@@ -301,7 +301,7 @@ UserManager.prototype.chk_user = function(user_id, password) {
     result: false,
     reason: 'not registered user'
   };
-}
+};
 UserManager.prototype.get_user = function(user_id) {
   for (var i = 0; i < this.user_list.length; i++) {
     if (this.user_list[i].id === user_id) {
@@ -309,7 +309,7 @@ UserManager.prototype.get_user = function(user_id) {
     }
   }
   return null;
-}
+};
 var user_manager = new UserManager();
 
 function MatchMaker() {
@@ -334,7 +334,7 @@ MatchMaker.prototype.add_client = function(user_id, soc) {
     id: user_id,
     soc: soc
   });
-}
+};
 MatchMaker.prototype.is_connected = function(user_id, soc) {
   for (var i = 0; i < this.client_list.length; i++) {
     if (this.client_list[i].id === user_id) {
@@ -343,7 +343,7 @@ MatchMaker.prototype.is_connected = function(user_id, soc) {
     }
   }
   return false;
-}
+};
 MatchMaker.prototype.get_socket = function(user_id) {
   for (var i = 0; i < this.client_list.length; i++) {
     if (this.client_list[i].id === user_id) {
@@ -351,7 +351,7 @@ MatchMaker.prototype.get_socket = function(user_id) {
     }
   }
   return null;
-}
+};
 MatchMaker.prototype.delete_client = function(soc) {
   for (var i = 0; i < this.client_list.length; i++) {
     if (this.client_list[i].soc == soc) {
@@ -360,21 +360,13 @@ MatchMaker.prototype.delete_client = function(soc) {
       return;
     }
   }
-}
-
-function max(a, b) {
-  return a > b ? a : b;
-}
-
-function min(a, b) {
-  return a > b ? b : a;
-}
+};
 
 // If the match is found, then it will broadcast the message
 MatchMaker.prototype.find_match = function(user_id) {
   var user = user_manager.get_user(user_id);
   if (user) {
-    console.log(user_id + ' is added to QUEUE')
+    console.log(user_id + ' is added to QUEUE');
     this.match_queue.push({
       id: user_id,
       when: Date.now(),
@@ -382,16 +374,16 @@ MatchMaker.prototype.find_match = function(user_id) {
       deck: user.deck
     });
   }
-}
+};
 MatchMaker.prototype.remove_from_match_queue = function(id) {
   for (var i = 0; i < this.match_queue.length; i++) {
     if (this.match_queue[i].id === id) {
       this.match_queue.splice(i, 1);
-      return
+      return;
     }
   }
   return;
-}
+};
 MatchMaker.prototype.match_found = function(user1, user2) {
   console.log('match is found!! ' + user1 + ' vs ' + user2);
 
@@ -423,7 +415,7 @@ MatchMaker.prototype.match_found = function(user1, user2) {
     });
   }
 
-}
+};
 
 function chk_in_range(first, second) {
   if (first.mmr - (Date.now() - first.when) / 1000 < second.mmr + (Date.now() - second.when) / 1000) return true;
@@ -457,14 +449,14 @@ MatchMaker.prototype.matching_queue = function() {
   var next_chk = 1000 - (Date.now() - called_time);
   if (next_chk < 0) next_chk = 0;
   setTimeout(this.matching_queue.bind(this), next_chk);
-}
+};
 MatchMaker.prototype.generate_match_token = function() {
   return crypto.randomBytes(64).toString('hex');
-}
+};
 MatchMaker.prototype.begin_match = function(match_id) {
-    hearth_game.start_match()
-  }
-  // TODO
+  hearth_game.start_match();
+};
+// TODO
 MatchMaker.prototype.is_valid_match = function(match_token) {
   // match_id is the first 32 characters of match-token
   for (var i = 0; i < this.found_match.length; i++) {
@@ -473,7 +465,7 @@ MatchMaker.prototype.is_valid_match = function(match_token) {
     }
   }
   return false;
-}
+};
 MatchMaker.prototype.get_full_token = function(match_token) {
   // match_id is the first 32 characters of match-token
   for (var i = 0; i < this.found_match.length; i++) {
@@ -481,18 +473,18 @@ MatchMaker.prototype.get_full_token = function(match_token) {
       return this.found_match[i].match_token;
     }
   }
-  return -1
-}
+  return -1;
+};
 // m :: name of the match
 MatchMaker.prototype.start_match = function(m) {
   m.game = hearth_game.start_match(m.p1_socket, m.p2_socket, user_manager.get_user(m.p1), user_manager.get_user(m.p2));
-}
+};
 MatchMaker.prototype.get_match = function(match_token) {
   for (var i = 0; i < this.found_match.length; i++) {
     if (this.found_match[i].match_token == match_token) return this.found_match[i];
   }
   return null;
-}
+};
 
 // Keep searching for the available game!
 var match_maker = new MatchMaker();
@@ -510,7 +502,7 @@ var stdin = process.openStdin();
 stdin.addListener('data', function(d) {
   var input = d.toString().trim();
   
-  var args = input.split(' ')
+  var args = input.split(' ');
   if(args[0] == 'db') hearth_api.get_db();
-})
+});
 

@@ -19,8 +19,8 @@ function Card(id) {
   this.mana = 0;
   this.name = '';
   this.type = '';
-  this.img_path = '';  // Path to the img file
-  
+  this.img_path = ''; // Path to the img file
+
   // Card position on the canvas field
   this.x = 0;
   this.y = 0;
@@ -221,12 +221,14 @@ function HearthClient() {
   // Receiving hearth-event
   this.socket.on('hearth-event', function(h) {
     return function(data) {
-      console.log('Received', data.event, ' Event!');
-      if (data.event_type == 'play_card') {
+      if (data.event) {
+        console.log('Received', data.event, ' Event!');
+        if (data.event_type == 'play_card') {
 
-      }
-      if (data.event_type == 'summon') {
+        }
+        if (data.event_type == 'summon') {
 
+        }
       }
 
       // 핸드에 카드를 받게 되면 계속해서 DOM Element 를 새로 생성하게 된다.
@@ -285,7 +287,7 @@ function HearthClient() {
       h.enemy_hero = data.enemy;
 
       h.draw_field();
-      h.log(data.event.event_type)
+      if(data.event) h.log(data.event.event_type)
     };
   }(this));
 

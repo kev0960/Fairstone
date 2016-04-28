@@ -11,12 +11,29 @@
     }
   }
 
+  function spell_next_step(me, f) {
+    me.owner.g_handler.add_callback(f, me, [me]);
+  }
+
   function end_spell(me) {
     me.owner.end_spell_txt(me);
   }
 
-  function rand(arr) {
-    return arr[Math.floor(arr.length * Math.random())];
+  // Choose AT MOST n cards. 
+  // If n is 1, then it returns an element. If not, it will
+  // return ARRAY of chosen cards 
+  function rand(arr, n) {
+    if (n == 1 || !n) return arr[Math.floor(arr.length * Math.random())];
+
+    var sel = [];
+    while (arr.length && n > 0) {
+      var lucky = Math.floor(arr.length * Math.random());
+      sel.push(arr[lucky]);
+      arr.splice(lucky, 1);
+
+      n--;
+    }
+    return sel;
   }
 
   // returns true in probablity of odd
@@ -289,7 +306,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -330,7 +347,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'dmg', me);
@@ -351,7 +368,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -481,7 +498,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -575,7 +592,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -732,7 +749,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.engine.add_aura(function(d, c) {
+            me.engine.add_aura(function(d, c, me) {
               if (me.owner.field.get_distance(me, c) == 1) return d + 1;
               return d;
             }, 'dmg', me);
@@ -1107,7 +1124,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (me.owner.weapon && c == me.owner.weapon && me.current_life != me.life()) return d + 2;
               return d;
             }, 'dmg', me)
@@ -1137,7 +1154,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(m, c) {
+            me.owner.engine.add_aura(function(m, c, me) {
               if (c.card_data.type == 'minion' && c.owner == me.owner) return m + 3;
               return m;
             }, 'mana', me);
@@ -1571,7 +1588,7 @@
           if (bc) {
             for (var i = 0; i < me.owner.field.num_card(); i++) {
               if (me.owner.field.get_distance(me, me.owner.field.card_list[i]) == 1) {
-                me.owner.engine.add_aura(function(d, c) {
+                me.owner.engine.add_aura(function(d, c, me) {
                   if (c.owner == me.owner.field.card_list[i].owner) return d + 1;
                   return d;
                 }, 'spell_dmg', me.owner.field.card_list[i]);
@@ -1666,7 +1683,7 @@
             me.owner.draw_cards(1);
           }
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -1771,11 +1788,11 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c != me && c.card_data.kind == 'pirate') return d + 1;
               return d;
             }, 'dmg', me);
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c != me && c.card_data.kind == 'pirate') return d + 1;
               return d;
             }, 'life', me);
@@ -1788,11 +1805,11 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c != me && c.card_data.kind == 'murloc') return d + 2;
               return d;
             }, 'dmg', me);
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c != me && c.card_data.kind == 'murloc') return d + 1;
               return d;
             }, 'life', me);
@@ -1937,7 +1954,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
             me.owner.engine.add_aura(function(t) {
-              return function(m, c) {
+              return function(m, c, me) {
                 if (t == c.owner.engine.current_turn && c.owner != me.owner && c.card_data.type == 'spell') return 0;
                 return m;
               };
@@ -1965,7 +1982,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.engine.add_aura(function(d, c) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner) return d + 1;
               return d;
             }, 'spell_dmg', me);
@@ -2407,11 +2424,344 @@
           if (bc) {
             var target = me.owner.get_all_character([me, me.owner.hero])
               .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
-              
+
             me.owner.instant_kill_many(me, target);
             while (me.owner.hand.num_card()) {
               me.owner.discard_card(me.owner.hand.card_list[0], me);
             }
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Execute': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.life() != c.current_life) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.instant_kill(me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Whirlwind': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.get_all_character([me.owner.hero])
+              .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+
+            var dmg = [];
+            for (var i = 0; i < target.length; i++) {
+              dmg.push(me.spell_dmg(1));
+            }
+            me.owner.deal_dmg_many(dmg, me, target);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Heroic Strike': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.add_hero_dmg(4);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Fiery War Axe': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Cleave': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.get_all_character([me.owner.hero])
+              .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+
+            target = rand(target, 2);
+
+            if (target.length) {
+              var dmg = [];
+              for (var i = 0; i < target.length; i++) {
+                dmg.push(me.spell_dmg(1));
+              }
+              me.owner.deal_dmg_many(dmg, me, target);
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Charge': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.make_charge(me);
+                  me.target.add_state(inc(2), 'dmg', me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Shield Block': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.add_armor(5, me);
+            me.owner.draw_cards(1);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Warsong Commander': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c, me) {
+              if (c.chk_state('charge') && c.owner == me.owner) {
+                return d + 1;
+              }
+              return d;
+            });
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Kor\'kron Elite': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(null, 'charge', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Arcanite Reaper': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Inner Rage': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(1), me, me.target);
+                  me.target.add_state(inc(2), 'dmg', me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Slam': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  spell_next_step(me, function(me) {
+                    if (me.target.current_life > 0) me.owner.draw_cards(1);
+                    end_spell(me);
+                  });
+                  me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
+                }
+                else end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Rampage': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.current_life != c.life()) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(inc(3), 'dmg', me);
+                  me.target.add_state(inc(3), 'life', me);
+                  me.current_life += 3;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Cruel Taskmaster': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc && me.target) {
+                  me.target.add_state(inc(2), 'dmg', me);
+                  me.owner.deal_dmg(1, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Battle Rage': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var mine = me.owner.get_all_character([], function(c) {
+              if (c.current_life != c.life()) return true;
+            });
+
+            me.owner.draw_cards(mine.length);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Battle Axe': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Arathi Weaponsmith': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.summon_card('Battle Axe');
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Heavy Axe': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Upgrade!': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            if (me.owner.weapon) {
+              me.owner.weapon.add_state(inc(1), 'dmg', me);
+              me.owner.weapon.add_state(inc(1), 'life', me);
+              me.owner.weapon.current_life += 1;
+            }
+            else {
+              me.owner.summon_card('Heavy Axe');
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Armorsmith': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.victim.owner == me.owner && e.victim.card_data.type == 'minion') {
+                me.owner.add_armor(1, me);
+              }
+            }, 'take_dmg', me, false);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Commanding Shout': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(t) {
+              return function(e, me) {
+                if (e.victim.owner == me.owner && me.owner.engine.current_turn == t) {
+                  var dmg = e.dmg;
+                  if (e.victim.current_life - dmg < 1) {
+                    e.attacker.dmg_given = (e.victim.current_life - 1);
+                  }
+                }
+              };
+            }(me.owner.engine.current_turn), 'pre_dmg', me);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Frothing Berserker': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.victim.card_data.type == 'minion') {
+                me.add_state(inc(1), 'dmg', me);
+              }
+            }, 'take_dmg', me, false);
           }
           end(me, non_bc, bc);
         });
