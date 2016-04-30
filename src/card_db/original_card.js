@@ -1376,7 +1376,7 @@
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.card.card_data.type == 'minion' && e.card.owner == me.owner && e.card != me) {
                 var target = me.owner.enemy.get_all_character();
-                var lucky = target[Math.floor(target.length * Math.random())];
+                var lucky = rand(target);
 
                 me.owner.deal_dmg(1, me, lucky);
               }
@@ -2767,6 +2767,405 @@
         });
       }
     },
+    'Mortal Strike': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  if (me.owner.hero.current_life <= 12) {
+                    me.owner.deal_dmg(me.spell_dmg(6), me, me.target);
+                  }
+                  else me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Shield Slam': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(me.owner.hero.armor), me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Brawl': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.get_all_character([me.owner.hero])
+              .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+
+            if (target.length) {
+              var lucky = rand(target, 1);
+              for (var i = 0; i < target.length; i++) {
+                if (target[i] == lucky) {
+                  target.splice(i, 1);
+                  break;
+                }
+              }
+
+              me.owner.instant_kill_many(me, target);
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Gorehowl': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.who === me.owner.hero && e.target.card_data.type === 'minion' && me.owner.hero.weapon === me) {
+                me.owner.hero.weapon.current_life += 1; // Does not Decrease its durability
+              }
+            }, 'attack', me, false);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Grommash Hellscream': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function(d, c) {
+              if (c.current_life != c.life()) {
+                return d + 6;
+              }
+              return d;
+            }, 'dmg', me);
+            me.add_state(null, 'charge', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Arcane Missiles': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.deal_multiple_dmg(me.spell_dmg(3), me, function() {
+              return me.owner.enemy.get_all_character([], function(c) {
+                if (c.current_life > 0) return true;
+              });
+            });
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Arcane Explosion': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+            var dmg = [];
+            for (var i = 0; i < target.length; i++) {
+              dmg.push(me.spell_dmg(1));
+            }
+
+            me.owner.deal_dmg_many(dmg, me, target);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Frostbolt': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.deal_dmg(me.spell_dmg(3), me, me.target);
+                me.target.is_frozen.until = me.owner.engine.current_turn + 1;
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Frost Nova': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+            for (var i = 0; i < target.length; i++) {
+              target[i].is_frozen.until = me.owner.engine.current_turn + 1;
+            }
+
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Arcane Intellect': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.draw_cards(2);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Water Elemental': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.attacker === me) {
+                e.victim.is_frozen.until = me.owner.engine.current_turn + 1;
+              }
+            }, 'take_dmg', me)
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Sheep': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Polymorph': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.transform(me, me.target, 'Sheep');
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Fireball': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.deal_dmg(me.spell_dmg(6), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Flamestrike': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+            var dmg = [];
+            for (var i = 0; i < target.length; i++) {
+              dmg.push(me.spell_dmg(4));
+            }
+
+            me.owner.deal_dmg_many(dmg, me, target);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Mana Wyrm': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card.owner === me.owner && e.card.card_data.type == 'spell') {
+                me.add_state(inc(1), 'dmg', me);
+              }
+            }, 'play_card', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ice Lance': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target.is_frozen.until >= me.owner.engine.current_turn) {
+                  me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
+                }
+                else {
+                  me.target.is_frozen.until = me.owner.engine.current_turn + 1;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Sorcerer\'s Apprentice': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(m, c, me) {
+              if (c.card_data.type == 'spell' && c.owner == me.owner) {
+                return m - 1;
+              }
+              return m;
+            }, 'mana', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Mirror Entity': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
+                me.owner.engine.current_player != me.owner) {
+                me.owner.summon_card(e.card.card_data.name, 10, false, function(c) {
+                  me.owner.copy_minion(e.card, c);
+                });
+                me.status = 'destroyed';
+              }
+            }, 'after_play', me, true);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Ice Barrier': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.victim == me.owner.hero &&
+                me.owner.engine.current_player != me.owner) {
+                me.owner.add_armor(8, me);
+                me.status = 'destroyed';
+              }
+            }, 'pre_dmg', me, true);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Cone of Cold': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if(c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                var target = [me.target];
+                for(var i = 0; i < me.owner.field.num_card(); i ++) {
+                  if(me.owner.field.get_distance(me.target, me.owner.field.card_list[i]) == 1) {
+                    target.push(me.owner.field.card_list[i]);
+                  }
+                }
+                
+                for(var i = 0; i < me.owner.enemy.field.num_card(); i ++) {
+                  if(me.owner.enemy.field.get_distance(me.target, me.owner.enemy.field.card_list[i]) == 1) {
+                    target.push(me.owner.enemy.field.card_list[i]);
+                  }
+                }
+                
+                var dmg = [];
+                for(var i = 0; i < target.length; i ++) {
+                  target.is_frozen.until = me.owner.engine.current_turn + 1;
+                  dmg.push(me.spell_dmg(1));
+                }
+                
+                me.owner.deal_dmg_many(dmg, me, target);
+                
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Counterspell': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card.owner == me.owner.enemy &&
+                me.owner.engine.current_player != me.owner) {
+                e.card.status = 'destroyed';
+                me.status = 'destroyed';
+              }
+            }, 'play_card', me, true);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Vaporize': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
+                me.owner.engine.current_player != me.owner) {
+                me.owner.instant_kill(me, e.card);
+              }
+            }, 'propose_attack', me, true);
+            end_spell(me);
+          }
+        );
+      }
+    },
     'Emperor Thaurissan': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -2814,24 +3213,6 @@
             end(me, non_bc, bc);
           });
         }
-      }
-    },
-    'Fireball': {
-      on_play: function(me, forced_target, random_target) {
-        me.owner.select_one(me, function() {
-            return true;
-          }, // It can attack anything
-          function select_success(me) { // on select success
-            me.owner.play_success(me, -1,
-              function(me) {
-                me.owner.deal_dmg(me.spell_dmg(6), me, me.target);
-                end_spell(me);
-              }
-            );
-          },
-          nothing, // on select failure
-          forced_target, // if forced_target is enabled then we don't make user to choose
-          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
       }
     },
     'Noble Sacrifice': {

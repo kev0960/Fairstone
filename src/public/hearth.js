@@ -564,7 +564,7 @@ HearthClient.prototype.where_to_put = function(x) {
     else prev_x = hearth_client.my_field[i].x;
   }
   return hearth_client.my_field.length + 1;
-}
+};
 HearthClient.prototype.init_field_click = function() {
   function is_in_rect(e, x, y, w, h) {
     if (e.offsetX >= x && e.offsetX <= x + w && e.offsetY >= y && e.offsetY <= y + h) return true;
@@ -600,7 +600,6 @@ HearthClient.prototype.init_field_click = function() {
 
         return;
       }
-
     }
 
     for (var i = 0; i < hearth_client.enemy_field.length; i++) {
@@ -652,7 +651,9 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       if (hearth_client.field_selected) {
-        console.log('Minion #', hearth_client.field_selected.name, ' vs Me')
+        if(hearth_client.field_selected.name) console.log('Minion #', hearth_client.field_selected.name, ' vs Me')
+        else console.log('Minion #', hearth_client.field_selected, ' vs Me');
+        
         if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'me');
         }
@@ -665,6 +666,7 @@ HearthClient.prototype.init_field_click = function() {
       }
 
       hearth_client.field_selected = 'me';
+      return;
     }
     // Enemy hero
     else if (is_in_rect(e, hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150)) {
@@ -676,7 +678,9 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       if (hearth_client.field_selected) {
-        console.log('Minion #', hearth_client.field_selected.id, ' vs Enemy Hero')
+        if(hearth_client.field_selected.id) console.log('Minion #', hearth_client.field_selected.id, ' vs Enemy Hero')
+        else console.log('Minion #', hearth_client.field_selected, ' vs Enemy Hero')
+        
         if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'enemy');
         }
@@ -687,6 +691,7 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       hearth_client.field_selected = 'enemy';
+      return
     }
 
     // Hero Power

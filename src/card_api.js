@@ -26,12 +26,12 @@ HearthAPI.prototype.get_card_db = function() {
     for (collection in data) {
       console.log(collection, data[collection].length);
 
-      if (collection == 'Debug' || collection == 'Tavern Brawl' || collection == 'Missions') continue;
+      if (collection === 'Debug' || collection === 'Tavern Brawl' || collection === 'Missions') continue;
       for (var i = 0; i < data[collection].length; i++) {
         if (!data[collection][i].name) continue;
 
         var t = data[collection][i].type;
-        if (t == 'Minion' || t == 'Weapon' || t == 'Spell' || t == 'Hero Power') {
+        if (t === 'Minion' || t === 'Weapon' || t === 'Spell' || t === 'Hero Power') {
           var c = data[collection][i];
           hearth_api.card_db.push({
               name : c.name.replace('\\', ''),
