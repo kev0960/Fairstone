@@ -67,8 +67,10 @@ module.exports = {
   get_db: hearth_api.get_card_db,
   load_card: function(name) {
     var card = null;
+    if(name === 'Wrath') name = 'EX1_154';
+    
     for (var i = 0; i < hearth_api.card_db.length; i++) {
-      if (hearth_api.card_db[i].name == name) {
+      if (hearth_api.card_db[i].name == name || hearth_api.card_db[i].unique == name) {
         card = hearth_api.card_db[i];
         break;
       }
@@ -81,7 +83,7 @@ module.exports = {
       console.log('Card :: ' , name, ' is not found!');
       return ;
     }
-    console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
-    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img];
+    //console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
+    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique];
   }
 };

@@ -5,8 +5,10 @@ $(window).on('resize', function() {
   $('#world').height($(window).width())
 })
 
-function Card(id) {
+function Card(id, unique) {
   this.id = id
+  this.unique = unique;
+
   this.card_draw = null;
   this.card_type = '';
 
@@ -140,12 +142,12 @@ var init = (function() {});
 window.onload = init;
 
 function HearthImageDB() {
-  this.img_list = []; // { card_name, img }
+  this.img_list = []; // { unique, img }
 }
 
 HearthImageDB.prototype.get_image = function(c, on_load, on_done) {
   for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == c.name) {
+    if (this.img_list[j].unique == c.unique) {
       on_load(this.img_list[j].img);
       if (on_done) on_done();
       return;
@@ -157,7 +159,7 @@ HearthImageDB.prototype.get_image = function(c, on_load, on_done) {
   console.log('Image Path :: ', c.img_path)
 
   img.onload = function() {
-    hearth_img_db.add_image(c.name, img);
+    hearth_img_db.add_image(c.unique, img);
     on_load(img);
 
     if (on_done) on_done();
@@ -165,22 +167,22 @@ HearthImageDB.prototype.get_image = function(c, on_load, on_done) {
 };
 HearthImageDB.prototype.async_get_image = function(c) {
   for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == c.name) {
+    if (this.img_list[j].unique == c.unique) {
       return this.img_list[j].img;
     }
   }
   throw Error('[async-get_image] ', c.name, ' does not exist');
 };
-HearthImageDB.prototype.add_image = function(card_name, img) {
+HearthImageDB.prototype.add_image = function(unique, img) {
   this.img_list.push({
-    card_name: card_name,
+    unique: unique,
     img: img
   });
-  console.log(card_name, ' image is added');
+  console.log(unique, ' image is added');
 };
-HearthImageDB.prototype.has_image = function(card_name) {
+HearthImageDB.prototype.has_image = function(unique) {
   for (var j = 0; j < this.img_list.length; j++) {
-    if (this.img_list[j].card_name == card_name) {
+    if (this.img_list[j].unique == unique) {
       return true;
     }
   }
@@ -262,7 +264,7 @@ function HearthClient() {
 
       function change_to_recv_data(src, dest) {
         for (var i = 0; i < src.length; i++) {
-          var card = new Card(src[i].id);
+          var card = new Card(src[i].id, src[i].unique);
 
           card.type = src[i].type;
           card.life = src[i].life;
@@ -287,7 +289,7 @@ function HearthClient() {
       h.enemy_hero = data.enemy;
 
       h.draw_field();
-      if(data.event) h.log(data.event.event_type)
+      if (data.event) h.log(data.event.event_type)
     };
   }(this));
 
@@ -310,7 +312,6 @@ function HearthClient() {
 
             // Now redraw the field
             h.draw_field();
-
           }
         }
       }
@@ -352,6 +353,43 @@ function HearthClient() {
 
       h.show_card_list(h.choose_card_list);
     };
+  }(this));
+
+  this.socket.on('choose-one', function(h) {
+    return function(data) {
+      var card_list = data.list;
+      h.choose_card_list = card_list;
+
+      console.log('Choose ONE :: ', card_list)
+      h.show_card_list(card_list);
+      
+      // Enable clicking the 'world' canvas
+      $('#world').css('pointer-events', 'auto');
+      $('#battlefield').css('pointer-events', 'none');
+
+      document.getElementById('world').onclick = function f(e) {
+        h.world_ctx.fillStyle = 'red';
+        h.world_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
+
+        for (var i = 0; i < card_list.length; i++) {
+          if (e.offsetX >= card_list[i].x && e.offsetX <= card_list[i].x + card_list[i].w) {
+            if (e.offsetY >= card_list[i].y && e.offsetY <= card_list[i].y + card_list[i].h) {
+              h.socket.emit('select-done', {
+                id : i
+              });
+              
+              // Clear canvas!
+              h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
+              $('#world').css('pointer-events', 'none');
+              $('#battlefield').css('pointer-events', 'auto');
+              
+              document.getElementById('world').removeEventListener('click', f);
+            }
+          }
+        }
+      }
+    }
+
   }(this));
 
   this.socket.on('select-one', function(h) {
@@ -456,7 +494,7 @@ HearthClient.prototype.draw_field = function() {
     this.my_field[i].x = this.my_field_center + 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = this.my_field_card_y;
 
-    if (hearth_img_db.has_image(this.my_field[i].name)) {
+    if (hearth_img_db.has_image(this.my_field[i].unique)) {
       this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i]), this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     else {
@@ -493,7 +531,7 @@ HearthClient.prototype.draw_field = function() {
     this.enemy_field[i].x = this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2));
     this.enemy_field[i].y = this.enemy_field_card_y;
 
-    if (hearth_img_db.has_image(this.enemy_field[i].name)) {
+    if (hearth_img_db.has_image(this.enemy_field[i].unique)) {
       this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i]), this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
     }
     else {
@@ -651,9 +689,9 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       if (hearth_client.field_selected) {
-        if(hearth_client.field_selected.name) console.log('Minion #', hearth_client.field_selected.name, ' vs Me')
+        if (hearth_client.field_selected.name) console.log('Minion #', hearth_client.field_selected.name, ' vs Me')
         else console.log('Minion #', hearth_client.field_selected, ' vs Me');
-        
+
         if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'me');
         }
@@ -678,9 +716,9 @@ HearthClient.prototype.init_field_click = function() {
         return;
       }
       if (hearth_client.field_selected) {
-        if(hearth_client.field_selected.id) console.log('Minion #', hearth_client.field_selected.id, ' vs Enemy Hero')
+        if (hearth_client.field_selected.id) console.log('Minion #', hearth_client.field_selected.id, ' vs Enemy Hero')
         else console.log('Minion #', hearth_client.field_selected, ' vs Enemy Hero')
-        
+
         if (hearth_client.field_selected.id) {
           hearth_client.combat(hearth_client.field_selected.id, 'enemy');
         }
@@ -733,7 +771,7 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
   $('#world').css('pointer-events', 'auto');
   $('#battlefield').css('pointer-events', 'none');
 
-  document.getElementById('world').onclick = function(e) {
+  document.getElementById('world').onclick = function f(e) {
     hearth_client.world_ctx.fillStyle = 'red';
     hearth_client.world_ctx.fillRect(e.offsetX, e.offsetY, 10, 10);
 
@@ -775,8 +813,10 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
         // Clear canvas!
         hearth_client.world_ctx.clearRect(0, 0, hearth_client.world_canvas.width, hearth_client.world_canvas.height);
         for (var i = 0; i < card_list.length; i++) {
-          if (!card_list[i].selected) hearth_client.world_ctx.drawImage(card_list[i].img, card_list[i].x, card_list[i].y)
+          if (!card_list[i].selected) hearth_client.world_ctx.drawImage(card_list[i].img, card_list[i].x, card_list[i].y);
         }
+        
+        document.getElementById('world').removeEventListener('click', f);
 
         $('#world').css('pointer-events', 'none');
         $('#battlefield').css('pointer-events', 'auto');

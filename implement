@@ -102,3 +102,29 @@ http://hearthstoneserver.jaebumlee.c9users.io/
     target 이 먼저 발동하며, deal_dmg 는 공격자의 것이 먼저 발생된다.
     
     참고로 여기서 사용자에게 combat 결과를 알려주는 minion_battle 이벤트 정보가 클라이언트로 전송된다. 
+
+드루이드 선택 카드 과정 설명
+
+- choose_one 함수 내에서 select_one 함수가 호출될 수 있기 때문에 이 함수에 Pass 해야 할 정보에 대한 인자들도 가지고 있다.
+  (forced_target, random_target 이 그 예 이다. )
+  
+- choose_one 함수의 option 에는 사용자에게 보이고자 하는 카드들의 이름이 들어가 있다. 보통 보여지는 카드의 이름이 같은 경우가
+  있어서 card unique ID 를 전달한다 (예) Wrath
+  
+#1 Spell 혹은 Minion 을 play 하면 choose_one 함수가 실행된다. Engine 에 변수들을 추가하는 것을 막기 위해서, select_one 함수가
+   사용하고 있었던 인자들을 재활용 하였는데;
+   
+  this.selection_fail_timer = null;  // 사용자가 시간 내에 choose 를 하지 않았을 때
+  this.available_list = []; // option 리스트를 포함한다. 
+
+  this.on_select_success = null; // 사용자가 choose 하였을 때
+  this.on_select_fail = null; // 사용자가 choose 하지 않았을 때
+  
+  그 외로 
+  
+  this.choose_waiting = false; // 현재 choose 를 기다리고 있는지
+  this.forced_target = null; // select_one 함수에 전달할 인자 (혹시 있다면)
+  this.random_target = null;
+  this.must_choose = false; // 반드시 user 가 choose 해야만 하는가 (Discover 에 해당)
+  
+  가 있다. 

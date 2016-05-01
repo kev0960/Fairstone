@@ -1636,7 +1636,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
             me.add_state(inc(me.owner.hand.num_card()), 'life', me);
-            me.curret_life += me.owner.hand.num_card();
+            me.current_life += me.owner.hand.num_card();
           }
           end(me, non_bc, bc);
         });
@@ -3166,6 +3166,94 @@
         );
       }
     },
+    'Ethereal Arcanist': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.who == me.owner && me.owner.secret_list.length) {
+                me.add_state(inc(2), 'dmg', me);
+                me.add_state(inc(2), 'life', me);
+                me.current_life += 2;
+              }
+            }, 'turn_end', me, false);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ice Block': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.victim == me.owner.hero && !me.owner.chk_invincible(me.owner.hero) &&
+                me.owner.engine.current_player != me.owner) {
+                // Now carefully chk the dmg is actually lethal
+                if(me.owner.hero.current_life + me.owner.hero.armor <= e.attacker.dmg_given) {
+                  e.attacker.dmg_given = 0;
+                  me.owner.hero.is_invincible.until = me.owner.engine.current_turn + 1;
+                  me.status = 'destroyed';
+                }
+              }
+            }, 'pre_dmg', me, true);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Blizzard': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+            var dmg = [];
+            for (var i = 0; i < target.length; i++) {
+              dmg.push(me.spell_dmg(2));
+            }
+
+            me.owner.deal_dmg_many(dmg, me, target);
+            
+            for(var i = 0; i < target.length; i ++) {
+              target[i].is_frozen.turn = me.owner.engine.current_turn + 1;
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Pyroblast': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.deal_dmg(me.spell_dmg(10), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Archmage Antonidas': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card.owner === me.owner && e.card.card_data.type === 'spell') {
+                me.owner.hand_card('Fireball');
+              }
+            }, 'play_card', me, false);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Emperor Thaurissan': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -3213,23 +3301,6 @@
             end(me, non_bc, bc);
           });
         }
-      }
-    },
-    'Noble Sacrifice': {
-      on_play: function(me) {
-        // Spell does not require 'at' argument
-        me.owner.play_success(me, -1, function(me) {
-          me.owner.g_handler.add_handler(function(e, me) {
-            if (e.who.owner == me.owner.enemy && me.owner.field.num_card() <= 6) {
-              me.owner.summon_card('수호자', 10, function(me) {
-                return function(c) {
-                  me.target = c;
-                };
-              }(me));
-            }
-          }, 'propose_attack', me, true);
-          end_spell(me);
-        });
       }
     }
   };
