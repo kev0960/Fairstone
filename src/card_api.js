@@ -33,6 +33,15 @@ HearthAPI.prototype.get_card_db = function() {
         var t = data[collection][i].type;
         if (t === 'Minion' || t === 'Weapon' || t === 'Spell' || t === 'Hero Power') {
           var c = data[collection][i];
+          
+          if(!c.cost) {
+            c.cost = 0;
+          }
+          
+          if(!c.durability) {
+            c.durability = 0;
+          }
+          
           hearth_api.card_db.push({
               name : c.name.replace('\\', ''),
               type: c.type.toLowerCase(),
@@ -40,7 +49,7 @@ HearthAPI.prototype.get_card_db = function() {
               kind: (c.race ? c.race.toLowerCase() : null),
               job: (c.playerClass ? c.playerClass.toLowerCase() : null),
               img: c.img,
-              info: [(c.cost ? c.cost : c.durability), (c.attack ? c.attack : 0), (c.health ? c.health : 0)],
+              info: [c.cost, (c.attack ? c.attack : 0), (c.health ? c.health : c.durability)],
               unique : c.cardId,
               is_token : (c.collectible ? false : true),
               'is_secret' : is_secret(c.mechanics)
@@ -67,17 +76,18 @@ module.exports = {
   get_db: hearth_api.get_card_db,
   load_card: function(name) {
     var card = null;
-    if(name === 'Wrath') name = 'EX1_154';
+    var search = name;
+    if(name === 'Wrath') search = 'EX1_154';
     
     for (var i = 0; i < hearth_api.card_db.length; i++) {
-      if (hearth_api.card_db[i].name == name || hearth_api.card_db[i].unique == name) {
+      if (hearth_api.card_db[i].name == search || hearth_api.card_db[i].unique == search) {
         card = hearth_api.card_db[i];
         break;
       }
     }
     
     // Check for the unregistered ones
-    if(!card) card = hearth_api.chk_not_found(name);
+    if(!card) card = hearth_api.chk_not_found(search);
     
     if(!card) {
       console.log('Card :: ' , name, ' is not found!');

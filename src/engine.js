@@ -309,6 +309,7 @@ function Player(player_name, job, engine) {
   // TODO make it to the default setting
   this.current_mana = 100;
   this.boosted_mana = 0;
+  this.max_mana = this.current_mana;
 
   // current turn's overloaded mana
   this.current_overload_mana = 0;
@@ -1811,24 +1812,27 @@ Handler.prototype.do_event = function(e) {
   var handler_num = this.event_handler_arr[e.event_type].length;
   var handler_arr = this.event_handler_arr[e.event_type];
   for (var i = 0; i < handler_num; i++) {
-    var chk_secret = false;
-    if (handler_arr[i].is_secret && handler_arr[i].me.status != 'destroyed') chk_secret = true;
-    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && handler_arr[i].me == e.card)) {
+    if (handler_arr[i].me.status != 'destroyed' || (e.event_type == 'deathrattle' && (handler_arr[i].me == e.card || handler_arr[i].target == e.card))) {
       handler_arr[i].f(e, handler_arr[i].me, handler_arr[i].target);
-    }
-    if (chk_secret && handler_arr[i].me.status === 'destroyed') {
-      console.log(colors.red('[Secret] ' + handler_arr[i].me.card_data.name + ' is invoked!'));
-
-      // Remove it from the player's secret list
-      for (var j = 0; j < handler_arr[i].me.owner.secret_list.length; j++) {
-        if (handler_arr[i].me.owner.secret_list[j] == handler_arr[i].me) {
-          handler_arr[i].me.owner.secret_list.splice(j, 1);
-          break;
-        }
-      }
     }
   }
 
+  // Check for the secret that is deleted
+  for(var i = 0; i < this.engine.p1.secret_list.length; i ++) {
+    if(this.engine.p1.secret_list[i].status === 'destroyed') {
+      this.engine.p1.secret_list.splice(i , 1); i --;
+    }
+  }
+
+  for(var i = 0; i < this.engine.p2.secret_list.length; i ++) {
+    if(this.engine.p2.secret_list[i].status === 'destroyed') {
+      this.engine.p2.secret_list.splice(i , 1); i --;
+    }
+  }
+  
+  // Send Client an information about the board
+  this.engine.send_client_data();
+  
   this.exec_lock = false;
   this.execute();
 };
@@ -2121,7 +2125,6 @@ Engine.prototype.start_match = function() {
 // Begins the game by putting selected cards to each player's deck
 Engine.prototype.begin_game = function() {
   function hand_card(player) {
-    console.log('[player starting cards]', player.starting_cards);
     for (var i = 0; i < player.starting_cards.length; i++) {
       for (var j = 0; j < player.deck.card_list.length; j++) {
         if (player.starting_cards[i].name == player.deck.card_list[j].card_data.name) {
@@ -2149,6 +2152,9 @@ Engine.prototype.begin_game = function() {
 
   this.set_up_listener(this.p1);
   this.set_up_listener(this.p2);
+  
+  this.p2.hand_card('The Coin');
+  this.start_turn();
 };
 Engine.prototype.end_turn = function() {
   console.log('change Turn!!');
@@ -2165,6 +2171,8 @@ Engine.prototype.end_turn = function() {
   this.current_player.current_mana = Math.floor(this.current_turn / 2) + 1 + this.current_player.boosted_mana;
   if (this.current_player.current_mana > 10) this.current_player.current_mana = 10;
 
+  this.max_mana = this.current_player.current_mana;
+  
   // Apply overloaded mana deduction
   this.current_player.current_mana -= this.current_player.next_overload_mana;
   if (this.current_player.current_mana < 0) this.current_player.current_mana = 0;
@@ -2438,5 +2446,11 @@ stdin.addListener('data', function(d) {
   else if (args[0] == 'mana') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     to.current_mana = 100;
+  }
+  else if (args[0] == 'show') {
+    var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
+    for(var i = 0; i < to.field.num_card(); i ++) {
+      console.log(to.field.card_list[i].card_data.name , ' ', to.field.card_list[i].mana(), '/', to.field.card_list[i].dmg(), ' Life : ', to.field.card_list[i].current_life , '/', to.field.card_list[i].life());
+    }
   }
 });

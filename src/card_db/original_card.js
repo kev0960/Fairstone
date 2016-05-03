@@ -129,6 +129,74 @@
           forced_target); // if forced_target is enabled then we don't make user to choose
       }
     },
+    'Healing Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.who == me.owner) {
+                var target = me.owner.get_all_character([me.owner.hero]);
+
+                var arr = []
+                for (var i = 0; i < target.length; i++) {
+                  arr.push(1);
+                }
+                me.owner.heal_many(arr, me, target);
+              }
+            }, 'turn_end', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Searing Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Stoneclaw Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Wrath of Air Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c, me) {
+              if (c.owner == me.owner) return d + 1;
+              return d;
+            }, 'spell_dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Totemic Call': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var avail = ['Healing Totem', 'Searing Totem', 'Stoneclaw Totem', 'Wrath of Air Totem'];
+          var list = me.owner.get_all_character([me.owner.hero]);
+
+          for (var i = 0; i < list.length; i++) {
+            for (var j = 0; j < avail.length; j++) {
+              if (avail[j] == list[i].card_data.name) {
+                avail.splice(j, 1);
+                break;
+              }
+            }
+          }
+
+          if (avail.length) me.owner.summon_card(rand(avail), 10);
+          else me.owner.summon_card(rand(['Healing Totem', 'Searing Totem', 'Stoneclaw Totem', 'Wrath of Air Totem']), 10);
+        });
+      }
+    },
     'The Coin': {
       on_play: function(me) {
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
@@ -3100,32 +3168,32 @@
     'Cone of Cold': {
       on_play: function(me, forced_target, random_target) {
         me.owner.select_one(me, function(c) {
-            if(c.card_data.type == 'minion') return true;
+            if (c.card_data.type == 'minion') return true;
           }, // It can attack anything
           function select_success(me) { // on select success
             me.owner.play_success(me, -1,
               function(me) {
                 var target = [me.target];
-                for(var i = 0; i < me.owner.field.num_card(); i ++) {
-                  if(me.owner.field.get_distance(me.target, me.owner.field.card_list[i]) == 1) {
+                for (var i = 0; i < me.owner.field.num_card(); i++) {
+                  if (me.owner.field.get_distance(me.target, me.owner.field.card_list[i]) == 1) {
                     target.push(me.owner.field.card_list[i]);
                   }
                 }
-                
-                for(var i = 0; i < me.owner.enemy.field.num_card(); i ++) {
-                  if(me.owner.enemy.field.get_distance(me.target, me.owner.enemy.field.card_list[i]) == 1) {
+
+                for (var i = 0; i < me.owner.enemy.field.num_card(); i++) {
+                  if (me.owner.enemy.field.get_distance(me.target, me.owner.enemy.field.card_list[i]) == 1) {
                     target.push(me.owner.enemy.field.card_list[i]);
                   }
                 }
-                
+
                 var dmg = [];
-                for(var i = 0; i < target.length; i ++) {
+                for (var i = 0; i < target.length; i++) {
                   target.is_frozen.until = me.owner.engine.current_turn + 1;
                   dmg.push(me.spell_dmg(1));
                 }
-                
+
                 me.owner.deal_dmg_many(dmg, me, target);
-                
+
                 end_spell(me);
               }
             );
@@ -3190,7 +3258,7 @@
               if (e.victim == me.owner.hero && !me.owner.chk_invincible(me.owner.hero) &&
                 me.owner.engine.current_player != me.owner) {
                 // Now carefully chk the dmg is actually lethal
-                if(me.owner.hero.current_life + me.owner.hero.armor <= e.attacker.dmg_given) {
+                if (me.owner.hero.current_life + me.owner.hero.armor <= e.attacker.dmg_given) {
                   e.attacker.dmg_given = 0;
                   me.owner.hero.is_invincible.until = me.owner.engine.current_turn + 1;
                   me.status = 'destroyed';
@@ -3213,8 +3281,8 @@
             }
 
             me.owner.deal_dmg_many(dmg, me, target);
-            
-            for(var i = 0; i < target.length; i ++) {
+
+            for (var i = 0; i < target.length; i++) {
               target[i].is_frozen.turn = me.owner.engine.current_turn + 1;
             }
             end_spell(me);
@@ -3269,38 +3337,6 @@
           }
           end(me, non_bc, bc);
         });
-      }
-    },
-    'Druid of the Claw': {
-      on_play: function(me, bc, user_play, at) {
-        if (user_play) {
-          me.owner.choose_one(['표범 변환', '곰 변환'], function(me, at) {
-            return function(choice) {
-              if (choice == 1) { // 곰 변환
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(2), 'life', me);
-                    me.current_life += 2;
-                  }
-                  end(me, non_bc, bc);
-                });
-              }
-              else { // 표범 변환
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.make_charge(me);
-                  }
-                  end(me, non_bc, bc);
-                });
-              }
-            };
-          }(me, at));
-        }
-        else {
-          me.owner.play_success(me, at, function(me, non_bc, bc) {
-            end(me, non_bc, bc);
-          });
-        }
       }
     }
   };

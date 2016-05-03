@@ -458,6 +458,7 @@
                 e.card.add_state(inc(1), 'dmg', me);
                 e.card.add_state(inc(1), 'life', me);
                 e.card.current_life += 1;
+                me.owner.weapon_dec_durability(1, me);
               }
             }, 'summon', me);
           }
@@ -523,6 +524,240 @@
         });
       }
     },
+    'Moonfire': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                me.owner.deal_dmg(me.spell_dmg(1), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Innervate': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.current_mana += 2;
+          if (me.owner.current_mana > 10) me.owner.current_mana = 10;
+
+          end_spell(me);
+        });
+      }
+    },
+    'Claw': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.add_hero_dmg(2);
+          me.owner.add_armor(2, me);
+          end_spell(me);
+        });
+      }
+    },
+    'Excess Mana': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.draw_cards(1);
+          end_spell(me);
+        });
+      }
+    },
+    'Wild Growth': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          if (me.owner.max_mana >= 10) {
+            me.owner.hand_card('Excess Mana');
+          }
+          else me.owner.boosted_mana += 1;
+
+          end_spell(me);
+        });
+      }
+    },
+    'Mark of the Wild': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.add_state(null, 'taunt', me);
+                  me.add_state(inc(2), 'dmg', me);
+                  me.add_state(inc(2), 'life', me);
+                  me.current_life += 2;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Savage Roar': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character([me.owner.hero]);
+
+          for (var i = 0; i < target.length; i++) {
+            target[i].add_state(function(t) {
+              return function(d, c) {
+                if (t == c.owner.engine.current_turn) {
+                  return d + 2;
+                }
+                return d;
+              };
+            }, 'dmg', me);
+          }
+
+          me.owner.add_hero_dmg(2);
+          end_spell(me);
+        });
+      }
+    },
+    'Healing Touch': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.heal(8, me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Swipe': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            if (me.target) {
+              var target = me.owner.enemy.get_all_character([], function(c) {
+                if (c == me.target) return false;
+                return true;
+              });
+
+              var dmg = [];
+              for (var i = 0; i < target.length; i++) {
+                dmg.push(me.spell_dmg(1));
+              }
+
+              target.push(me.target);
+              dmg.push(me.spell_dmg(4));
+
+              me.owner.deal_dmg_many(dmg, me, target);
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Starfire': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.deal_dmg(me.spell_dmg(5), me, me.target);
+                me.owner.draw_cards(1);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Ironbark Protector': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Naturalize': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.instant_kill(me, me.target);
+                me.owner.enemy.draw_cards(2);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Power of the Wild': {
+      on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
+        me.owner.choose_one(me, ['Leader of the Pack', 'Summon a Panther'],
+          function choose_success(choice, me, forced_target, random_target) {
+            console.log('Your CHOICE :: ', choice);
+            if (choice == 0) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                var target = me.owner.get_all_character([me.owner.hero]);
+                for (var i = 0; i < target.length; i++) {
+                  target[i].add_state(inc(1), 'dmg', me);
+                  target[i].add_state(inc(1), 'life', me);
+                  target[i].current_life += 1;
+                }
+                end_spell(me);
+              });
+            }
+            else if (choice == 1) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                me.owner.summon_card('Panther', 10);
+                end_spell(me);
+              });
+            }
+            // This choice is only for Fandral Staghelm 
+            else if (choice == 2) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                me.owner.summon_card('Panther', 10, function(c) {
+                  var target = me.owner.get_all_character([me.owner.hero]);
+                  for (var i = 0; i < target.length; i++) {
+                    target[i].add_state(inc(1), 'dmg', me);
+                    target[i].add_state(inc(1), 'life', me);
+                    target[i].current_life += 1;
+                  }
+                });
+                end_spell(me);
+              });
+            }
+          },
+          nothing,
+          false,
+          forced_choose, random_choose, forced_target, random_target);
+      }
+    },
     'Wrath': {
       on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
         me.owner.choose_one(me, ['EX1_154a', 'EX1_154b'],
@@ -530,7 +765,7 @@
             console.log('Your CHOICE :: ', choice);
             if (choice == 0) {
               me.owner.select_one(me, function(c) {
-                  return true;
+                  if (c.card_data.type == 'minion') return true;
                 }, function select_success(me) {
                   me.owner.play_success(me, -1,
                     function(me) {
@@ -546,7 +781,7 @@
             }
             else if (choice == 1) {
               me.owner.select_one(me, function(c) {
-                  return true;
+                  if (c.card_data.type == 'minion') return true;
                 }, function select_success(me) {
                   me.owner.play_success(me, -1,
                     function(me) {
@@ -564,7 +799,7 @@
             // This choice is only for Fandral Staghelm 
             else if (choice == 2) {
               me.owner.select_one(me, function(c) {
-                  return true;
+                  if (c.card_data.type == 'minion') return true;
                 }, function select_success(me) {
                   me.owner.play_success(me, -1,
                     function(me) {
@@ -583,6 +818,155 @@
           nothing,
           false,
           forced_choose, random_choose, forced_target, random_target);
+      }
+    },
+    'Mark of Nature': {
+      on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
+        me.owner.choose_one(me, ['EX1_155a', 'EX1_155b'],
+          function choose_success(choice, me, forced_target, random_target) {
+            console.log('Your CHOICE :: ', choice);
+            if (choice == 0) {
+              me.owner.select_one(me, function(c) {
+                  if (c.card_data.type == 'minion') return true;
+                }, function select_success(me) {
+                  me.owner.play_success(me, -1,
+                    function(me) {
+                      if (me.target) {
+                        me.target.add_state(inc(4), 'dmg', me);
+                      }
+                      end_spell(me);
+                    });
+                },
+                nothing,
+                forced_target,
+                random_target);
+            }
+            else if (choice == 1) {
+              me.owner.select_one(me, function(c) {
+                  if (c.card_data.type == 'minion') return true;
+                }, function select_success(me) {
+                  me.owner.play_success(me, -1,
+                    function(me) {
+                      if (me.target) {
+                        me.target.add_state(inc(4), 'life', me);
+                        me.target.current_life += 4;
+                      }
+                      end_spell(me);
+                    });
+                },
+                nothing,
+                forced_target,
+                random_target);
+            }
+            // This choice is only for Fandral Staghelm 
+            else if (choice == 2) {
+              me.owner.select_one(me, function(c) {
+                  if (c.card_data.type == 'minion') return true;
+                }, function select_success(me) {
+                  me.owner.play_success(me, -1,
+                    function(me) {
+                      if (me.target) {
+                        me.target.add_state(inc(4), 'life', me);
+                        me.target.current_life += 4;
+
+                        me.target.add_state(inc(4), 'dmg', me);
+                      }
+                      end_spell(me);
+                    });
+                },
+                nothing,
+                forced_target,
+                random_target);
+            }
+          },
+          nothing,
+          false,
+          forced_choose, random_choose, forced_target, random_target);
+      }
+    },
+    'Soul of the Forest': { // Todo :: CHK
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character([me.owner.hero]);
+
+          for (var i = 0; i < target.length; i++) {
+            me.owner.engine.g_handler.add_handler(function(e, me, target) {
+              if (e.card == target) {
+                me.owner.summon_card('Treant', target.last_position);
+              }
+            }, 'deathrattle', me, false, false, target[i]);
+          }
+          end_spell(me);
+        });
+      }
+    },
+    'Druid of the Claw': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.choose_one(['Cat Form', 'Bear Form'], function(me, at) {
+            return function(choice) {
+              if (choice == 0) { // Cat Form
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.make_charge(me);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 1) { // Bear Form
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.add_state(inc(2), 'life', me);
+                    me.current_life += 2;
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 2) {
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.add_state(inc(2), 'life', me);
+                    me.current_life += 2;
+                    me.make_charge(me);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+            };
+          }(me, at));
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Savagery': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function() {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.deal_dmg(me.spell_dmg(me.owner.hero_dmg()), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Bite': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.add_hero_dmg(4);
+          me.owner.add_armor(4, me);
+          end_spell(me);
+        });
       }
     },
     'Keeper of the Grove': {
@@ -651,6 +1035,107 @@
             end(me, non_bc, bc);
           });
         }
+      }
+    },
+    'Starfall': {
+      on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
+        me.owner.choose_one(me, ['NEW1_007a', 'NEW1_007b'],
+          function choose_success(choice, me, forced_target, random_target) {
+            console.log('Your CHOICE :: ', choice);
+            if (choice == 0) {
+              me.owner.select_one(me, function(c) {
+                  if (c.card_data.type == 'minion') return true;
+                }, function select_success(me) {
+                  me.owner.play_success(me, -1,
+                    function(me) {
+                      if (me.target) {
+                        me.owner.deal_dmg(me.spell_dmg(5), me, me.target);
+                      }
+                      end_spell(me);
+                    });
+                },
+                nothing,
+                forced_target,
+                random_target);
+            }
+            else if (choice == 1) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                var target = me.owner.enemy.get_all_character([me.owner.hero]);
+                var dmg = [];
+                for (var i = 0; i < target.length; i++) {
+                  dmg.push(me.spell_dmg(2));
+                }
+                me.owner.deal_dmg_many(dmg, me, target);
+
+                end_spell(me);
+              });
+            }
+            // This choice is only for Fandral Staghelm 
+            else if (choice == 2) {
+              me.owner.select_one(me, function(c) {
+                  if (c.card_data.type == 'minion') return true;
+                }, function select_success(me) {
+                  me.owner.play_success(me, -1,
+                    function(me) {
+                      var target = me.owner.enemy.get_all_character([me.owner.enemy.hero], function(c) {
+                        if (c == me.target) return false;
+                        return true;
+                      });
+
+                      var dmg = [];
+                      for (var i = 0; i < target.length; i++) {
+                        dmg.push(me.spell_dmg(2));
+                      }
+
+                      target.push(me.target);
+                      dmg.push(me.spell_dmg(7));
+
+                      me.owner.deal_dmg_many(dmg, me, target);
+                    });
+                },
+                nothing,
+                forced_target,
+                random_target);
+            }
+          },
+          nothing,
+          false,
+          forced_choose, random_choose, forced_target, random_target);
+      }
+    },
+    'Nourish': {
+      on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
+        me.owner.choose_one(me, ['Leader of the Pack', 'Summon a Panther'],
+          function choose_success(choice, me, forced_target, random_target) {
+            console.log('Your CHOICE :: ', choice);
+            if (choice == 0) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                me.owner.current_mana += 2;
+                if (me.owner.current_mana > 10) me.owner.current_mana = 10;
+                end_spell(me);
+              });
+            }
+            else if (choice == 1) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                me.owner.draw_cards(3);
+                end_spell(me);
+              });
+            }
+            // This choice is only for Fandral Staghelm 
+            else if (choice == 2) {
+              me.owner.play_success(me, -1, function(me, non_bc, bc) {
+                me.owner.summon_card('Panther', 10, function(c) {
+                  me.owner.draw_cards(3);
+                  me.owner.current_mana += 2;
+                  if (me.owner.current_mana > 10) me.owner.current_mana = 10;
+                });
+                end_spell(me);
+              });
+            }
+          },
+          nothing,
+          false,
+          forced_choose, random_choose, forced_target, random_target);
       }
     }
   };

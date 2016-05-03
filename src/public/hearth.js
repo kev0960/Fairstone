@@ -290,6 +290,7 @@ function HearthClient() {
 
       h.draw_field();
       if (data.event) h.log(data.event.event_type)
+      else h.log();
     };
   }(this));
 
