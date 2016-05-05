@@ -77,7 +77,10 @@ module.exports = {
   load_card: function(name) {
     var card = null;
     var search = name;
+    
     if(name === 'Wrath') search = 'EX1_154';
+    else if(name === 'Nourish') search = 'EX1_164';
+    else if(name === 'Starfall') search = 'NEW1_007';
     
     for (var i = 0; i < hearth_api.card_db.length; i++) {
       if (hearth_api.card_db[i].name == search || hearth_api.card_db[i].unique == search) {
@@ -95,5 +98,10 @@ module.exports = {
     }
     //console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
     return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique];
+  },
+  get_name : function(id) {
+    for(var i = 0; i < hearth_api.card_db.length; i ++) {
+      if(hearth_api.card_db[i].unique == id) return hearth_api.card_db[i].name;
+    }
   }
 };

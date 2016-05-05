@@ -1039,7 +1039,7 @@
     },
     'Starfall': {
       on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
-        me.owner.choose_one(me, ['NEW1_007a', 'NEW1_007b'],
+        me.owner.choose_one(me, ['NEW1_007b', 'NEW1_007a'],
           function choose_success(choice, me, forced_target, random_target) {
             console.log('Your CHOICE :: ', choice);
             if (choice == 0) {
@@ -1105,7 +1105,7 @@
     },
     'Nourish': {
       on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
-        me.owner.choose_one(me, ['Leader of the Pack', 'Summon a Panther'],
+        me.owner.choose_one(me, ['EX1_164a', 'EX1_164b'],
           function choose_success(choice, me, forced_target, random_target) {
             console.log('Your CHOICE :: ', choice);
             if (choice == 0) {
@@ -1124,11 +1124,9 @@
             // This choice is only for Fandral Staghelm 
             else if (choice == 2) {
               me.owner.play_success(me, -1, function(me, non_bc, bc) {
-                me.owner.summon_card('Panther', 10, function(c) {
-                  me.owner.draw_cards(3);
-                  me.owner.current_mana += 2;
-                  if (me.owner.current_mana > 10) me.owner.current_mana = 10;
-                });
+                me.owner.draw_cards(3);
+                me.owner.current_mana += 2;
+                if (me.owner.current_mana > 10) me.owner.current_mana = 10;
                 end_spell(me);
               });
             }
@@ -1136,6 +1134,804 @@
           nothing,
           false,
           forced_choose, random_choose, forced_target, random_target);
+      }
+    },
+    'Force of Nature': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.summon_card('Treat', 10);
+            me.owner.summon_card('Treat', 10);
+            me.owner.summon_card('Treat', 10);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Ancient of War': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.choose_one(me, ['Uproot', 'Rooted'], function(me, at) {
+            return function(choice) {
+              if (choice == 0) { // Cat Form
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.add_state(inc(5), 'dmg', me);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 1) { // Bear Form
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.add_state(inc(5), 'life', me);
+                    me.current_life += 5;
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 2) {
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.add_state(inc(5), 'life', me);
+                    me.current_life += 5;
+                    me.add_state(inc(5), 'dmg', me);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+            };
+          }(me, at));
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Ancient of Lore': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.choose_one(me, ['Ancient Teachings', 'Ancient Secrets'], function(me, at) {
+            return function(choice) {
+              if (choice == 0) { // Cat Form
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    me.owner.draw_cards(1);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 1) { // Bear Form
+                me.owner.select_one(me,
+                  function(c) {
+                    return true;
+                  },
+                  function() {
+                    me.owner.play_success(me, at, function(me, non_bc, bc) {
+                      if (non_bc && me.target) { // Choose One Effects are not BATTLECRY
+                        me.owner.heal(5, me, me.target);
+                      }
+                      end(me, non_bc, bc);
+                    });
+                  },
+                  function() {},
+                  false
+                );
+              }
+              else if (choice == 2) {
+                me.owner.select_one(me,
+                  function(c) {
+                    return true;
+                  },
+                  function() {
+                    me.owner.play_success(me, at, function(me, non_bc, bc) {
+                      if (non_bc && me.target) {
+                        me.owner.heal(5, me, me.target);
+                        me.owner.draw_cards(1);
+                      }
+                      end(me, non_bc, bc);
+                    });
+                  },
+                  function() {},
+                  false
+                );
+              }
+            };
+          }(me, at));
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'EX1_573t': { // Treant with Taunt
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Cenarius': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.choose_one(me, ['Demigod\'s Favor', 'Shan\'do\'s Lesson'], function(me, at) {
+            return function(choice) {
+              if (choice == 0) {
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    var target = me.owner.get_all_character([me.owner.hero, me]);
+                    for (var i = 0; i < target.length; i++) {
+                      target[i].add_state(inc(2), 'dmg', me);
+                      target[i].add_state(inc(2), 'life', me);
+                      target[i].current_life += 2;
+                    }
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 1) {
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    var pos = me.owner.field.get_pos(me);
+                    me.owner.summon_card('EX1_573t', pos + 1);
+                    me.owner.summon_card('EX1_573t', pos + 2);
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+              else if (choice == 2) {
+                me.owner.play_success(me, at, function(me, non_bc, bc) {
+                  if (non_bc) {
+                    var pos = me.owner.field.get_pos(me);
+                    me.owner.summon_card('EX1_573t', pos + 1);
+                    me.owner.summon_card('EX1_573t', pos + 2, false,
+                      function(c) {
+                        var target = me.owner.get_all_character([me.owner.hero, me]);
+                        for (var i = 0; i < target.length; i++) {
+                          target[i].add_state(inc(2), 'dmg', me);
+                          target[i].add_state(inc(2), 'life', me);
+                          target[i].current_life += 2;
+                        }
+                      });
+                  }
+                  end(me, non_bc, bc);
+                });
+              }
+            };
+          }(me, at));
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Ancestral Healing': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.heal(me.target.life() - me.target.current_life, me, me.target);
+                  me.target.add_state(null, 'taunt', me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Totemic Might': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.enemy.get_all_character();
+
+            for (var i = 0; i < target.length; i++) {
+              if (target[i].card_data.kind == 'totem') {
+                target[i].add_state(inc(2), 'life', me);
+                target[i].current_life += 2;
+              }
+            }
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Frozen Shock': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.deal_dmg(me.spell_dmg(1), me, me.target);
+                  me.target.is_frozen.until = me.owner.engine.current_turn + 1;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Rockbiter Weapon': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  if (me.target == me.owner.hero || me.target == me.owner.enemy.hero) {
+                    me.target.owner.add_hero_dmg(3, me);
+                  }
+                  else {
+                    me.target.add_state(function(t) {
+                      return function(d, c) {
+                        if (c.owner.engine.current_turn == t) return d + 3;
+                        return d;
+                      };
+                    }(me.owner.engine.current_turn), 'dmg', me);
+                  }
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Flametongue Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(d, c, me) {
+              if (c.owner.field.get_distance(c, me) == 1) {
+                return d + 2;
+              }
+              return d;
+            }, 'dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Windfury': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.make_windfury(me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Hex': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.transform(me, me.target, 'Frog');
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Windspeaker': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc && me.target) {
+                  me.target.make_windfury(me);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Bloodlust': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character([me.owner.hero]);
+          for (var i = 0; i < target.length; i++) {
+            target[i].add_state(function(t) {
+              return function(d, c) {
+                if (t == c.owner.engine.current_turn) {
+                  return d + 3;
+                }
+                return d;
+              };
+            }, 'dmg', me);
+          }
+          end_spell(me);
+        });
+      }
+    },
+    'Fire Elemental': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc && me.target) {
+                  me.owner.deal_dmg(3, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Forked Lightning': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          if (me.owner.enemy.field.num_card()) {
+            var target = rand(me.owner.enemy.get_all_character([me.owner.enemy.hero]), 2);
+            var dmg = [];
+
+            for (var i = 0; i < target.length; i++) {
+              dmg.push(me.spell_dmg(2));
+            }
+
+            me.owner.deal_dmg_many(dmg, me, target);
+            me.owner.add_overload(2, me);
+          }
+          end_spell(me);
+        });
+      }
+    },
+    'Earth Shock': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.silence(me, me.target);
+                  me.owner.deal_dmg(me.spell_dmg(1), me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Dust Devil': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) me.owner.add_overload(2, me);
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function() {
+              return 2;
+            }, 'atk_num', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Lightning Bolt': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(3), me, me.target);
+                  me.owner.add_overload(1, me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing, // on select failure
+          forced_target, // if forced_target is enabled then we don't make user to choose
+          random_target); // if random_target is enabled then Engine Randomly Selects Available Target
+      }
+    },
+    'Stormforged Axe': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) me.owner.add_overload(1, me);
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Ancestral Spirit': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.g_handler.add_handler(function(e, me, target) {
+                    if (e.card == target) {
+                      me.owner.summon_card(target.card_data.unique, target.last_position);
+                    }
+                  }, 'deathrattle', me, false, false, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Mana Tide Totem': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.who == me.owner) me.owner.draw_cards(1);
+            }, 'turn_end', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Lightning Storm': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+          var dmg = [];
+
+          for (var i = 0; i < target.legnth; i++) {
+            dmg.push(me.spell_dmg(2) + (chance(0.5) ? 1 : 0));
+          }
+
+          me.owner.deal_dmg_many(dmg, me, target);
+          me.owner.add_overload(2, me);
+          end_spell(me);
+        });
+      }
+    },
+    'Spirit Wolf': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Feral Spirit': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.summon_card('Spirit Wolf', 10);
+          me.owner.summon_card('Spirit Wolf', 10);
+
+          me.owner.add_overload(2, me);
+          end_spell(me);
+        });
+      }
+    },
+    'Lava Burst': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(5), me, me.target);
+                  me.owner.add_overload(2, me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Far Sight': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.draw_cards(1, function(c) {
+            if (c) {
+              c.add_state(inc(-3), 'mana', me);
+            }
+          });
+          end_spell(me);
+        });
+      }
+    },
+    'Earth Elemental': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) me.owner.add_overload(3, me);
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Doomhammer': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) me.owner.add_overload(1, me);
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function() {
+              return 2;
+            }, 'atk_num', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Al\'Akir the Windlord': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.add_state(null, 'taunt', me);
+            me.make_charge(me);
+            me.is_shielded.until = 1000;
+            me.add_state(function() {
+              return 2;
+            }, 'atk_num', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Sacrificial Pact': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.kind == 'demon') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.instant_kill(me, me.target);
+                  me.owner.heal(5, me, me.owner.hero);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Voidwalker': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.add_state(null, 'taunt', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Corruption': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.g_handler.add_handler(function(e, me, target) {
+                    if (e.who == me.owner) {
+                      me.owner.instant_kill(me, target);
+                    }
+                  }, 'turn_begin', me, false, false, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Soulfire': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(4), me, me.owner.hero);
+                  if (me.owner.hand.num_card()) {
+                    me.owner.discard_card(rand(me.owner.hand.card_list), me);
+                  }
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Mortal Coil': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  spell_next_step(me, function(me) {
+                    if (me.target.current_life <= 0) me.owner.draw_cards(1);
+                    end_spell(me);
+                  });
+                  me.owner.deal_dmg(me.spell_dmg(1), me, me.target);
+                }
+                else end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Succubus': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            if (me.owner.hand.num_card()) {
+              me.owner.discard_card(rand(me.owner.hand.card_list), me);
+            }
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Drain Life': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
+                  me.owner.heal(2, me, me.owner);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Shadow Bolt': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Hellfire': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character().concat(me.owner.enemy.get_all_character());
+          var dmg = [];
+          for (var i = 0; i < target.length; i++) dmg.push(me.spell_dmg(3));
+
+          me.owner.deal_dmg_many(dmg, me, target);
+          end_spell(me);
+        });
+      }
+    },
+    'Dread Infernal': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var target = me.owner.get_all_character([me.owner.hero])
+              .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+            var dmg = [];
+            for (var i = 0; i < target.length; i++) dmg.push(me.spell_dmg(1));
+
+            me.owner.deal_dmg_many(dmg, me, target);
+          }
+          end(me, non_bc, bc);
+        });
       }
     }
   };

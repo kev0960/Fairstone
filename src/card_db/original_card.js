@@ -784,9 +784,11 @@
     'Young Dragonhawk': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
-          if (non_bc) me.add_state(function() {
-            return 2;
-          }, 'atk_num', me);
+          if (non_bc) {
+            me.add_state(function() {
+              return 2;
+            }, 'atk_num', me);
+          }
           end(me, non_bc, bc);
         });
       }
@@ -1515,7 +1517,7 @@
                 var hand = me.owner.hand.card_list;
                 if (hand.length) {
                   var lucky = me.owner.hand.card_list[Math.floor(me.owner.hand.num_card() * Math.random())];
-                  me.owner.summon_card(lucky.card_data.name, loc);
+                  me.owner.summon_card(lucky.card_data.unique, loc);
                   me.owner.hand.remove_card(lucky);
                 }
                 me.owner.hand_card('Alarm-o-Bot');
@@ -2038,7 +2040,7 @@
           if (non_bc) {
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.card.card_data.type == 'spell') {
-                e.card.owner.enemy.hand_card(e.card.card_data.name);
+                e.card.owner.enemy.hand_card(e.card.card_data.unique);
               }
             }, 'play_card', me);
           }
@@ -2616,7 +2618,7 @@
                 return d + 1;
               }
               return d;
-            });
+            }, 'dmg', me);
           }
           end(me, non_bc, bc);
         });
@@ -3138,7 +3140,7 @@
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
                 me.owner.engine.current_player != me.owner) {
-                me.owner.summon_card(e.card.card_data.name, 10, false, function(c) {
+                me.owner.summon_card(e.card.card_data.unique, 10, false, function(c) {
                   me.owner.copy_minion(e.card, c);
                 });
                 me.status = 'destroyed';
