@@ -71,6 +71,9 @@ function Card(card_data, id, owner) {
 
   // Proposed attack target during combat phase (can be changed)
   this.target = null;
+  
+  // Is this card attacking?
+  this.is_attacking = false; 
 
   // Proposed damage that may be given to the target (can be changed)
   this.dmg_given = 0;
@@ -317,6 +320,9 @@ function Player(player_name, job, engine) {
   // Next turn's overloaded mana
   this.next_overload_mana = 0;
 
+  // How many cards drawn in this turn
+  this.turn_card_play = [];
+  
   this.hand = new Deck();
   this.field = new Deck();
   this.deck = new Deck();
@@ -365,6 +371,7 @@ function Player(player_name, job, engine) {
     dmg: 0,
     turn: -1
   };
+  
 
   this.turn_hero_atk = {
     did: 0,
@@ -381,9 +388,18 @@ Player.prototype.chk_aura = function(aura) {
   }
   return false;
 };
-// TODO :: Finish implementing this function using user io
-// [options] are the array of name of cards to choose
-// we can us choose_one as a DISCOVER too (by using the option must)
+// Check whether c is charge due to the global aura effect
+Player.prototype.chk_charge = function(c) {
+    for (var i = 0; i < this.g_aura.length; i++) {
+      if (this.g_aura[i].state == 'charge' && this.g_aura[i].who.is_good() && this.g_aura[i].f(c, this.g_aura[i].who)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // TODO :: Finish implementing this function using user io
+  // [options] are the array of name of cards to choose
+  // we can us choose_one as a DISCOVER too (by using the option must)
 Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
   forced_choose, random_choose, forced_target, random_target) {
   if (forced_choose === 0 || forced_choose) {
@@ -426,8 +442,7 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
 
       if (p.must_choose) {
         p.on_select_success(0, c, p.forced_target, p.random_target);
-      }
-      else {
+      } else {
         p.on_select_fail(c);
       }
 
@@ -525,6 +540,8 @@ Player.prototype.play_spell = function(c) {
   if (this.current_mana < c.mana()) return; // Enough mana?
 
   var card = card_manager.load_card(c.card_data.unique);
+  this.turn_card_play.push(c);
+  
   card.on_play(c);
 };
 
@@ -550,7 +567,7 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
-Player.prototype.hand_card = function(unique, n) {
+Player.prototype.hand_card = function(unique, n, after_hand) {
   if (!n) n = 1;
   while (n--) {
     var card = card_manager.load_card(unique);
@@ -562,6 +579,7 @@ Player.prototype.hand_card = function(unique, n) {
     if (card.on_draw) card.on_draw(c);
     this.hand.put_card(c, 10);
 
+     if (after_hand) this.g_handler.add_callback(after_hand, this, [c]);
     this.g_handler.add_event(new Event('hand_card', [c, this]));
     this.g_handler.execute();
   }
@@ -640,6 +658,8 @@ Player.prototype.play_minion = function(c, at) {
   }
 
   var card = card_manager.load_card(c.card_data.unique);
+  this.turn_card_play.push(c);
+  
   card.on_play(c, true, true, at);
 };
 Player.prototype.play_success = function(c, at, next) {
@@ -668,16 +688,13 @@ Player.prototype.play_success = function(c, at, next) {
 
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
-  }
-  else if (c.card_data.type == 'spell') {
+  } else if (c.card_data.type == 'spell') {
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
-  }
-  else if (c.card_data.type == 'hero power') {
+  } else if (c.card_data.type == 'hero power') {
     this.g_handler.add_event(new Event('inspire', [this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
-  }
-  else if (c.card_data.type == 'weapon') {
+  } else if (c.card_data.type == 'weapon') {
     this.load_weapon(c);
 
     this.g_handler.add_event(new Event('play_card', [c, this]));
@@ -727,14 +744,12 @@ Player.prototype.summon_phase = function(c) {
     c.atk_info.max = c.calc_state('atk_num', 1);
     c.atk_info.turn = this.engine.current_turn;
 
-    if (c.chk_state('charge')) {
+    if (c.chk_state('charge') || this.chk_charge(c)) {
       c.atk_info.did = 0;
-    }
-    else {
+    } else {
       c.atk_info.did = c.atk_info.max; // Cannot move at a spawned turn
     }
-  }
-  else if (c.card_data.type == 'weapon') {
+  } else if (c.card_data.type == 'weapon') {
     this.weapon = c;
     this.weapon.atk_info.max = this.weapon.calc_state('atk_num', 1, false);
     this.weapon.atk_info.turn = this.engine.current_turn;
@@ -766,7 +781,7 @@ Player.prototype.summon_card = function(unique, at, transformed, after_summon) {
   if (transformed) this.transformed = true;
 
   var card = card_manager.load_card(c.card_data.unique);
-
+  
   if (c.card_data.type == 'minion') this.field.put_card(c, at);
   else if (c.card_data.type == 'weapon') {
     this.load_weapon(c);
@@ -839,8 +854,7 @@ Player.prototype.hero_combat = function(target) {
 
     this.weapon.atk_info.did++;
     this.turn_hero_atk.did++;
-  }
-  else if (this.hero_dmg() != 0 && this.turn_hero_atk.did == 0) {
+  } else if (this.hero_dmg() != 0 && this.turn_hero_atk.did == 0) {
     this.turn_hero_atk.did++;
   }
 
@@ -861,6 +875,9 @@ Player.prototype.hero_attack = function(target) {
 Player.prototype.pre_hero_combat = function() {
   var target = this.hero.target;
 
+  this.hero.is_attacking = true;
+  target.is_attacking = false;
+  
   this.hero.dmg_given = this.hero_dmg();
   target.dmg_given = target.dmg();
 
@@ -870,6 +887,18 @@ Player.prototype.pre_hero_combat = function() {
 
   this.g_handler.execute();
 };
+// Conducts combat no matter what happens
+Player.prototype.forced_combat = function(c, target) {
+  c.target = target;
+  c.is_stealth.until = -1; // stealth is gone!
+  c.atk_info.did += 1; // Did attack 
+
+  // propose_attack event can change the target of the attacker
+  this.g_handler.add_event(new Event('propose_attack', [c, target]));
+  this.g_handler.add_callback(this.attack, this, [c]);
+
+  this.g_handler.execute();
+}
 Player.prototype.combat = function(c, target) {
   if (!c.is_attackable() // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
@@ -899,6 +928,9 @@ Player.prototype.attack = function(c) {
 Player.prototype.pre_combat = function(c) {
   var target = c.target;
 
+  c.is_attacking = true;
+  target.is_attacking = false;
+  
   c.dmg_given = c.dmg();
   target.dmg_given = target.dmg();
 
@@ -930,8 +962,7 @@ Player.prototype.actual_combat = function(c) {
 
   if (c.armor > target.dmg_given) {
     c.armor -= target.dmg_given;
-  }
-  else {
+  } else {
     c.armor = 0;
     c.current_life -= (target.dmg_given - c.armor);
   }
@@ -939,8 +970,7 @@ Player.prototype.actual_combat = function(c) {
   // Check for the Armor
   if (target.armor > c.dmg_given) {
     target.armor -= c.dmg_given;
-  }
-  else {
+  } else {
     target.armor = 0;
     target.current_life -= (c.dmg_given - target.armor);
   }
@@ -1013,8 +1043,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   // Check for the Armor
   if (to.armor > dmg) {
     to.armor -= dmg;
-  }
-  else {
+  } else {
     to.armor = 0;
     to.current_life -= (dmg - to.armor);
   }
@@ -1141,8 +1170,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
     this.g_handler.add_event(new Event('pre_dmg', [from, to_arr[done], dmg_arr[done]]));
     this.g_handler.add_callback(this.deal_dmg_many, this, [dmg_arr, from, to_arr, done + 1]);
     return;
-  }
-  else { // Now pre_dmg events are done
+  } else { // Now pre_dmg events are done
     dmg_arr[done - 1] = from.dmg_given;
 
     for (i = 0; i < to_arr.length; i++) {
@@ -1161,8 +1189,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
         // Check for the Armor
         if (to_arr[i].armor > dmg_arr[i]) {
           to_arr[i].armor -= dmg_arr[i];
-        }
-        else {
+        } else {
           to_arr[i].armor = 0;
           to_arr[i].current_life -= (dmg_arr[i] - to_arr[i].armor);
         }
@@ -1177,19 +1204,21 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
   }
 };
 // Brings card on field to hand
-Player.prototype.return_to_hand = function(c, who) {
+Player.prototype.return_to_hand = function(c, who, after_hand) {
   // Card will be marked as destroyed but will not queued into
   // destroyed_queue unless the hand is full
   c.status = 'destroyed';
 
   // Remove Card from field
-  this.field.remove_card(c);
+  c.owner.field.remove_card(c);
 
-  if (this.hand.num_card() >= 10) {
+  if (c.owner.hand.num_card() >= 10) {
     this.g_handler.add_event(new Event('destroyed', [c, who]));
   }
-
-  this.hand_card(c.card_data.unique);
+  
+  c.owner.hand_card(c.card_data.unique, 1, after_hand);
+  
+  this.g_handler.execute();
 };
 // Discard a card on hand
 Player.prototype.discard_card = function(c, who) {
@@ -1211,8 +1240,7 @@ Player.prototype.take_control = function(c, who) {
 
   if (c.chk_state('charge')) {
     c.atk_info.did = 0;
-  }
-  else c.atk_info.did = c.atk_info.max;
+  } else c.atk_info.did = c.atk_info.max;
 };
 // Everything about src copies to dest
 Player.prototype.copy_minion = function(src, dest) {
@@ -1311,8 +1339,7 @@ Player.prototype.instant_kill_many = function(from, target_arr) {
 Player.prototype.add_hero_dmg = function(d) {
   if (this.turn_dmg.turn == this.engine.current_turn) {
     this.turn_dmg.dmg += d;
-  }
-  else {
+  } else {
     this.turn_dmg.turn = this.engine.current_turn;
     this.turn_dmg.dmg = d;
   }
@@ -1485,7 +1512,7 @@ Player.prototype.load_weapon = function(weapon) {
     this.weapon.status = 'destroyed';
     this.g_handler.add_event(new Event('destroyed', [this.weapon, weapon]));
   }
-  
+
   // ** WEAPON LOADING SEQUENCE IS HANDLED IN SUMMON PHASE ** 
 };
 Player.prototype.get_all_character = function(exclude, cond) {
@@ -1532,89 +1559,70 @@ function Event(event_type, args) {
     this.who = args[0];
     this.target = args[1];
     this.type = args[2];
-  }
-  else if (event_type == 'take_dmg') {
+  } else if (event_type == 'take_dmg') {
     this.victim = args[0];
     this.attacker = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'deal_dmg') {
+  } else if (event_type == 'deal_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'pre_dmg') {
+  } else if (event_type == 'pre_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'destroyed') {
+  } else if (event_type == 'destroyed') {
     this.destroyed = args[0];
     this.attacker = args[1];
-  }
-  else if (event_type == 'summon') {
+  } else if (event_type == 'summon') {
     this.card = args[0];
-  }
-  else if (event_type == 'draw_card') {
+  } else if (event_type == 'draw_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'hand_card') {
+  } else if (event_type == 'hand_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'play_card') {
+  } else if (event_type == 'play_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'after_play') {
+  } else if (event_type == 'after_play') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'turn_begin') {
+  } else if (event_type == 'turn_begin') {
     this.who = args[0];
-  }
-  else if (event_type == 'turn_end') {
+  } else if (event_type == 'turn_end') {
     this.who = args[0];
-  }
-  else if (event_type == 'deathrattle') {
+  } else if (event_type == 'deathrattle') {
     this.card = args[0];
-  }
-  else if (event_type == 'propose_attack') {
+  } else if (event_type == 'propose_attack') {
     this.who = args[0];
     this.target = args[1];
-  }
-  else if (event_type == 'target') {
+  } else if (event_type == 'target') {
     this.who = args[0];
-  }
-  else if (event_type == 'silence') {
+  } else if (event_type == 'silence') {
     this.who = args[0];
     this.target = args[1];
-  }
-  else if (event_type == 'card_burnt') {
+  } else if (event_type == 'card_burnt') {
     this.card = args[0];
-  }
-  else if (event_type == 'heal') {
+  } else if (event_type == 'heal') {
     this.who = args[0];
     this.target = args[1];
     this.heal = args[2];
-  }
-  else if (event_type == 'inspire') {
+  } else if (event_type == 'inspire') {
     this.who = args[0];
-  }
-  else if (event_type == 'armor') {
+  } else if (event_type == 'armor') {
     this.who = args[0];
     this.target = args[1];
     this.armor = args[2];
-  }
-  else if (event_type == 'overload') {
+  } else if (event_type == 'overload') {
     this.who = args[0];
     this.target = args[1];
     this.overload = args[2];
-  }
-  else if (event_type == 'discard') {
+  } else if (event_type == 'discard') {
     this.card = args[0];
     this.who = args[1];
+  } else if (event_type == 'reveal') {
+    this.card = args[0];
   }
 }
 Event.prototype.packer = function() {
@@ -1622,21 +1630,18 @@ Event.prototype.packer = function() {
     return {
       event_type: this.event_type
     };
-  }
-  else if (this.args.length == 1) {
+  } else if (this.args.length == 1) {
     return {
       event_type: this.event_type,
       from: this.args[0].id
     };
-  }
-  else if (this.args.length == 2) {
+  } else if (this.args.length == 2) {
     return {
       event_type: this.event_type,
       from: this.args[0].id,
       to: this.args[1].id
     };
-  }
-  else if (this.args.length == 3) {
+  } else if (this.args.length == 3) {
     return {
       event_type: this.event_type,
       from: this.args[0].id,
@@ -1665,7 +1670,7 @@ function Handler(engine) {
   var event_type_list = ['attack', 'deal_dmg', 'take_dmg', 'destroyed', 'summon', 'hand_card',
     'draw_card', 'play_card', 'after_play', 'turn_begin', 'turn_end', 'deathrattle',
     'propose_attack', 'pre_dmg', 'heal', 'silence', 'card_burnt', 'target', 'inspire', 'armor', 'discard',
-    'overload'
+    'overload', 'reveal'
   ];
 
   // initialize event handler array
@@ -1693,8 +1698,7 @@ Handler.prototype.add_event = function(e) {
 
   if (e.event_type == 'destroyed') {
     this.destroyed_queue.push(e);
-  }
-  else {
+  } else {
     // Insert in front of all other events
     this.queue.splice(0, 0, e);
   }
@@ -1730,8 +1734,7 @@ Handler.prototype.add_phase = function(f, that, args) {
       that: that,
       args: args
     };
-  }
-  else {
+  } else {
     this.add_callback(f, that, args);
   }
 };
@@ -1750,8 +1753,7 @@ Handler.prototype.execute = function() {
       this.exec_lock = false;
       this.execute();
       return;
-    }
-    else {
+    } else {
       // If both destoryed queue and callback queues are empty, then we initiate
       // death creation phase
       this.death_creation();
@@ -1842,6 +1844,7 @@ Handler.prototype.do_event = function(e) {
   // Check for the secret that is deleted
   for (var i = 0; i < this.engine.p1.secret_list.length; i++) {
     if (this.engine.p1.secret_list[i].status === 'destroyed') {
+      this.add_event(new Event('reveal', [this.engine.p1.secret_list[i]]));
       this.engine.p1.secret_list.splice(i, 1);
       i--;
     }
@@ -1849,6 +1852,7 @@ Handler.prototype.do_event = function(e) {
 
   for (var i = 0; i < this.engine.p2.secret_list.length; i++) {
     if (this.engine.p2.secret_list[i].status === 'destroyed') {
+      this.add_event(new Event('reveal', [this.engine.p2.secret_list[i]]));
       this.engine.p2.secret_list.splice(i, 1);
       i--;
     }
@@ -2186,8 +2190,7 @@ Engine.prototype.end_turn = function() {
   // Change the players
   if (this.current_player == this.p1) {
     this.current_player = this.p2;
-  }
-  else this.current_player = this.p1;
+  } else this.current_player = this.p1;
 
   this.current_turn += 1;
 
@@ -2203,6 +2206,7 @@ Engine.prototype.end_turn = function() {
 
   this.current_player.current_overload_mana = this.current_player.next_overload_mana;
   this.current_player.next_overload_mana = 0;
+  this.current_player.turn_card_play = [];
 
   this.g_handler.add_event(new Event('turn_begin', [this.current_player]));
   this.g_handler.add_callback(this.start_turn, this, []);
@@ -2232,8 +2236,7 @@ Engine.prototype.set_up_listener = function(p) {
               console.log(colors.green('[play card] :: '), c.card_data.name, ' , at ', data.at);
               p.play_minion(c, data.at);
               return;
-            }
-            else if (c.card_data.type == 'spell') {
+            } else if (c.card_data.type == 'spell') {
               p.play_spell(c);
               return;
             }
@@ -2309,8 +2312,7 @@ Engine.prototype.set_up_listener = function(p) {
         p.who_select_wait.target = target;
         p.on_select_success(p.who_select_wait);
         clearTimeout(p.selection_fail_timer);
-      }
-      else if (p == e.current_player && p.choose_waiting) {
+      } else if (p == e.current_player && p.choose_waiting) {
         p.choose_waiting = false;
 
         if (!(data.id >= 0 && data.id < p.available_list.length)) {
@@ -2424,8 +2426,7 @@ Engine.prototype.send_client_data = function(e) {
 Engine.prototype.socket = function(p) {
   if (p == this.p1) {
     return this.p1_socket;
-  }
-  else if (p == this.p2) {
+  } else if (p == this.p2) {
     return this.p2_socket;
   }
   throw "SOCKET ERROR";
@@ -2466,12 +2467,10 @@ stdin.addListener('data', function(d) {
     for (var i = 3; i < args.length; i++) card_name += (' ' + args[i]);
 
     to.hand_card(card_name);
-  }
-  else if (args[0] == 'mana') {
+  } else if (args[0] == 'mana') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     to.current_mana = 100;
-  }
-  else if (args[0] == 'show') {
+  } else if (args[0] == 'show') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     for (var i = 0; i < to.field.num_card(); i++) {
       console.log(to.field.card_list[i].card_data.name, ' ', to.field.card_list[i].mana(), '/', to.field.card_list[i].dmg(), ' Life : ', to.field.card_list[i].current_life, '/', to.field.card_list[i].life());
