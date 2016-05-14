@@ -12,20 +12,20 @@ $(document).ready(function() {
     }).success (function (data) {
       var d = JSON.parse(data);
       if(d.id) {
-        $('#headerLeft').text('Hi,' + d.id);
-        $('#headerLeft').attr('href', '/info');
-        $('#headerRight').hide();
+        $('#userInfo').text('Hi, ' + d.id);
+        $('#userInfo').attr('href', '/info');
+        $('#userSignin').hide();
       } else {
-        $('#headerLeft').text('Log in');
-        $('#headerLeft').attr('href', '/login');
-        $('#headerRight').text('Sign Up!');
-        $('#headerRight').attr('href', '/signup');
+        $('#userLogin').text('Log in');
+        $('#userLogin').attr('href', '/login');
+        $('#userSignin').text('Sign Up!');
+        $('#userSignin').attr('href', '/signup');
       }
     });
   } else {
-    $('#headerLeft').text('Log in');
-    $('#headerLeft').attr('href', '/login');
-    $('#headerRight').text('Sign Up!');
-    $('#headerRight').attr('href', '/signup');
+    $('#userLogin').text('Log in');
+    $('#userLogin').attr('href', '/login');
+    $('#userSignin').text('Sign Up!');
+    $('#userSignin').attr('href', '/signup');
   }
 });
