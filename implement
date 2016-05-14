@@ -128,3 +128,9 @@ http://hearthstoneserver.jaebumlee.c9users.io/
   this.must_choose = false; // 반드시 user 가 choose 해야만 하는가 (Discover 에 해당)
   
   가 있다. 
+  
+#2 사용자가 선택을 완료한다면 on_select_success 에 선택한 것의 번호가 전달된다. 그 번호는 available_list 의 원소의 index
+   와 동일하다고 보면 된다. 보통 Choose One 의 경우 2개를, Discover 의 경우 3 개의 옵션이 있게 된다.
+   
+   참고로 판드랄 스테그헬름을 처리하기 위해 Choose One 에서 select 된 값이 2 인 경우 판드랄에 의해 두 개의 선택이 모두
+   활성화 된 것이라 보면 된다. 

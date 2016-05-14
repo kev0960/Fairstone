@@ -373,11 +373,13 @@ function Player(player_name, job, engine) {
 
   // List of secrets
   this.secret_list = [];
-}
 
+  // Auras (This is updated in update_aura section)
+  this.aura = [];
+}
 Player.prototype.chk_aura = function(aura) {
-  for (var i = 0; i < this.g_aura.length; i++) {
-    if (this.g_aura[i].state == aura && this.g_aura[i].who.is_good() && this.g_aura[i].who.owner == this) return true;
+  for (var i = 0; i < this.aura.length; i++) {
+    if (this.aura[i] == aura) return true;
   }
   return false;
 };
@@ -410,7 +412,7 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
     for (var i = 0; i < arr.length; i++) {
       x.push(new CardData(card_db.load_card(arr[i])));
     }
-    return x
+    return x;
   }
 
   console.log('Options :: ', options);
@@ -980,7 +982,7 @@ Player.prototype.actual_combat = function(c) {
 Player.prototype.spell_dmg = function(c, dmg) {
   for (var i = 0; i < this.g_aura.length; i++) {
     if (this.g_aura[i].state == 'spell_dmg' && this.g_aura[i].who.is_good()) {
-      dmg = this.g_aura[i].f(dmg, c, this.g_aura[i].me);
+      dmg = this.g_aura[i].f(dmg, c, this.g_aura[i].who);
     }
   }
   if (this.chk_aura('prophet_velen')) {
@@ -1485,7 +1487,7 @@ Player.prototype.load_weapon = function(weapon) {
     this.weapon.status = 'destroyed';
     this.g_handler.add_event(new Event('destroyed', [this.weapon, weapon]));
   }
-  
+
   // ** WEAPON LOADING SEQUENCE IS HANDLED IN SUMMON PHASE ** 
 };
 Player.prototype.get_all_character = function(exclude, cond) {
@@ -2046,6 +2048,26 @@ Engine.prototype.update_life_aura = function(p) {
 Engine.prototype.update_aura = function() {
   this.update_life_aura(this.p1);
   this.update_life_aura(this.p2);
+
+  // The Following Auras are checked in this step
+  // Baron Rivendare, Auchenai Soulpriest, Brann Bronzebeard, Mal'Ganis's Immune effect, Prophet Velen
+  // baron_rivendare, auchenai_soulpriest, bran_bronzebeard, prophet_velen
+  function chk_aura(p) {
+    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen'];
+    for (var j = 0; j < aura_list.length; j++) {
+      for (var i = 0; i < p.g_aura.length; i++) {
+        if (p.g_aura[i].state == aura_list[j] && p.g_aura[i].who.is_good() && p.g_aura[i].who.owner == p) {
+          p.aura.push(aura_list[j]);
+        }
+      }
+    }
+  }
+
+  this.p1.aura = [];
+  this.p2.aura = [];
+
+  chk_aura(this.p1);
+  chk_aura(this.p2);
 };
 
 Engine.prototype.find_card_by_id = function(id, p) {

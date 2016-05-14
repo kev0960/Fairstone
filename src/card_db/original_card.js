@@ -416,7 +416,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.engine.add_aura(function(d, c, me) {
-              if (c.owner == me.owner) return d + 1;
+              if (c.owner == me.owner && c.card_data.type == 'minion') return d + 1;
               return d;
             }, 'dmg', me);
           }
