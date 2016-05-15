@@ -1907,6 +1907,519 @@
         });
       }
     },
+    ,
+    'Power Overwhelming': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(inc(4), 'dmg', me);
+                  me.target.add_state(inc(4), 'life', me);
+                  me.target.current_life += 4;
+
+                  me.owner.g_handler.add_handler(function(e, me, target) {
+                    if (e.who == me.owner) {
+                      me.owner.instant_kill(me, target);
+                    }
+                  }, 'turn_end', me, false, false, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Blood Imp': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.is_stealth.until = 1000;
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.who == me.owner) {
+                var target = me.owner.get_all_character([me, me.owner.hero]);
+                if (target.length) {
+                  var lucky = rand(target);
+                  lucky.add_state(inc(1), 'life', me);
+                  lucky.current_life += 1;
+                }
+              }
+            }, 'turn_end', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Flame Imp': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.deal_dmg(3, me, me.owner.hero);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Demonfire': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  if (me.target.card_data.kind == 'devil' && me.target.owner == me.owner) {
+                    me.target.add_state(inc(2), 'dmg', me);
+                    me.target.add_state(inc(2), 'life', me);
+                    me.target.current_life += 2;
+                  }
+                  else {
+                    me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
+                  }
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Summoning Portal': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.engine.add_aura(function(m, c, me) {
+              if (c.owner == me.owner && c.card_data.type == 'minion') {
+                if (m - 2 >= 1) return m - 2;
+                if (m <= 0) return 0;
+                return 1;
+              }
+            })
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Void Terror': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var target = [];
+            var list = me.owner.get_all_character([me, me.owner.hero]);
+            var life = 0,
+              dmg = 0;
+
+            for (var i = 0; i < list.length; i++) {
+              if (me.owner.field.get_distance(me, list[i]) == 1) {
+                target.push(list[i]);
+                life += list[i].current_life;
+                dmg += list[i].dmg();
+              }
+            }
+            if (target.length) {
+              me.owner.instant_kill_many(me, target);
+              me.add_state(inc(life), 'life', me);
+              me.current_life += life;
+              me.add_state(inc(dmg), 'dmg', me);
+            }
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Felguard': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) me.owner.boosted_mana -= 1;
+          if (non_bc) me.add_state(null, 'taunt', me);
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Shadowflame': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  var d = me.target.dmg();
+                  me.owner.instant_kill(me, me.target);
+
+                  var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+
+                  var dmg = [];
+                  for (var i = 0; i < target.length; i++) {
+                    dmg.push(me.spell_dmg(d));
+                  }
+                  me.owner.deal_dmg_many(dmg, me, target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Doomguard': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            if (me.owner.hand.num_card()) {
+              me.owner.discard_card(rand(me.owner.hand.card_list), me);
+            }
+            if (me.owner.hand.num_card()) {
+              me.owner.discard_card(rand(me.owner.hand.card_list), me);
+            }
+          }
+          if (non_bc) {
+            me.make_charge(me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Siphon Soul': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.instant_kill(me, me.target);
+                  me.owner.heal(3, me, me.owner.hero);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Pit Lord': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            me.owner.deal_dmg(5, me, me.owner.hero);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Twisting Nether': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character([me.owner.hero])
+            .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+
+          me.owner.instant_kill_many(me, target);
+          end_spell(me);
+        });
+      }
+    },
+    'Mind Vision': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          if (me.owner.enemy.hand.num_card()) {
+            var lucky = rand(me.owner.enemy.hand.card_list);
+            me.owner.hand_card(lucky.card_data.unique);
+          }
+          end_spell(me);
+        });
+      }
+    },
+    'Northshire Cleric': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.target.card_data.type == 'minion') {
+                me.owner.draw_cards(1);
+              }
+            }, 'heal', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Holy Smite': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Power Word: Shield': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(inc(2), 'life', me);
+                  me.target.current_life += 2;
+                  me.owner.draw_cards(1);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Shadow Word: Pain': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.dmg() <= 3) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.instant_kill(me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Mind Blast': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          me.owner.deal_dmg(me.spell_dmg(5), me, me.owner.enemy.hero);
+          end_spell(me);
+        });
+      }
+    },
+    'Divine Spirit': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(inc(me.target.current_life), 'life', me);
+                  me.target.current_life += me.target.current_life;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Shadow Word: Death': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion' && c.dmg() >= 5) return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.instant_kill(me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Holy Nova': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.enemy.get_all_character([me.owner.enemy.hero]);
+
+          var dmg = [];
+          for (var i = 0; i < target.length; i++) {
+            dmg.push(me.spell_dmg(2));
+          }
+          me.owner.deal_dmg_many(dmg, me, target);
+
+          var heal = [];
+          var mine = me.owner.get_all_character([me.owner.hero]);
+          for (var i = 0; i < mine.length; i++) {
+            heal.push(2);
+          }
+
+          me.owner.heal_many(heal, me, mine);
+          end_spell(me);
+        });
+      }
+    },
+    'Take Control': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.take_control(me.target, me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Circle of Healing': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          var target = me.owner.get_all_character([me.owner.hero])
+            .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero]));
+
+          var heal = [];
+          for (var i = 0; i < target.length; i++) {
+            heal.push(4);
+          }
+
+          me.owner.heal_many(heal, me, target);
+          end_spell(me);
+        });
+      }
+    },
+    'Silence': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.owner.silence(me, me.target);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Inner Fire': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(function(d) { return function() { return d;};}(me.target.current_life), 'dmg', me);
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Thought Steal': {
+      on_play: function(me) {
+        me.owner.play_success(me, -1, function(me, non_bc, bc) {
+          if (me.owner.enemy.deck.num_card()) {
+            var lucky = rand(me.owner.enemy.deck.card_list);
+            me.owner.hand_card(lucky.card_data.unique);
+          }
+          if (me.owner.enemy.deck.num_card()) {
+            lucky = rand(me.owner.enemy.deck.card_list);
+            me.owner.hand_card(lucky.card_data.unique);
+          }
+          end_spell(me);
+        });
+      }
+    },
+    'Lightspawn': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.add_state(function(d, c) {
+              return c.current_life;
+            }, 'dmg', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Temple Enforcer': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              if (c.card_data.type == 'minion' && c.owner == me.owner) return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc && me.target) {
+                  me.target.add_state(inc(3), 'life', me);
+                  me.target.current_life += 3;
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
     'Hunter\'s Mask': {
       on_play: function(me, forced_target, random_target) {
         me.owner.select_one(me, function(c) {
