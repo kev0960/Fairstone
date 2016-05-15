@@ -1,6 +1,6 @@
-$('#login-btn').click(function() {
-  var user_id = $('#user-id').val();
-  var password = $('#password').val();
+$('#loginBtn').click(function() {
+  var user_id = $('#inputMail').val();
+  var password = $('#inputPassword').val();
   $.ajax({
     url : '/login',
     data : {
@@ -21,8 +21,8 @@ $('#login-btn').click(function() {
     }
     else {
       // Empty the form inputs
-      $('#user-id').val('');
-      $('#password').val('');
+      $('#inputMail').val('');
+      $('#inputPassword').val('');
     }
   });
 })

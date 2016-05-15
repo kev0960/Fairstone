@@ -631,15 +631,11 @@ HearthClient.prototype.init_field_click = function() {
         }
 
         if (hearth_client.field_selected) {
-          if (hearth_client.field_selected.name) {
-            console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.my_field[i].name)
+          if(hearth_client.field_selected.id) {
             hearth_client.combat(hearth_client.field_selected.id, hearth_client.my_field[i].id);
-          }
-          else {
-            console.log('Minion #', hearth_client.field_selected, ' vs ', hearth_client.my_field[i].name);
+          } else {
             hearth_client.combat(hearth_client.field_selected, hearth_client.my_field[i].id);
           }
-
           hearth_client.field_selected = null;
           return;
         }
@@ -665,14 +661,14 @@ HearthClient.prototype.init_field_click = function() {
         }
 
         if (hearth_client.field_selected) {
-          if (hearth_client.field_selected.name) {
+          if(hearth_client.field_selected.id) {
             console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.enemy_field[i].name)
             hearth_client.combat(hearth_client.field_selected.id, hearth_client.enemy_field[i].id);
           }
           else {
-            console.log('Minion #', hearth_client.field_selected, ' vs ', hearth_client.enemy_field[i].name);
+            console.log('Minion #', hearth_client.field_selected, ' vs ', hearth_client.enemy_field[i].name)
             hearth_client.combat(hearth_client.field_selected, hearth_client.enemy_field[i].id);
-          }
+          } 
           
           hearth_client.field_selected = null;
           return;

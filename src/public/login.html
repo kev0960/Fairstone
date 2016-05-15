@@ -1,21 +1,35 @@
-<html>
+<html lang="en">
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+<script src="index.js"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<link href="/style/login.css" rel="stylesheet">
 
 <head>
-  <title>Log in!</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in</title>
 
   <body>
-    <p>Welcome</p>
-    <div>
-      <label>Id :</label>
-      <input id='user-id' type="text" name="user_id"></input>
+    <div class="form-signin">
+      <h2 class="form-signin-heading">Please sign in</h2>
+      <label for="inputMail" class="sr-only">Login Id</label>
+      <input type="email" id="inputMail" class="form-control" placeholder="Login ID" required autofocus>
+      <label for="inputPassword" class="sr-only">Password</label>
+      <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+      <div class="checkbox">
+        <label>
+            <input type="checkbox" value="remember-me"> Remember me
+            </label>
+      </div>
+      <button class="btn btn-lg btn-primary btn-block" id="loginBtn">Log in</button>
     </div>
-    <div>
-      <label>Password :</label>
-      <input id='password' type="password" name="password"></input>
-    </div>
-    <div>
-      <button id='login-btn'>Login!</button>
-    </div>
+    
     <script src="http://code.jquery.com/jquery-latest.min.js"></script>
     <script type="text/javascript" src="login.js"></script>
   </body>

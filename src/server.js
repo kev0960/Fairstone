@@ -110,7 +110,7 @@ app.post('/login', function(req, res) {
     token = jwt.sign({
       id: id
     }, hearth_secret, {
-      expiresInMinutes: 1440
+      expiresIn : '1d'
     });
   }
   res.send(JSON.stringify({
