@@ -1907,7 +1907,6 @@
         });
       }
     },
-    ,
     'Power Overwhelming': {
       on_play: function(me, forced_target, random_target) {
         me.owner.select_one(me, function(c) {
@@ -3368,6 +3367,7 @@
       }
     }
   };
+  var card_names = [];
   module.exports = {
     load_card: function(c) {
       if (card_do[c]) return card_do[c];
@@ -3377,6 +3377,14 @@
     is_implemented: function(name) {
       if (card_do[name]) return true;
       return false;
+    },
+    get_card_names : function() {
+      if(!card_names.length) {
+        for(var x in card_do) {
+          card_names.push(x);
+        }
+      }
+      return card_names;
     }
   };
 }());

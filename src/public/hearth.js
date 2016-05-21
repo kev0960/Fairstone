@@ -22,6 +22,7 @@ function Card(id, unique) {
   this.name = '';
   this.type = '';
   this.img_path = ''; // Path to the img file
+  this.state = [];
 
   // Card position on the canvas field
   this.x = 0;
@@ -272,6 +273,7 @@ function HearthClient() {
           card.dmg = src[i].dmg;
           card.name = src[i].name;
           card.img_path = src[i].img_path
+          card.state = (src[i].state ? src[i].state : []);
 
           if (!dest.add_card) dest.push(card);
           else {
@@ -363,7 +365,7 @@ function HearthClient() {
 
       console.log('Choose ONE :: ', card_list)
       h.show_card_list(card_list);
-      
+
       // Enable clicking the 'world' canvas
       $('#world').css('pointer-events', 'auto');
       $('#battlefield').css('pointer-events', 'none');
@@ -376,14 +378,14 @@ function HearthClient() {
           if (e.offsetX >= card_list[i].x && e.offsetX <= card_list[i].x + card_list[i].w) {
             if (e.offsetY >= card_list[i].y && e.offsetY <= card_list[i].y + card_list[i].h) {
               h.socket.emit('select-done', {
-                id : i
+                id: i
               });
-              
+
               // Clear canvas!
               h.world_ctx.clearRect(0, 0, h.world_canvas.width, h.world_canvas.height);
               $('#world').css('pointer-events', 'none');
               $('#battlefield').css('pointer-events', 'auto');
-              
+
               document.getElementById('world').removeEventListener('click', f);
             }
           }
@@ -463,6 +465,12 @@ function is_in_the_list(arr, id) {
 }
 
 HearthClient.prototype.draw_field = function() {
+  function chk_state(arr, state) {
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] == state) return true;
+    }
+    return false;
+  }
   this.field_ctx.clearRect(0, 0, 2000, 2000);
 
   this.field_ctx.save();
@@ -472,9 +480,9 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Transparent black
     this.field_ctx.fillRect(0, 0, 2000, 2000);
   }
-  
+
   this.world_ctx.clearRect(0, 0, 2000, 2000);
-  
+
 
   this.field_ctx.fillStyle = 'yellow';
   this.field_ctx.fillRect(1400, this.turn_end_btn_y, 150, 50);
@@ -504,10 +512,43 @@ HearthClient.prototype.draw_field = function() {
       });
     }
 
-    if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.my_field[i].id)) {
-      this.field_ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    if (chk_state(this.my_field[i].state, 'frozen')) {
+      this.field_ctx.fillStyle = 'rgba(52, 191, 238, 0.3)';
       this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
+    if (chk_state(this.my_field[i].state, 'stealth')) {
+      this.field_ctx.fillStyle = 'rgba(52, 191, 238, 0.3)';
+      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+    }
+    if (chk_state(this.my_field[i].state, 'attackable')) {
+      this.field_ctx.beginPath();
+      var bef = this.field_ctx.lineWidth;
+      this.field_ctx.lineWidth = 10;
+      
+      this.field_ctx.strokeStyle = 'rgb(51, 204, 51)'
+      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+      this.field_ctx.stroke();
+      
+      this.field_ctx.lineWidth = bef;
+    }
+
+    if (chk_state(this.my_field[i].state, 'taunt')) {
+      this.field_ctx.beginPath();
+      var bef = this.field_ctx.lineWidth;
+      this.field_ctx.lineWidth = 8;
+      
+      this.field_ctx.strokeStyle = 'rgba(38, 38, 38, 0,3)'
+      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+      this.field_ctx.stroke();
+      
+      this.field_ctx.lineWidth = bef;
+    }
+
+    if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.my_field[i].id)) {
+      this.field_ctx.fillStyle = 'rgba(139, 148, 150, 0.3)';
+      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+    }
+
     this.field_ctx.restore();
 
     // Show life and dmg of the minions here
@@ -631,9 +672,10 @@ HearthClient.prototype.init_field_click = function() {
         }
 
         if (hearth_client.field_selected) {
-          if(hearth_client.field_selected.id) {
+          if (hearth_client.field_selected.id) {
             hearth_client.combat(hearth_client.field_selected.id, hearth_client.my_field[i].id);
-          } else {
+          }
+          else {
             hearth_client.combat(hearth_client.field_selected, hearth_client.my_field[i].id);
           }
           hearth_client.field_selected = null;
@@ -661,15 +703,15 @@ HearthClient.prototype.init_field_click = function() {
         }
 
         if (hearth_client.field_selected) {
-          if(hearth_client.field_selected.id) {
+          if (hearth_client.field_selected.id) {
             console.log('Minion #', hearth_client.field_selected.name, ' vs ', hearth_client.enemy_field[i].name)
             hearth_client.combat(hearth_client.field_selected.id, hearth_client.enemy_field[i].id);
           }
           else {
             console.log('Minion #', hearth_client.field_selected, ' vs ', hearth_client.enemy_field[i].name)
             hearth_client.combat(hearth_client.field_selected, hearth_client.enemy_field[i].id);
-          } 
-          
+          }
+
           hearth_client.field_selected = null;
           return;
         }
@@ -827,7 +869,7 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
         for (var i = 0; i < card_list.length; i++) {
           if (!card_list[i].selected) hearth_client.world_ctx.drawImage(card_list[i].img, card_list[i].x, card_list[i].y);
         }
-        
+
         document.getElementById('world').removeEventListener('click', f);
 
         $('#world').css('pointer-events', 'none');
