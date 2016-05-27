@@ -350,7 +350,7 @@
       on_play: function(me, forced_target, random_target) {
         me.owner.play_success(me, -1,
           function(me) {
-            var num = me.owner.enemy.hand.num_card() - me.ower.hand.num_card();
+            var num = me.owner.enemy.hand.num_card() - me.owner.hand.num_card();
             if (num > 0) me.owner.draw_cards(num);
 
             end_spell(me);
@@ -1659,7 +1659,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.add_state(null, 'taunt', me);
+            me.add_state(null, 'taunt', me);
           }
           end(me, non_bc, bc);
         });
@@ -1714,7 +1714,7 @@
         if (user_play) me.owner.add_overload(3, me);
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.add_state(null, 'taunt', me);
+            me.add_state(null, 'taunt', me);
           }
           end(me, non_bc, bc);
         });
@@ -1737,7 +1737,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.add_state(null, 'taunt', me);
+            me.add_state(null, 'taunt', me);
             me.make_charge(me);
             me.is_shielded.until = 1000;
             me.add_state(function() {
@@ -1773,7 +1773,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.add_state(null, 'taunt', me);
+            me.add_state(null, 'taunt', me);
           }
           end(me, non_bc, bc);
         });

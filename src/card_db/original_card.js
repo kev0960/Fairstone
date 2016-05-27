@@ -2543,7 +2543,7 @@
       on_play: function(me, forced_target, random_target) {
         me.owner.play_success(me, -1,
           function(me) {
-            me.add_hero_dmg(4);
+            me.owner.add_hero_dmg(4);
             end_spell(me);
           }
         );

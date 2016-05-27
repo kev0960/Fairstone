@@ -905,6 +905,27 @@
         });
       }
     },
+    'Yogg-Saron, Hope\'s End': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var num = me.owner.g_handler.search_legacy_queue(function(e) {
+              if(e.event_type == 'play_card' && e.card.card_data.type == 'spell' && e.card.owner == me.owner) return true;
+            }).length;
+            
+            var avail = me.owner.engine.find_card_cond(function(c) {
+              if (c.type == 'spell' && !c.is_token) return true;
+            });
+            for(var i = 0; i < num; i ++) {
+              var lucky = rand(avail);
+              console.log('>>>> ', lucky.name, ' <<<<');
+              me.owner.random_cast_spell(lucky.unique);
+            }
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'C\'Thun': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {

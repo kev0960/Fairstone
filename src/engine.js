@@ -449,7 +449,9 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
     return;
   }
   if (random_choose) {
-    on_success(Math.floor(Math.random() * options.length));
+    var choice = Math.floor(Math.random() * options.length);
+    console.log('Random Choice :: ', choice);
+    on_success(choice);
     return;
   }
 
@@ -503,7 +505,7 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
 // 전송하게 된다. 그리고 해당 player 의 selection_waiting 를 on 시킨다.
 // 이 소켓을 client 에서 수신하게 된다면 'selected-done' 이라는 소켓을 보내게 되는데
 // 만일 해당 Player 의 selection_waiting 가 on 되어 있다면, 결과에 따라 이에 대응하는
-// success 함수, 혹은 fail 함���를 호출하면 된다.
+// success 함수, 혹은 fail 함수를 호출하면 된다.
 // 참고로 force_target 의 경우 이 것이 설정되어 있다면 target 을 유저로 부터 받는게
 // 아니라 자동으로 force_target 으로 설정된다. 
 // random_target 의 경우, 주문이 랜덤하게 고르게 된다. 
@@ -545,7 +547,10 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
   if (random_target) {
     if (available_list.length) {
       c.target = available_list[Math.floor(available_list.length * Math.random())];
+      console.log('Random Target :: ', c.target.card_data.name);
       success(c);
+    } else {
+      console.log('No Target!');
     }
     return;
   }
@@ -1624,6 +1629,17 @@ Player.prototype.give_cthun_buff = function(d, l) {
 
   // TODO :: Show Cthun Buff info here
 };
+Player.prototype.random_cast_spell = function(unique) {
+  var c = create_card(unique);
+  
+  c.owner = this;
+  c.status = 'field';
+  
+  var card = card_manager.load_card(unique);
+  
+  card.on_play(c, false, true, false, true);
+  this.g_handler.death_creation(true); // Forced Death Phase
+};
 Player.prototype.get_all_character = function(exclude, cond) {
   var ret = [];
   var pass = true;
@@ -2016,7 +2032,7 @@ Handler.prototype.do_event = function(e) {
   this.exec_lock = false;
   this.execute();
 };
-Handler.prototype.death_creation = function() {
+Handler.prototype.death_creation = function(is_forced) {
   console.log('Death Creation ', this.destroyed_queue.length);
   console.log('Callback size, ', this.queue_resolved_callback.length);
 
@@ -2048,7 +2064,7 @@ Handler.prototype.death_creation = function() {
   dq.splice(0, dq.length);
 
   // Death Creation step 이 끝나면 end phase 를 실행할 수 있게 된다.
-  if (this.next_phase) this.add_callback(this.end_phase, this, []);
+  if (this.next_phase && !is_forced) this.add_callback(this.end_phase, this, []);
 
   this.exec_lock = false;
   if (this.queue.length || this.queue_resolved_callback.length) {
