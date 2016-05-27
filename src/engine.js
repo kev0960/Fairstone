@@ -17,9 +17,10 @@ function CardData(args) {
   this.is_secret = args[9];
   this.img_path = args[10];
   this.unique = args[11];
+  this.mech = args[12];
 }
 CardData.prototype.to_array = function() {
-  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind, this.is_token, this.is_secret, this.img_path, this.unique];
+  var arr = [this.name, this.type, this.level, this.job, this.mana, this.dmg, this.life, this.kind, this.is_token, this.is_secret, this.img_path, this.unique, this.mech];
   return arr;
 };
 
@@ -101,6 +102,12 @@ Card.prototype.add_state = function(f, state, who) {
 Card.prototype.chk_state = function(state) {
   for (var i = 0; i < this.state.length; i++) {
     if (this.state[i].state === state) return true;
+  }
+  return false;
+};
+Card.prototype.chk_mech = function(mech) {
+  for (var i = 0; i < this.card_data.mech.length; i++) {
+    if (this.card_data.mech[i] == mech) return true;
   }
   return false;
 };
@@ -307,6 +314,13 @@ Deck.prototype.get_pos = function(c) {
   }
   return -1;
 };
+Deck.prototype.search_deck = function(cond) {
+  var r = [];
+  for (var i = 0; i < this.card_list.length; i++) {
+    if (cond(this.card_list[i])) r.push(this.card_list[i]);
+  }
+  return r;
+}
 
 function Player(player_name, job, engine) {
   this.player_name = player_name;
@@ -396,6 +410,10 @@ function Player(player_name, job, engine) {
 
   // Auras (This is updated in update_aura section)
   this.aura = [];
+
+  // C'Thun Buffs
+  this.cthun_dmg_buff = 0;
+  this.cthun_life_buff = 0;
 }
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.aura.length; i++) {
@@ -416,17 +434,18 @@ Player.prototype.chk_charge = function(c) {
 // [options] are the array of name of cards to choose
 // we can us choose_one as a DISCOVER too (by using the option must)
 Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
-  forced_choose, random_choose, forced_target, random_target) {
+  forced_choose, random_choose, forced_target, random_target, engine_called) {
   // If the user is already on choose/select process, then we add this
   // into user_waiting_queue
-  if (this.choose_waiting || this.selection_waiting) {
+  if ((this.choose_waiting || this.selection_waiting) && !engine_called) {
     this.engine.add_user_waiting(this.choose_one, this, [me, options, on_success, on_fail, must,
       forced_choose, random_choose, forced_target, random_target
     ]);
+    return;
   }
 
   if (forced_choose === 0 || forced_choose) {
-    on_success(forced_choose);
+    on_success(forced_choose, me, forced_target, random_target);
     return;
   }
   if (random_choose) {
@@ -484,13 +503,14 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
 // 전송하게 된다. 그리고 해당 player 의 selection_waiting 를 on 시킨다.
 // 이 소켓을 client 에서 수신하게 된다면 'selected-done' 이라는 소켓을 보내게 되는데
 // 만일 해당 Player 의 selection_waiting 가 on 되어 있다면, 결과에 따라 이에 대응하는
-// success 함수, 혹은 fail 함수를 호출하면 된다.
+// success 함수, 혹은 fail 함���를 호출하면 된다.
 // 참고로 force_target 의 경우 이 것이 설정되어 있다면 target 을 유저로 부터 받는게
 // 아니라 자동으로 force_target 으로 설정된다. 
 // random_target 의 경우, 주문이 랜덤하게 고르게 된다. 
-Player.prototype.select_one = function(c, select_cond, success, fail, forced_target, random_target) {
-  if (this.choose_waiting || this.selection_waiting) {
+Player.prototype.select_one = function(c, select_cond, success, fail, forced_target, random_target, engine_called) {
+  if ((this.choose_waiting || this.selection_waiting) && !engine_called) {
     this.engine.add_user_waiting(this.select_one, this, [c, select_cond, success, fail, forced_target, random_target]);
+    return;
   }
 
   if (forced_target) {
@@ -572,9 +592,17 @@ Player.prototype.play_spell = function(c) {
   var card = card_manager.load_card(c.card_data.unique);
   this.turn_card_play.push(c);
 
-  card.on_play(c);
+  if(this.chk_aura('fandral_staghelm')) {
+    card.on_play(c, false, false, 2);
+  } else {
+    card.on_play(c);
+  }
 };
-
+// Forcefully cast a spell to target
+Player.prototype.force_cast_spell = function(c, target) {
+  var card = card_manager.load_card(c.card_data.unique);
+  card.on_play(c, target);
+};
 // Targeting phase does not create death creation step!
 Player.prototype.chk_target = function(c, next) {
   if (c.status == 'destroyed') return;
@@ -597,7 +625,7 @@ Player.prototype.end_spell_txt = function(c) {
   this.g_handler.add_phase_block = false;
   this.g_handler.add_phase(this.summon_phase, this, [c]);
 };
-Player.prototype.hand_card = function(unique, n, after_hand) {
+Player.prototype.hand_card = function(unique, n, after_hand, force) {
   if (!n) n = 1;
   while (n--) {
     var card = card_manager.load_card(unique);
@@ -606,11 +634,13 @@ Player.prototype.hand_card = function(unique, n, after_hand) {
     c.status = 'hand';
     c.id = this.g_id.get_id();
 
-    if (card.on_draw) card.on_draw(c);
+    if (card.on_draw && !force) card.on_draw(c);
     this.hand.put_card(c, 10);
 
     if (after_hand) this.g_handler.add_callback(after_hand, this, [c]);
-    this.g_handler.add_event(new Event('hand_card', [c, this]));
+    if (!force) {
+      this.g_handler.add_event(new Event('hand_card', [c, this]));
+    }
     this.g_handler.execute();
   }
 };
@@ -690,7 +720,11 @@ Player.prototype.play_minion = function(c, at) {
   var card = card_manager.load_card(c.card_data.unique);
   this.turn_card_play.push(c);
 
-  card.on_play(c, true, true, at);
+  if(this.chk_aura('fandral_staghelm')) {
+    card.on_play(c, true, true, at, 2);
+  } else {
+    card.on_play(c, true, true, at);
+  }
 };
 Player.prototype.play_success = function(c, at, next) {
   // if the status of card is already specified as 'field',
@@ -890,8 +924,13 @@ Player.prototype.hero_combat = function(target) {
     this.weapon.atk_info.did++;
     this.turn_hero_atk.did++;
   }
-  else if (this.hero_dmg() != 0 && this.turn_hero_atk.did == 0) {
-    this.turn_hero_atk.did++;
+  else if (this.hero_dmg() != 0) {
+    if (this.turn_hero_atk.did == 0) {
+      this.turn_hero_atk.did++;
+    }
+    else {
+      return;
+    }
   }
 
   this.hero.target = target;
@@ -1503,6 +1542,8 @@ Player.prototype.silence = function(from, target) {
       }
     }
   }
+  
+  target.current_life = (target.current_life > target.life() ? target.life() : target.current_life);
 
   // Non Attacking Minions can attack when they are silenced (in that turn)
   if (target.atk_info.max == 0 && target.field_summon_turn != target.engine.current_turn) {
@@ -1513,13 +1554,32 @@ Player.prototype.silence = function(from, target) {
   this.g_handler.add_event(new Event('silence', [from, target]));
   this.g_handler.execute();
 };
-
 Player.prototype.transform = function(who, target, name) {
   target.status = 'destroyed';
   var loc = target.owner.field.get_pos(target);
 
   target.owner.field.remove_card(target);
   target.owner.summon_card(name, loc, true);
+};
+Player.prototype.shift_card_hand = function(target, unique) {
+  var loc = target.owner.hand.get_pos(target);
+  target.owner.hand.remove_card(target);
+
+  var card = card_manager.load_card(unique);
+  var c = create_card(unique, this);
+
+  c.status = 'hand';
+  c.id = target.id;
+
+  if (card.on_draw) card.on_draw(c);
+  this.hand.put_card(c, loc);
+};
+// Put 'card' into deck (card :: unique of card)
+Player.prototype.put_card_to_deck = function(who, card) {
+  var c = create_card(card, this);
+
+  c.status = 'deck';
+  this.deck.card_list.push(c);
 };
 Player.prototype.swap_life_dmg = function(from, target) {
   var life = target.current_life();
@@ -1557,6 +1617,12 @@ Player.prototype.load_weapon = function(weapon) {
   }
 
   // ** WEAPON LOADING SEQUENCE IS HANDLED IN SUMMON PHASE ** 
+};
+Player.prototype.give_cthun_buff = function(d, l) {
+  if (d) this.cthun_dmg_buff += d;
+  if (l) this.cthun_life_buff += l;
+
+  // TODO :: Show Cthun Buff info here
 };
 Player.prototype.get_all_character = function(exclude, cond) {
   var ret = [];
@@ -1757,7 +1823,19 @@ function Handler(engine) {
 
   this.engine = engine;
 }
+Handler.prototype.search_legacy_queue = function(cond, turn) {
+  var res = [];
 
+  if (turn != 0 && !turn) turn = -1;
+  for (var i = this.legacy_queue.length - 1; i >= 0; i--) {
+    if (turn != 1 && this.legacy_queue[i].turn < turn) {
+      break;
+    }
+    if (cond(this.legacy_queue[i])) res.push(this.legacy_queue[i]);
+  }
+
+  return res;
+};
 Handler.prototype.add_event = function(e) {
   console.log(colors.yellow('[Event]'), e.event_type, ' is added!!');
   e.turn = this.engine.current_turn;
@@ -1771,6 +1849,9 @@ Handler.prototype.add_event = function(e) {
     // Insert in front of all other events
     this.queue.splice(0, 0, e);
   }
+};
+Handler.prototype.force_add_deathrattle_event = function(c) {
+  this.add_event(new Event('deathrattle', [c]));
 };
 // Target :: If this handler targets certain Minion, then we (optionally) set 
 // This is for 'Copying' minion effect can also copy the handlers that are registered
@@ -2076,10 +2157,13 @@ Engine.prototype.add_user_waiting = function(f, that, args) {
 };
 Engine.prototype.do_user_waiting = function() {
   if (this.user_waiting_queue.length) {
-    var x = this.user_waiting_queue.splice(0, 1);
+    var x = this.user_waiting_queue[0];
+    this.user_waiting_queue.splice(0, 1);
+
+    x.args.push(true); // Set engine_called as true
     x.f.apply(x.that, x.args);
   }
-}
+};
 Engine.prototype.add_aura = function(f, state, who, must) {
   this.g_aura.push({
     f: f,
@@ -2090,7 +2174,7 @@ Engine.prototype.add_aura = function(f, state, who, must) {
   });
 };
 Engine.prototype.update_life_aura = function(p) {
-  // Health Update
+  // Health Updategiv
   for (var i = 0; i < p.field.num_card(); i++) {
     var card = p.field.card_list[i];
     var bef = card.current_life;
@@ -2141,7 +2225,7 @@ Engine.prototype.update_aura = function() {
   // Baron Rivendare, Auchenai Soulpriest, Brann Bronzebeard, Mal'Ganis's Immune effect, Prophet Velen
   // baron_rivendare, auchenai_soulpriest, bran_bronzebeard, prophet_velen
   function chk_aura(p) {
-    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen'];
+    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen', 'fandral_staghelm'];
     for (var j = 0; j < aura_list.length; j++) {
       for (var i = 0; i < p.g_aura.length; i++) {
         if (p.g_aura[i].state == aura_list[j] && p.g_aura[i].who.is_good() && p.g_aura[i].who.owner == p) {
@@ -2602,7 +2686,13 @@ stdin.addListener('data', function(d) {
     var card_name = args[2];
     for (var i = 3; i < args.length; i++) card_name += (' ' + args[i]);
 
-    to.hand_card(card_name);
+    var list = card_db.get_implemented_list();
+    for(var i = 0; i < list.length; i ++) {
+      if(list[i].name == card_name) {
+        to.hand_card(card_name);
+        break;
+      }
+    }
   }
   else if (args[0] == 'mana') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);

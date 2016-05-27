@@ -2,6 +2,7 @@
 const original_cards = require('./original_card');
 const original_cards2 = require('./original_card2');
 const explorers = require('./explorers');
+const wog = require('./wog.js');
 const card_name = require('../card_api');
 
 (function() {
@@ -21,6 +22,9 @@ const card_name = require('../card_api');
             x = explorers.load_card(c); // Rest of the original cards
             if(x) return x;
             
+            x = wog.load_card(c); // Rest of the original cards
+            if(x) return x;
+            
             // If not found, then chk with the name of the card
             var id = card_name.get_name(c);
             
@@ -32,6 +36,9 @@ const card_name = require('../card_api');
             
             x = explorers.load_card(id); // Rest of the original cards
             if(x) return x;
+            
+            x = wog.load_card(id); // Rest of the original cards
+            if(x) return x;
         },
         // Check whether certain card is implemented or not
         is_implemented: function(name) {
@@ -39,6 +46,7 @@ const card_name = require('../card_api');
                 card_names = card_names.concat(original_cards.get_card_names());
                 card_names = card_names.concat(original_cards2.get_card_names());
                 card_names = card_names.concat(explorers.get_card_names());
+                card_names = card_names.concat(wog.get_card_names());
             }
             
             for(var i = 0; i < card_names; i ++)  {
@@ -52,6 +60,7 @@ const card_name = require('../card_api');
                 card_names = card_names.concat(original_cards.get_card_names());
                 card_names = card_names.concat(original_cards2.get_card_names());
                 card_names = card_names.concat(explorers.get_card_names());
+                card_names = card_names.concat(wog.get_card_names());
             }
             return card_names;
         }

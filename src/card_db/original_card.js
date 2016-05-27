@@ -2075,7 +2075,7 @@
               function(me) {
                 me.target.add_state(inc(1), 'dmg', me);
                 me.target.add_state(inc(1), 'life', me);
-                me.current_life += 1;
+                me.target.current_life += 1;
               }
             );
           },

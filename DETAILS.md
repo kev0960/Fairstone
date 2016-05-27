@@ -110,8 +110,8 @@ http://hearthstoneserver.jaebumlee.c9users.io/
  - choose_one 함수 내에서 select_one 함수가 호출될 수 있기 때문에 이 함수에 Pass 해야 할 정보에 대한 인자들도 가지고 있다.
   (forced_target, random_target 이 그 예 이다. )
   
- - choose_one 함수의 option 에는 사용자에게 보이고자 하는 카드들의 이름이 들어가 있다. ~~보통 보여지는 카드의 이름이 같은 경우가
-  있어서 card unique ID 를 전달한다~~ (예) Wrath.  기존에는 Card 의 Name 을 기준으로 하였지만 현재는 카드의 unique ID 를 기준으로 해야 한다. 
+ - choose_one 함수의 option 에는 사용자에게 보이고자 하는 ~~카드들의 이름이 들어가 있다.~~ 보통 보여지는 카드의 이름이 같은 경우가
+  있어서 card unique ID 를 전달한다 (예) Wrath.  기존에는 Card 의 Name 을 기준으로 하였지만 현재는 카드의 unique ID 를 기준으로 해야 한다. 
   
 1. Spell 혹은 Minion 을 play 하면 choose_one 함수가 실행된다. Engine 에 변수들을 추가하는 것을 막기 위해서, select_one 함수가
    사용하고 있었던 인자들을 재활용 하였는데;

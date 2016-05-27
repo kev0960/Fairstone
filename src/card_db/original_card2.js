@@ -713,6 +713,13 @@
           random_target); // if random_target is enabled then Engine Randomly Selects Available Target
       }
     },
+    'Panther': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Power of the Wild': {
       on_play: function(me, forced_target, random_target, forced_choose, random_choose) {
         me.owner.choose_one(me, ['Leader of the Pack', 'Summon a Panther'],
@@ -737,7 +744,7 @@
             // This choice is only for Fandral Staghelm 
             else if (choice == 2) {
               me.owner.play_success(me, -1, function(me, non_bc, bc) {
-                me.owner.summon_card('Panther', 10, function(c) {
+                me.owner.summon_card('Panther', 10, false, function(c) {
                   var target = me.owner.get_all_character([me.owner.hero]);
                   for (var i = 0; i < target.length; i++) {
                     target[i].add_state(inc(1), 'dmg', me);
@@ -799,7 +806,7 @@
                   me.owner.play_success(me, -1,
                     function(me) {
                       if (me.target) {
-                        me.owner.deal_dmg(me.spell_dmg(3), me, me.target);
+                        me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
                         me.owner.draw_cards(1);
                       }
                       end_spell(me);
@@ -895,9 +902,9 @@
       }
     },
     'Druid of the Claw': {
-      on_play: function(me, bc, user_play, at) {
+      on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
-          me.owner.choose_one(['Cat Form', 'Bear Form'], function(me, at) {
+          me.owner.choose_one(me, ['Cat Form', 'Bear Form'], function(me, at) {
             return function(choice) {
               if (choice == 0) { // Cat Form
                 me.owner.play_success(me, at, function(me, non_bc, bc) {
@@ -925,7 +932,10 @@
                 });
               }
             };
-          }(me, at));
+          }(me, at),
+          nothing,
+          false,
+          forced_choose);
         } else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
@@ -961,7 +971,7 @@
       }
     },
     'Keeper of the Grove': {
-      on_play: function(me, bc, user_play, at) {
+      on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['EX1_166a', 'Dispel'],
             function(choice, me) {
@@ -1017,7 +1027,8 @@
               }
             },
             nothing,
-            false);
+            false,
+            forced_choose);
         } else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
@@ -1135,7 +1146,7 @@
       }
     },
     'Ancient of War': {
-      on_play: function(me, bc, user_play, at) {
+      on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Uproot', 'Rooted'], function(me, at) {
             return function(choice) {
@@ -1165,7 +1176,10 @@
                 });
               }
             };
-          }(me, at));
+          }(me, at),
+          nothing,
+          false,
+          forced_choose);
         } else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
@@ -1174,7 +1188,7 @@
       }
     },
     'Ancient of Lore': {
-      on_play: function(me, bc, user_play, at) {
+      on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Ancient Teachings', 'Ancient Secrets'], function(me, at) {
             return function(choice) {
@@ -1220,7 +1234,10 @@
                 );
               }
             };
-          }(me, at));
+          }(me, at),
+          nothing,
+          false,
+          forced_choose);
         } else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
@@ -1239,7 +1256,7 @@
       }
     },
     'Cenarius': {
-      on_play: function(me, bc, user_play, at) {
+      on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Demigod\'s Favor', 'Shan\'do\'s Lesson'], function(me, at) {
             return function(choice) {
@@ -1283,7 +1300,10 @@
                 });
               }
             };
-          }(me, at));
+          }(me, at),
+          nothing,
+          false,
+          forced_choose);
         } else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
@@ -1612,7 +1632,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.g_handler.add_handler(function(e, me) {
-              if (e.who == me.owner) me.owner.draw_cards(1);
+              if (e.victim == me.owner.hero) e.dmg *= 2;
             }, 'turn_end', me);
           }
           end(me, non_bc, bc);

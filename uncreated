@@ -1,0 +1,19 @@
+* 안만들고 넘어간 카드 목록들 
+
+Faerie Dragon -> 주문 및 영능 면역 항목 아직 안만듬
+Raging Worgen -> 아직 격노 처리를 매끄럽게 못함
+Pint-Sized Summoner -> Legacy Queue 를 좀 더 테스트 해볼 필요 있음
+Captain's Parrot -> 특정 카드를 덱에서 손으로 가져오는 것을 구현 안함
+Captain Greenskin -> 무기를 많이 안만듬
+Nozdormu -> 아직 시간 개념이 없다
+Mirror Image, Spellbender -> 스펠과 소환되는 하수인 이름이 중복됨 (cardID 를 사용해야 하는데 아직 구현 안함)
+Kirin Tor Mage -> 다음에 소환되는 것에 대한 정보 없음
+Unbound Elemental -> HearthAPI Mechanics 를 분석해서 카드 정보를 card_data 에 카드 정보를 넣었어야 함
+Sense Demons -> 아직 Deck 에서 직접 핸드로 가져오는거 없음
+Bane of Doom -> 무작위 카드 추출하는 함수 없음
+Sir Finley Mrrgglton -> 영능 Discover 구현 필요
+Yogg Saron -> 
+썩은지느러미 심문관 -> 영능 바꾸는 것 구현 필요
+Renounce Darkness -> 영능 바꾸는 것 없음!
+초갈
+Servant of Yogg Saron

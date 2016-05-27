@@ -3,7 +3,7 @@ const unirest = require('unirest');
 function HearthAPI() {
   this.card_db = [];
   this.get_card_db();
-  
+
   this.implemented_list = [];
 }
 HearthAPI.prototype.get_card_db = function() {
@@ -18,6 +18,17 @@ HearthAPI.prototype.get_card_db = function() {
     }
     return false;
   }
+
+  function get_property(m) {
+    var x = [];
+    if (m) {
+      for (var i = 0; i < m.length; i++) {
+        x.push(m[i].name.toLowerCase());
+      }
+    }
+    return x;
+  }
+  
   unirest.get("https://omgvamp-hearthstone-v1.p.mashape.com/cards").header("X-Mashape-Key", "nPCuh0xMwxmshf9ZGfRS2p3lF7Jip1pJbjYjsn67kOlM4TTr7j").end(function(result) {
     const card_name = require('./card_db/all_cards');
 
@@ -45,7 +56,7 @@ HearthAPI.prototype.get_card_db = function() {
           if (!c.durability) {
             c.durability = 0;
           }
-
+          
           hearth_api.card_db.push({
             name: c.name.replace('\\', ''),
             type: c.type.toLowerCase(),
@@ -57,7 +68,8 @@ HearthAPI.prototype.get_card_db = function() {
             unique: c.cardId,
             is_token: (c.collectible ? false : true),
             'is_secret': is_secret(c.mechanics),
-            is_implemented: false
+            is_implemented: false,
+            mech : get_property(c.mechanics)
           });
         }
       }
@@ -87,6 +99,8 @@ module.exports = {
     if (name === 'Wrath') search = 'EX1_154';
     else if (name === 'Nourish') search = 'EX1_164';
     else if (name === 'Starfall') search = 'NEW1_007';
+    else if (name === 'Raven Idol') search = 'LOE_115';
+    else if (name === 'Druid of the Claw') search = 'EX1_165';
 
     for (var i = 0; i < hearth_api.card_db.length; i++) {
       if (hearth_api.card_db[i].name == search || hearth_api.card_db[i].unique == search) {
@@ -103,10 +117,10 @@ module.exports = {
       return;
     }
     //console.log(card, " with ", name, ' db size : ', hearth_api.card_db.length);
-    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique];
+    return [name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique, card.mech];
   },
-  to_arr : function(card) {
-    return [card.name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique];
+  to_arr: function(card) {
+    return [card.name, card.type, card.level, card.job, card.info[0], card.info[1], card.info[2], card.kind, card.is_token, card.is_secret, card.img, card.unique, card.mech];
   },
   get_name: function(id) {
     for (var i = 0; i < hearth_api.card_db.length; i++) {
@@ -122,7 +136,6 @@ module.exports = {
         if (arr[j] == c.name || arr[j] == c.unique) {
           arr[j].is_implemented = true;
           hearth_api.implemented_list.push(c);
-          console.log('[Implemented] ', arr[j]);
           break;
         }
       }
@@ -135,7 +148,7 @@ module.exports = {
       if (hearth_api.card_db[i].unique == unique) return hearth_api.card_db[i].is_implemented;
     }
   },
-  get_implemented_list : function() {
+  get_implemented_list: function() {
     return hearth_api.implemented_list;
   }
 };
