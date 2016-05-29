@@ -2120,14 +2120,15 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
     };
   }
 
+  console.log(p1);
   this.g_id = new UniqueId();
   this.g_when = new UniqueId(); // Object to give unique number to the events
 
   this.g_aura = []; // Aura that is (selectively) affecting entire minions on field
   this.g_handler = new Handler(this);
 
-  this.p1 = new Player(p1.id, p1.deck_list[0].job, this); // First
-  this.p2 = new Player(p2.id, p2.deck_list[0].job, this); // Second
+  this.p1 = new Player(p1.id, p1.deck.job, this); // First
+  this.p2 = new Player(p2.id, p2.deck.job, this); // Second
 
   // TODO IMPLEMENT THIS
   this.current_player = this.p1;
@@ -2135,18 +2136,18 @@ function Engine(p1_socket, p2_socket, p1, p2, io) {
   this.p1.enemy = this.p2;
   this.p2.enemy = this.p1;
 
-  for (let i = 0; i < p1.deck_list[0].cards.length / 2; i++) {
-    let c = p1.deck_list[0].cards[2 * i];
-    let num = p1.deck_list[0].cards[2 * i + 1];
+  for (let i = 0; i < p1.deck.cards.length / 2; i++) {
+    let c = p1.deck.cards[2 * i];
+    let num = p1.deck.cards[2 * i + 1];
 
     for (let j = 0; j < num; j++) {
       this.p1.deck.card_list.push(create_card(c, this.p1));
     }
   }
 
-  for (let i = 0; i < p2.deck_list[0].cards.length / 2; i++) {
-    let c = p2.deck_list[0].cards[2 * i];
-    let num = p2.deck_list[0].cards[2 * i + 1];
+  for (let i = 0; i < p2.deck.cards.length / 2; i++) {
+    let c = p2.deck.cards[2 * i];
+    let num = p2.deck.cards[2 * i + 1];
 
     for (let j = 0; j < num; j++) {
       this.p2.deck.card_list.push(create_card(c, this.p2));
@@ -2669,6 +2670,7 @@ var current_working_engine = null;
 module.exports = {
   start_match: function(p1_socket, p2_socket, p1, p2) {
     card_db.init_implemented(card_manager.implemented_card_list());
+    console.log(p1, p2);
     var e = new Engine(p1_socket, p2_socket, p1, p2);
     e.start_match();
 

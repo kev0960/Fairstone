@@ -75,11 +75,12 @@ app.post('/info', function(req, res) {
       }))
     }
     else {
-      var user = user_manager.get_user(decoded.id);
-      res.send(JSON.stringify({
-        id: user.id,
-        mmr: user.mmr
-      }))
+      user_manager.get_user(decoded.id, (user) => {
+        res.send(JSON.stringify({
+          id: user.id,
+          mmr: user.mmr
+        }));
+      });
     }
   });
 })
@@ -116,18 +117,20 @@ app.post('/login', function(req, res) {
   var id = req.body.user_id;
   var password = req.body.password;
 
-  var token = '';
-  if (user_manager.chk_user(id, password).result) {
-    token = jwt.sign({
-      id: id
-    }, hearth_secret, {
-      expiresIn: '1d'
-    });
-  }
-  res.send(JSON.stringify({
-    'token': token,
-    'user_id': id
-  }));
+  user_manager.chk_user(id, password, function(result) {
+    var token = '';
+    if (result == 1) {
+      token = jwt.sign({
+        id: id
+      }, hearth_secret, {
+        expiresIn: '1d'
+      });
+    }
+    res.send(JSON.stringify({
+      'token': token,
+      'user_id': id
+    }));
+  });
 });
 
 app.post('/match', function(req, res) {
@@ -142,35 +145,36 @@ app.post('/match', function(req, res) {
         }))
       }
       else {
-        var user = user_manager.get_user(decoded.id);
-        var deck_list = user.deck_list;
-        if (req_deck_id) {
-          var selected;
-          if (req_deck_id >= 0 && req_deck_id < deck_list.length) {
-            selected = deck_list[req_deck_id];
+        user_manager.get_user(decoded.id, (user) => {
+          var deck_list = user.deck_list;
+          if (req_deck_id) {
+            var selected;
+            if (req_deck_id >= 0 && req_deck_id < deck_list.length) {
+              selected = deck_list[req_deck_id];
+            }
+            res.send(JSON.stringify({
+              id: user.id,
+              selected_deck: selected
+            }));
           }
-          res.send(JSON.stringify({
-            id: user.id,
-            selected_deck: selected
-          }));
-        }
-        else {
-          var deck_names = []
-          for (var i = 0; i < deck_list.length; i++) {
-            deck_names.push({
-              name: deck_list[i].name,
-              job: deck_list[i].job
-            })
+          else {
+            var deck_names = []
+            for (var i = 0; i < deck_list.length; i++) {
+              deck_names.push({
+                name: deck_list[i].name,
+                job: deck_list[i].job
+              })
+            }
+            console.log('deck names :: ' + JSON.stringify({
+              id: user.id,
+              deck_list: deck_names
+            }))
+            res.send(JSON.stringify({
+              id: user.id,
+              deck_list: deck_names
+            }))
           }
-          console.log('deck names :: ' + JSON.stringify({
-            id: user.id,
-            deck_list: deck_names
-          }))
-          res.send(JSON.stringify({
-            id: user.id,
-            deck_list: deck_names
-          }))
-        }
+        });
       }
     };
   }(req_deck_id));
@@ -203,11 +207,11 @@ app.get('/match/:id', function(req, res) {
           // Possible duplicated connection!
           if (m.p1_join && m.p2_join) return;
 
-          if (data.user_id == m.p1) {
+          if (data.user_id == m.m1.id) {
             m.p1_join = true;
             m.p1_socket = socket;
           }
-          else if (data.user_id == m.p2) {
+          else if (data.user_id == m.m2.id) {
             m.p2_join = true;
             m.p2_socket = socket;
           }
@@ -225,13 +229,6 @@ app.get('/match/:id', function(req, res) {
   }
   else res.redirect('/')
 });
-
-app.post('/match/start-match', function(req, res) {
-  var user_id = req.decoded;
-  if (user_id) {
-    match_maker.find_match(user_id);
-  }
-})
 
 var server_port = process.env.PORT || 80
 http.listen(server_port, function() {
@@ -258,27 +255,29 @@ io.of('/match').on('connection', function(socket) {
     console.log('token : ', data.token)
       // Start the match finding QUEUE
     jwt.verify(data.token, hearth_secret, function(err, decoded) {
-      if(err) throw err;
-      
+      if (err) throw err;
+
       console.log('match queue added')
-      match_maker.find_match(decoded.id);
+      match_maker.find_match(decoded.id, 0);
     });
   });
 });
 
+var r_con = null;
+
 function UserManager() {
-  var connection = null;
   r.connect({
     host: 'localhost',
     port: 28015
   }, function(err, conn) {
     if (err) throw err;
-    connection = conn;
-    r.dbCreate('fairstone').run(connection, function() {
-      connection.use('fairstone');
-      r.tableCreate('user').run(connection, function() {
+    r_con = conn;
+    r.dbCreate('fairstone').run(r_con, function() {
+      r_con.use('fairstone');
+
+      r.tableCreate('user').run(r_con, function() {
         r.table('user').insert([{
-          id : "a",
+          id: "a",
           password: "a",
           nickname: "Jaebum the Legendary Hearthstone Player",
           mmr: 1000,
@@ -289,9 +288,8 @@ function UserManager() {
               'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2
             ]
           }]
-        },
-        {
-          id : "Jaebum",
+        }, {
+          id: "Jaebum",
           password: "a",
           nickname: "Jaebum the Legendary Hearthstone Player",
           mmr: 1000,
@@ -302,37 +300,15 @@ function UserManager() {
               'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2
             ]
           }]
-        }], {conflict : 'replace'}).run(connection, function(err, result) {
+        }], {
+          conflict: 'update'
+        }).run(r_con, function(err, result) {
           if (err) throw err;
           console.log(JSON.stringify(result, null, 2));
         })
       });
     });
   });
-
-  this.user_list = [{
-    id: 'a',
-    password: 'a',
-    mmr: 1000,
-    deck_list: [{
-      name: '법사 덱',
-      job: 'mage',
-      cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Mortal Coil', 2, 'Abusive Sergeant', 2, 'Hellfire', 2, 'Tinkmaster Overspark', 2,
-        'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2
-      ]
-    }]
-  }, {
-    id: 'Jaebum',
-    password: 'test',
-    mmr: 1000,
-    deck_list: [{
-      name: '전사 덱',
-      job: 'shaman',
-      cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Ysera', 2, 'Big Game Hunter', 2,
-        'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2
-      ]
-    }]
-  }];
 }
 UserManager.prototype.add_user = function(user_id, password) {
   for (var i = 0; i < this.user_list.length; i++) {
@@ -351,30 +327,37 @@ UserManager.prototype.add_user = function(user_id, password) {
     result: true
   };
 };
-UserManager.prototype.chk_user = function(user_id, password) {
-  for (var i = 0; i < this.user_list.length; i++) {
-    if (this.user_list[i].id === user_id) {
-      if (this.user_list[i].password === password) return {
-        result: true
-      };
-      return {
-        result: false,
-        reason: 'password is not matched'
-      };
+UserManager.prototype.chk_user = function(user_id, password, after) {
+  r.table('user').get(user_id).run(r_con, function(err, result) {
+    if (err) {
+      console.log(err);
+      return;
     }
-  }
-  return {
-    result: false,
-    reason: 'not registered user'
-  };
+
+    console.log(result);
+    if (!result) {
+      after(100); // Error code :: user is not registered
+      return;
+    }
+
+    if (result.password == password) {
+      after(1);
+    }
+    else {
+      after(101); // Error code :: user password is not matched
+    }
+  });
 };
-UserManager.prototype.get_user = function(user_id) {
-  for (var i = 0; i < this.user_list.length; i++) {
-    if (this.user_list[i].id === user_id) {
-      return this.user_list[i];
+UserManager.prototype.get_user = function(user_id, after) {
+  r.table('user').get(user_id).run(r_con, function(err, result) {
+    if (err) {
+      console.log(err);
+      return;
     }
-  }
-  return null;
+
+    console.log(result);
+    if (after) after(result);
+  });
 };
 var user_manager = new UserManager();
 
@@ -429,17 +412,17 @@ MatchMaker.prototype.delete_client = function(soc) {
 };
 
 // If the match is found, then it will broadcast the message
-MatchMaker.prototype.find_match = function(user_id) {
-  var user = user_manager.get_user(user_id);
-  if (user) {
-    console.log(user_id + ' is added to QUEUE');
+MatchMaker.prototype.find_match = function(user_id, choice) {
+  function find_match(user) {
+    console.log(user.id + ' is added to QUEUE with Deck choice ', choice);
     this.match_queue.push({
-      id: user_id,
+      id: user.id,
       when: Date.now(),
       mmr: user.mmr,
-      deck: user.deck
+      deck: user.deck_list[choice]
     });
   }
+  user_manager.get_user(user_id, find_match.bind(this));
 };
 MatchMaker.prototype.remove_from_match_queue = function(id) {
   for (var i = 0; i < this.match_queue.length; i++) {
@@ -450,28 +433,28 @@ MatchMaker.prototype.remove_from_match_queue = function(id) {
   }
   return;
 };
-MatchMaker.prototype.match_found = function(user1, user2) {
-  console.log('match is found!! ' + user1 + ' vs ' + user2);
+MatchMaker.prototype.match_found = function(m1, m2) {
+  console.log('match is found!! ' + m1.id + ' vs ' + m2.id);
 
   var match_token = this.generate_match_token();
 
-  var socket1 = this.get_socket(user1);
-  var socket2 = this.get_socket(user2);
+  var socket1 = this.get_socket(m1.id);
+  var socket2 = this.get_socket(m2.id);
 
   if (socket1 && socket2) {
     console.log('EMIT');
     socket1.emit('match-found', {
-      opponent: user2,
+      opponent: m1.id,
       token: match_token
     });
     socket2.emit('match-found', {
-      opponent: user1,
+      opponent: m2.id,
       token: match_token
     });
 
     this.found_match.push({
-      p1: user1,
-      p2: user2,
+      m1: m1,
+      m2: m2,
       match_token: match_token,
       p1_join: false,
       p2_join: false,
@@ -492,9 +475,11 @@ MatchMaker.prototype.matching_queue = function() {
   //console.log('chking.. queue length ', this.match_queue.length);
   for (var i = 0; i < this.match_queue.length; i++) {
     for (var j = i + 1; j < this.match_queue.length; j++) {
+      if(this.match_queue[i].id == this.match_queue[j].id) continue;
+      
       if (this.match_queue[i].mmr > this.match_queue[j].mmr) {
         if (chk_in_range(this.match_queue[i], this.match_queue[j])) {
-          this.match_found(this.match_queue[i].id, this.match_queue[j].id);
+          this.match_found(this.match_queue[i], this.match_queue[j]);
           this.match_queue.splice(j, 1);
           this.match_queue.splice(i, 1);
           i -= 2;
@@ -503,7 +488,7 @@ MatchMaker.prototype.matching_queue = function() {
       }
       else {
         if (chk_in_range(this.match_queue[j], this.match_queue[i])) {
-          this.match_found(this.match_queue[i].id, this.match_queue[j].id);
+          this.match_found(this.match_queue[i], this.match_queue[j]);
           this.match_queue.splice(j, 1);
           this.match_queue.splice(i, 1);
           i -= 2;
@@ -520,9 +505,7 @@ MatchMaker.prototype.matching_queue = function() {
 MatchMaker.prototype.generate_match_token = function() {
   return crypto.randomBytes(64).toString('hex');
 };
-MatchMaker.prototype.begin_match = function(match_id) {
-  hearth_game.start_match();
-};
+
 // TODO
 MatchMaker.prototype.is_valid_match = function(match_token) {
   // match_id is the first 32 characters of match-token
@@ -544,7 +527,7 @@ MatchMaker.prototype.get_full_token = function(match_token) {
 };
 // m :: name of the match
 MatchMaker.prototype.start_match = function(m) {
-  m.game = hearth_game.start_match(m.p1_socket, m.p2_socket, user_manager.get_user(m.p1), user_manager.get_user(m.p2));
+  m.game = hearth_game.start_match(m.p1_socket, m.p2_socket, { id : m.m1.id, deck : m.m1.deck }, { id : m.m2.id, deck : m.m2.deck });
 };
 MatchMaker.prototype.get_match = function(match_token) {
   for (var i = 0; i < this.found_match.length; i++) {
