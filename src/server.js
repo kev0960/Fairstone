@@ -8,6 +8,7 @@ var io = require('socket.io').listen(http);
 var jwt = require('jsonwebtoken');
 var flash = require('connect-flash');
 var crypto = require('crypto');
+var r = require('rethinkdb');
 
 const hearth_secret = 'hearth-server-secret';
 
@@ -39,12 +40,14 @@ app.use(function(req, res, next) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
       if (!err) {
         req.decoded = decoded.id;
-      } else {
+      }
+      else {
         req.decoded = '';
       }
       next();
     });
-  } else {
+  }
+  else {
     req.decoded = '';
     next();
   }
@@ -58,7 +61,9 @@ app.get('/', function(req, res) {
   var id = req.decoded;
   console.log('Token :: ' + token);
 
-  res.sendFile('/public/index.html', { root: __dirname });
+  res.sendFile('/public/index.html', {
+    root: __dirname
+  });
 });
 
 app.post('/info', function(req, res) {
@@ -68,7 +73,8 @@ app.post('/info', function(req, res) {
       res.send(JSON.stringify({
         id: ''
       }))
-    } else {
+    }
+    else {
       var user = user_manager.get_user(decoded.id);
       res.send(JSON.stringify({
         id: user.id,
@@ -78,7 +84,9 @@ app.post('/info', function(req, res) {
   });
 })
 app.get('/info', function(req, res) {
-  res.sendFile('/public/info.html', { root: __dirname });
+  res.sendFile('/public/info.html', {
+    root: __dirname
+  });
 });
 app.get('/info/:id', function(req, res) {
 
@@ -92,14 +100,17 @@ app.post('/auth', function(req, res) {
       res.send(JSON.stringify({
         id: ''
       }))
-    } else res.send(JSON.stringify({
+    }
+    else res.send(JSON.stringify({
       id: decoded.id
     }))
   });
 })
 
 app.get('/login', function(req, res) {
-  res.sendFile('/public/login.html', { root: __dirname });
+  res.sendFile('/public/login.html', {
+    root: __dirname
+  });
 })
 app.post('/login', function(req, res) {
   var id = req.body.user_id;
@@ -110,12 +121,12 @@ app.post('/login', function(req, res) {
     token = jwt.sign({
       id: id
     }, hearth_secret, {
-      expiresIn : '1d'
+      expiresIn: '1d'
     });
   }
   res.send(JSON.stringify({
     'token': token,
-    'user_id' : id
+    'user_id': id
   }));
 });
 
@@ -129,7 +140,8 @@ app.post('/match', function(req, res) {
         res.send(JSON.stringify({
           id: ''
         }))
-      } else {
+      }
+      else {
         var user = user_manager.get_user(decoded.id);
         var deck_list = user.deck_list;
         if (req_deck_id) {
@@ -141,7 +153,8 @@ app.post('/match', function(req, res) {
             id: user.id,
             selected_deck: selected
           }));
-        } else {
+        }
+        else {
           var deck_names = []
           for (var i = 0; i < deck_list.length; i++) {
             deck_names.push({
@@ -163,7 +176,9 @@ app.post('/match', function(req, res) {
   }(req_deck_id));
 })
 app.get('/match', function(req, res) {
-  res.sendFile('/public/match.html', { root: __dirname });
+  res.sendFile('/public/match.html', {
+    root: __dirname
+  });
 });
 
 // 유저가 match room 에 GET 요청을 보내면 그 즉시, 이 위치에 대한
@@ -175,36 +190,40 @@ app.get('/match/:id', function(req, res) {
 
   if (match_maker.is_valid_match(match_token)) {
     io.of('/match/' + match_maker.get_full_token(match_token)).removeAllListeners('connection');
-    
+
     io.of('/match/' + match_maker.get_full_token(match_token)).on('connection', function(socket) {
       // To prevent adding identical socket event listeners to be added into same player-info event
       // from the user client browser's RELOAD
-      socket.removeAllListeners('player-info'); 
-      
+      socket.removeAllListeners('player-info');
+
       socket.on('player-info', function(socket, match_maker) {
         return function(data) {
           var m = match_maker.get_match(data.match_token);
 
           // Possible duplicated connection!
-          if(m.p1_join && m.p2_join) return;
+          if (m.p1_join && m.p2_join) return;
 
           if (data.user_id == m.p1) {
             m.p1_join = true;
             m.p1_socket = socket;
-          } else if (data.user_id == m.p2) {
+          }
+          else if (data.user_id == m.p2) {
             m.p2_join = true;
             m.p2_socket = socket;
           }
 
-          if(m.p1_join && m.p2_join) {
-              match_maker.start_match(m);
+          if (m.p1_join && m.p2_join) {
+            match_maker.start_match(m);
           }
         };
       }(socket, match_maker));
     });
 
-    res.sendFile('/public/hearth.html', { root: __dirname });
-  } else res.redirect('/')
+    res.sendFile('/public/hearth.html', {
+      root: __dirname
+    });
+  }
+  else res.redirect('/')
 });
 
 app.post('/match/start-match', function(req, res) {
@@ -239,6 +258,8 @@ io.of('/match').on('connection', function(socket) {
     console.log('token : ', data.token)
       // Start the match finding QUEUE
     jwt.verify(data.token, hearth_secret, function(err, decoded) {
+      if(err) throw err;
+      
       console.log('match queue added')
       match_maker.find_match(decoded.id);
     });
@@ -246,15 +267,59 @@ io.of('/match').on('connection', function(socket) {
 });
 
 function UserManager() {
+  var connection = null;
+  r.connect({
+    host: 'localhost',
+    port: 28015
+  }, function(err, conn) {
+    if (err) throw err;
+    connection = conn;
+    r.dbCreate('fairstone').run(connection, function() {
+      connection.use('fairstone');
+      r.tableCreate('user').run(connection, function() {
+        r.table('user').insert([{
+          id : "a",
+          password: "a",
+          nickname: "Jaebum the Legendary Hearthstone Player",
+          mmr: 1000,
+          deck_list: [{
+            name: '법사 덱',
+            job: 'mage',
+            cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Mortal Coil', 2, 'Abusive Sergeant', 2, 'Hellfire', 2, 'Tinkmaster Overspark', 2,
+              'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2
+            ]
+          }]
+        },
+        {
+          id : "Jaebum",
+          password: "a",
+          nickname: "Jaebum the Legendary Hearthstone Player",
+          mmr: 1000,
+          deck_list: [{
+            name: '냥꾼 덱',
+            job: 'hunter',
+            cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Ysera', 2, 'Big Game Hunter', 2,
+              'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2
+            ]
+          }]
+        }], {conflict : 'replace'}).run(connection, function(err, result) {
+          if (err) throw err;
+          console.log(JSON.stringify(result, null, 2));
+        })
+      });
+    });
+  });
+
   this.user_list = [{
     id: 'a',
     password: 'a',
     mmr: 1000,
     deck_list: [{
       name: '법사 덱',
-      job: 'warlock',
+      job: 'mage',
       cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Mortal Coil', 2, 'Abusive Sergeant', 2, 'Hellfire', 2, 'Tinkmaster Overspark', 2,
-      'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2]
+        'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2
+      ]
     }]
   }, {
     id: 'Jaebum',
@@ -264,7 +329,8 @@ function UserManager() {
       name: '전사 덱',
       job: 'shaman',
       cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Ysera', 2, 'Big Game Hunter', 2,
-      'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2]
+        'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2
+      ]
     }]
   }];
 }
@@ -434,7 +500,8 @@ MatchMaker.prototype.matching_queue = function() {
           i -= 2;
           break;
         }
-      } else {
+      }
+      else {
         if (chk_in_range(this.match_queue[j], this.match_queue[i])) {
           this.match_found(this.match_queue[i].id, this.match_queue[j].id);
           this.match_queue.splice(j, 1);
@@ -497,12 +564,11 @@ For Debugging
 
 */
 
-var hearth_api= require('./card_api');
+var hearth_api = require('./card_api');
 var stdin = process.openStdin();
 stdin.addListener('data', function(d) {
   var input = d.toString().trim();
-  
-  var args = input.split(' ');
-  if(args[0] == 'db') hearth_api.get_db();
-});
 
+  var args = input.split(' ');
+  if (args[0] == 'db') hearth_api.get_db();
+});

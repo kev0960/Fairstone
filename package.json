@@ -16,7 +16,8 @@
     "connect-flash" : "*",
     "colors" : "*",
     "redis" : "*",
-    "unirest" : "*"
+    "unirest" : "*",
+    "rethinkdb" : "*"
   },
   "author": "Jaebum Lee <jblee94@stanford.edu>",
   "version": "0.0.1",

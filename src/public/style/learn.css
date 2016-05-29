@@ -25,7 +25,6 @@ body {
 }
 body {
   color: #333;
-  text-align: center;
 }
 
 /* Extra markup and styles for table-esque vertical and horizontal centering */
@@ -59,6 +58,7 @@ body {
 .masthead-brand {
   margin-top: 10px;
   margin-bottom: 10px;
+  font-size : 30px;
 }
 
 .masthead-nav > li {
@@ -99,6 +99,7 @@ body {
 }
 
 
+
 /*
  * Cover
  */
@@ -112,7 +113,20 @@ body {
 }
 .cover-heading {
     font-size: 30px;
-    margin : 30px;
+}
+
+.question {
+  margin-bottom: 15px;
+  border-style:solid;
+  padding : 4px;
+  border-color:transparent;
+  border-bottom-color: #866c6c;
+}
+
+.answer {
+  font-size : 18px;
+  margin-left: 20px;
+  margin-bottom: 20px;
 }
 
 /*

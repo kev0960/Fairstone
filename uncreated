@@ -12,7 +12,6 @@ Unbound Elemental -> HearthAPI Mechanics 를 분석해서 카드 정보를 card_
 Sense Demons -> 아직 Deck 에서 직접 핸드로 가져오는거 없음
 Bane of Doom -> 무작위 카드 추출하는 함수 없음
 Sir Finley Mrrgglton -> 영능 Discover 구현 필요
-Yogg Saron -> 
 썩은지느러미 심문관 -> 영능 바꾸는 것 구현 필요
 Renounce Darkness -> 영능 바꾸는 것 없음!
 초갈

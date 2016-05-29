@@ -523,9 +523,9 @@ HearthClient.prototype.draw_field = function() {
     if (chk_state(this.my_field[i].state, 'attackable')) {
       this.field_ctx.beginPath();
       var bef = this.field_ctx.lineWidth;
-      this.field_ctx.lineWidth = 10;
+      this.field_ctx.lineWidth = 12;
       
-      this.field_ctx.strokeStyle = 'rgb(51, 204, 51)'
+      this.field_ctx.strokeStyle = 'rgb(51, 204, 51)';
       this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
       this.field_ctx.stroke();
       
@@ -537,8 +537,8 @@ HearthClient.prototype.draw_field = function() {
       var bef = this.field_ctx.lineWidth;
       this.field_ctx.lineWidth = 8;
       
-      this.field_ctx.strokeStyle = 'rgba(38, 38, 38, 0,3)'
-      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+      this.field_ctx.strokeStyle = 'rgb(38, 38, 38)';
+      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 47, 77, 0, 0, 2 * Math.PI, 0);
       this.field_ctx.stroke();
       
       this.field_ctx.lineWidth = bef;

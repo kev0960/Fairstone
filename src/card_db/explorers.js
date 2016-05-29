@@ -452,8 +452,8 @@
       on_play: function(me, forced_target, random_target) {
         me.owner.play_success(me, -1,
           function(me) {
-            me.owner.deal_multiple_dmg(me.spell_dmg(10), me, function() {
-              return me.owner.enemy.get_all_character([], function(c) {
+            me.owner.deal_multiple_dmg(me.spell_dmg(10), me, () => {
+              return me.owner.enemy.get_all_character([], c => {
                 if (c.current_life > 0) return true;
               });
             });

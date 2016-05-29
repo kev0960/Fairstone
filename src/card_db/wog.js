@@ -378,6 +378,7 @@
             function() {
               me.owner.play_success(me, at, function(me, non_bc, bc) {
                 if (bc && me.target) {
+                  me.owner.deal_dmg(2, me, me.target);
                   me.owner.give_cthun_buff(2, 2);
                 }
                 end(me, non_bc, bc);
@@ -910,13 +911,13 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
             var num = me.owner.g_handler.search_legacy_queue(function(e) {
-              if(e.event_type == 'play_card' && e.card.card_data.type == 'spell' && e.card.owner == me.owner) return true;
+              if (e.event_type == 'play_card' && e.card.card_data.type == 'spell' && e.card.owner == me.owner) return true;
             }).length;
-            
+
             var avail = me.owner.engine.find_card_cond(function(c) {
               if (c.type == 'spell' && !c.is_token) return true;
             });
-            for(var i = 0; i < num; i ++) {
+            for (var i = 0; i < num; i++) {
               var lucky = rand(avail);
               console.log('>>>> ', lucky.name, ' <<<<');
               me.owner.random_cast_spell(lucky.unique);
@@ -2299,7 +2300,7 @@
             var lucky = rand(me.owner.engine.find_card_cond(function(c) {
               if (c.type == 'spell' && c.job == 'mage' && !c.is_token) return true;
             }), 3);
-            for(var i = 0; i < 3; i ++) {
+            for (var i = 0; i < 3; i++) {
               me.owner.hand_card(lucky[i].unique, 1);
             }
             end_spell(me);
@@ -2323,6 +2324,158 @@
                 me.owner.deal_dmg_many(dmg, me, target);
               }
             }, 'deathrattle', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Hooded Acolyte': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              me.owner.give_cthun_buff(1, 1);
+            }, 'heal', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Power Word: Tentacles': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.select_one(me, function(c) {
+            if (c.card_data.type == 'minion') return true;
+          }, // It can attack anything
+          function select_success(me) { // on select success
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  me.target.add_state(inc(2), 'dmg', me);
+                  me.target.add_state(inc(6), 'life', me);
+                  me.target.current_life += 6;
+                }
+                end_spell(me);
+              }
+            );
+          },
+          nothing,
+          forced_target,
+          random_target);
+      }
+    },
+    'Darkshire Alchemist': {
+      on_play: function(me, bc, user_play, at) {
+        if (user_play) {
+          me.owner.select_one(me,
+            function(c) {
+              return true;
+            },
+            function() {
+              me.owner.play_success(me, at, function(me, non_bc, bc) {
+                if (bc && me.target) {
+                  me.owner.heal(5, me, me.target);
+                }
+                end(me, non_bc, bc);
+              });
+            },
+            function() {},
+            false
+          );
+        }
+        else {
+          me.owner.play_success(me, at, function(me, non_bc, bc) {
+            end(me, non_bc, bc);
+          });
+        }
+      }
+    },
+    'Shifting Shade': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (non_bc) {
+            me.owner.g_handler.add_handler(function(e, me) {
+              if (e.card == me) {
+                if (me.owner.enemy.deck.num_card()) {
+                  var lucky = rand(me.owner.enemy.deck.card_list);
+                  me.owner.hand_card(lucky.card_data.unique, 1);
+                }
+              }
+            }, 'deathrattle', me);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Shadow Word: Horror': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var target = me.owner.get_all_character([me.owner.hero], function(c) {
+                if (c.dmg() <= 2) return true;
+              })
+              .concat(me.owner.enemy.get_all_character([me.owner.enemy.hero], function(c) {
+                if (c.dmg() <= 2) return true;
+              }));
+
+            me.owner.instant_kill_many(me, target);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Twilight Darkmender': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc && me.owner.cthun_dmg_buff >= 4) {
+            me.owner.heal(10, me, me.owner.hero);
+          }
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Forbidden Shaping': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            var lucky = rand(me.owner.engine.find_card_cond(function(c) {
+              if (c.type == 'minion' && c.mana == me.owner.current_mana && !c.is_token) return true;
+            }));
+            me.owner.current_mana = 0;
+            me.owner.summon_card(lucky.unique, 10);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Embrace the Shadow': {
+      on_play: function(me, forced_target, random_target) {
+        me.owner.play_success(me, -1,
+          function(me) {
+            me.owner.engine.add_aura(null, 'embrace_the_shadow', me);
+            me.owner.g_handler.add_handler(function(e, me) {
+              if(e.who == me.owner) {
+                me.status = 'destroyed'; // Disable the Aura after the turn
+              }
+            }, 'turn_end', me);
+            end_spell(me);
+          }
+        );
+      }
+    },
+    'Herald Volazj': { // Todo : CHK
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var mine = me.owner.get_all_character([me, me.owner.hero]);
+            for(var i = 0; i < mine.length; i ++) {
+              me.owner.summon_card(mine[i].card_data.unique, 10, false, function (m) { return function(c) {
+                me.owner.copy_minion(m, c);
+                c.add_state(function() { return 1; }, 'life', me);
+                c.current_life = 1;
+                
+                c.add_state(function() { return 1; }, 'dmg', me);
+              }; }(mine[i]));
+            }
           }
           end(me, non_bc, bc);
         });

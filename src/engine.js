@@ -1141,7 +1141,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
 
 // Do not specify increased healing amount into 'heal'
 Player.prototype.heal = function(heal, from, to) {
-  if (this.chk_aura('auchenai_soulpriest')) {
+  if (this.chk_aura('auchenai_soulpriest') || this.chk_aura('embrace_the_shadow')) {
     this.deal_dmg(this.spell_dmg(from, heal), from, to);
     return;
   }
@@ -1161,7 +1161,7 @@ Player.prototype.heal = function(heal, from, to) {
   this.g_handler.execute();
 };
 Player.prototype.heal_many = function(heal_arr, from, to_arr, done) {
-  if (this.chk_aura('auchenai_soulpriest')) {
+  if (this.chk_aura('auchenai_soulpriest') || this.chk_aura('embrace_the_shadow')) {
     var dmg_arr = [];
     for (var i = 0; i < heal_arr.length; i++) {
       dmg_arr.push(this.spell_dmg(from, heal_arr[i]));
@@ -2241,7 +2241,7 @@ Engine.prototype.update_aura = function() {
   // Baron Rivendare, Auchenai Soulpriest, Brann Bronzebeard, Mal'Ganis's Immune effect, Prophet Velen
   // baron_rivendare, auchenai_soulpriest, bran_bronzebeard, prophet_velen
   function chk_aura(p) {
-    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen', 'fandral_staghelm'];
+    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen', 'fandral_staghelm', 'embrace_the_shadow'];
     for (var j = 0; j < aura_list.length; j++) {
       for (var i = 0; i < p.g_aura.length; i++) {
         if (p.g_aura[i].state == aura_list[j] && p.g_aura[i].who.is_good() && p.g_aura[i].who.owner == p) {
@@ -2266,7 +2266,7 @@ Engine.prototype.find_card_cond = function(cond) {
     }
   }
   return arr;
-}
+};
 Engine.prototype.find_card_by_id = function(id, p) {
   for (var i = 0; i < this.p1.hand.num_card(); i++) {
     if (this.p1.hand.card_list[i].id == id) return this.p1.hand.card_list[i];
@@ -2328,8 +2328,6 @@ Engine.prototype.start_match = function() {
         cards: new_starting_cards
       });
 
-      //console.log('[Starting Cards :: ]', p.starting_cards)
-      //console.log('[New Starting Cards :: ]', new_starting_cards)
       p.starting_cards = p.starting_cards.concat(new_starting_cards);
 
       if (!p.selection_waiting && !p.enemy.selection_waiting) {
@@ -2679,6 +2677,9 @@ module.exports = {
     current_working_engine = e;
 
     return e;
+  },
+  init_implemented : function() {
+    card_db.init_implemented(card_manager.implemented_card_list());
   }
 };
 
