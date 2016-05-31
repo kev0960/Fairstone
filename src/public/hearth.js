@@ -193,18 +193,34 @@ var hearth_img_db = new HearthImageDB();
 
 function HearthClient() {
   this.match_token = localStorage.getItem('hearth-match-token');
-  this.user_id = localStorage.getItem('hearth-user-id');
 
   // Create a connection between client and match server (tell them that I JOINED!!)
   this.socket = io.connect('/match/' + this.match_token);
 
-  // Send my Inforamation through socket
-  // 나중에 생성된 webtoken 을 보내서 인증받는 방식으로 바꿔야함
-  this.socket.emit('player-info', {
-    match_token: this.match_token,
-    user_id: this.user_id
-  });
-
+  var socket = this.socket;
+  var match_token = this.match_token;
+  
+  $.ajax({
+    url: '/match',
+    data: {
+      'token': token
+    },
+    type: 'POST'
+  }).success(function(socket, match_token) {
+    return function(data) {
+      var d = JSON.parse(data);
+      if (d.id) {
+        // Send my Inforamation through socket
+        // 나중에 생성된 webtoken 을 보내서 인증받는 방식으로 바꿔야함
+        socket.emit('player-info', {
+          match_token: match_token,
+          user_id: d.id
+        });
+      }
+    }
+  }(socket, match_token));
+  
+  
   console.log('[Match] Received player info ', this.user_id);
 
   this.success = null;
@@ -220,6 +236,29 @@ function HearthClient() {
 
   this.current_mana = 1;
   this.total_mana = 1;
+
+  this.socket.on('hearth-game-end', function(h) {
+    return function(data) {
+      console.log('Received !! GAME END!!');
+      h.field_ctx.fillStyle = 'black';
+      h.field_ctx.fillRect(h.my_field_center_x - 400, h.my_field_center_y - 200, 800, 400);
+      if (data.info == 'draw') {
+        h.field_ctx.strokeStyle = 'white';
+        h.field_ctx.strokeText('Game is Draw', h.my_field_center_x - 300, h.my_field_center_y - 100);
+      }
+      else if (data.info == 'win') {
+        h.field_ctx.strokeStyle = 'white';
+        h.field_ctx.strokeText('You Win !', h.my_field_center_x - 300, h.my_field_center_y - 100);
+      }
+      else if (data.info == 'lose') {
+        h.field_ctx.strokeStyle = 'white';
+        h.field_ctx.strokeText('You Lose !', h.my_field_center_x - 300, h.my_field_center_y - 100);
+      }
+      setTimeout(function() {
+        $(location).attr('href', '/match');
+      }, 5000);
+    };
+  } (this));
 
   // Receiving hearth-event
   this.socket.on('hearth-event', function(h) {
@@ -408,6 +447,7 @@ function HearthClient() {
   }(this));
 
   this.did_game_begin = false;
+
   this.socket.on('begin-match', function(h) {
     return function(data) {
       console.log('[Begin Match Received]');
@@ -438,7 +478,10 @@ function HearthClient() {
   this.turn_end_btn_y = 400;
   this.my_hero_y = 700;
   this.enemy_hero_y = 30;
-  this.my_field_center = window.innerWidth / 2;
+  this.my_field_center_x = window.innerWidth / 2;
+  this.my_field_center_y = window.innerHeight / 2;
+
+  this.message_list = [];
 }
 HearthClient.prototype.init = function() {};
 HearthClient.prototype.play_card = function(card_id, at) {
@@ -493,18 +536,18 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.my_field[i].x = this.my_field_center + 200 * (i - Math.floor(num_field / 2));
+    this.my_field[i].x = this.my_field_center_x + 200 * (i - Math.floor(num_field / 2));
     this.my_field[i].y = this.my_field_card_y;
 
     if (hearth_img_db.has_image(this.my_field[i].unique)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i]), this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.my_field[i]), this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     else {
       hearth_img_db.get_image(this.my_field[i], function() {
@@ -514,21 +557,21 @@ HearthClient.prototype.draw_field = function() {
 
     if (chk_state(this.my_field[i].state, 'frozen')) {
       this.field_ctx.fillStyle = 'rgba(52, 191, 238, 0.3)';
-      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.fillRect(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     if (chk_state(this.my_field[i].state, 'stealth')) {
       this.field_ctx.fillStyle = 'rgba(52, 191, 238, 0.3)';
-      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.fillRect(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
     if (chk_state(this.my_field[i].state, 'attackable')) {
       this.field_ctx.beginPath();
       var bef = this.field_ctx.lineWidth;
       this.field_ctx.lineWidth = 12;
-      
+
       this.field_ctx.strokeStyle = 'rgb(51, 204, 51)';
-      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+      this.field_ctx.ellipse(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
       this.field_ctx.stroke();
-      
+
       this.field_ctx.lineWidth = bef;
     }
 
@@ -536,26 +579,26 @@ HearthClient.prototype.draw_field = function() {
       this.field_ctx.beginPath();
       var bef = this.field_ctx.lineWidth;
       this.field_ctx.lineWidth = 8;
-      
+
       this.field_ctx.strokeStyle = 'rgb(38, 38, 38)';
-      this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 47, 77, 0, 0, 2 * Math.PI, 0);
+      this.field_ctx.ellipse(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)), this.my_field_card_y, 47, 77, 0, 0, 2 * Math.PI, 0);
       this.field_ctx.stroke();
-      
+
       this.field_ctx.lineWidth = bef;
     }
 
     if (this.need_to_select && !is_in_the_list(this.choose_card_list, this.my_field[i].id)) {
       this.field_ctx.fillStyle = 'rgba(139, 148, 150, 0.3)';
-      this.field_ctx.fillRect(this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
+      this.field_ctx.fillRect(this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) - 80, this.my_field_card_y - 80, 160, 238);
     }
 
     this.field_ctx.restore();
 
     // Show life and dmg of the minions here
     this.field_ctx.strokeStyle = 'yellow';
-    this.field_ctx.strokeText(this.my_field[i].dmg, this.my_field_center + 200 * (i - Math.floor(num_field / 2)) - 60, this.my_field_card_y + 100);
+    this.field_ctx.strokeText(this.my_field[i].dmg, this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) - 60, this.my_field_card_y + 100);
     this.field_ctx.strokeStyle = 'red';
-    this.field_ctx.strokeText(this.my_field[i].life, this.my_field_center + 200 * (i - Math.floor(num_field / 2)) + 60, this.my_field_card_y + 100);
+    this.field_ctx.strokeText(this.my_field[i].life, this.my_field_center_x + 200 * (i - Math.floor(num_field / 2)) + 60, this.my_field_card_y + 100);
   }
 
   var ene_num_field = this.enemy_field.length;
@@ -563,18 +606,18 @@ HearthClient.prototype.draw_field = function() {
     this.field_ctx.save();
 
     this.field_ctx.beginPath();
-    this.field_ctx.ellipse(this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)), this.enemy_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
+    this.field_ctx.ellipse(this.my_field_center_x + 200 * (i - Math.floor(ene_num_field / 2)), this.enemy_field_card_y, 50, 80, 0, 0, 2 * Math.PI, 0);
     this.field_ctx.closePath();
 
     // We should clip the image of minion to look like an actual minion
     this.field_ctx.clip();
 
     // Set card position on the canvas
-    this.enemy_field[i].x = this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2));
+    this.enemy_field[i].x = this.my_field_center_x + 200 * (i - Math.floor(ene_num_field / 2));
     this.enemy_field[i].y = this.enemy_field_card_y;
 
     if (hearth_img_db.has_image(this.enemy_field[i].unique)) {
-      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i]), this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
+      this.field_ctx.drawImage(hearth_img_db.async_get_image(this.enemy_field[i]), this.my_field_center_x + 200 * (i - Math.floor(ene_num_field / 2)) - 80, this.enemy_field_card_y - 80, 160, 238);
     }
     else {
       hearth_img_db.get_image(this.enemy_field[i], function() {
@@ -590,9 +633,9 @@ HearthClient.prototype.draw_field = function() {
 
     // Show life and dmg of the minions here
     this.field_ctx.strokeStyle = 'yellow';
-    this.field_ctx.strokeText(this.enemy_field[i].dmg, this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) - 60, this.enemy_field_card_y + 100);
+    this.field_ctx.strokeText(this.enemy_field[i].dmg, this.my_field_center_x + 200 * (i - Math.floor(ene_num_field / 2)) - 60, this.enemy_field_card_y + 100);
     this.field_ctx.strokeStyle = 'red'
-    this.field_ctx.strokeText(this.enemy_field[i].life, this.my_field_center + 200 * (i - Math.floor(ene_num_field / 2)) + 60, this.enemy_field_card_y + 100);
+    this.field_ctx.strokeText(this.enemy_field[i].life, this.my_field_center_x + 200 * (i - Math.floor(ene_num_field / 2)) + 60, this.enemy_field_card_y + 100);
   }
 };
 HearthClient.prototype.show_card_list = function(card_list) {
@@ -607,7 +650,7 @@ HearthClient.prototype.show_card_list = function(card_list) {
         h.choose_card_list[i].h = img.height;
       };
     }({
-      x: (this.my_field_center - 150) + Math.floor(i - card_list.length / 2) * 300,
+      x: (this.my_field_center_x - 150) + Math.floor(i - card_list.length / 2) * 300,
       y: 200
     }, this, i));
   }
@@ -625,7 +668,7 @@ HearthClient.prototype.show_card_list_done = function(card_list, on_done) {
         h.choose_card_list[i].h = img.height;
       };
     }({
-      x: (this.my_field_center - 150) + Math.floor(i - card_list.length / 2) * 300,
+      x: (this.my_field_center_x - 150) + Math.floor(i - card_list.length / 2) * 300,
       y: 200
     }, this, i), on_done);
   }
@@ -731,10 +774,10 @@ HearthClient.prototype.init_field_click = function() {
 
     // My Hero
     hearth_client.field_ctx.strokeStyle = 'white';
-    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.my_hero_y, 200, 150);
-    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150);
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center_x - 100, hearth_client.my_hero_y, 200, 150);
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center_x - 100, hearth_client.enemy_hero_y, 200, 150);
 
-    if (is_in_rect(e, hearth_client.my_field_center - 100, hearth_client.my_hero_y, 200, 150)) {
+    if (is_in_rect(e, hearth_client.my_field_center_x - 100, hearth_client.my_hero_y, 200, 150)) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'me'
@@ -761,7 +804,7 @@ HearthClient.prototype.init_field_click = function() {
       return;
     }
     // Enemy hero
-    else if (is_in_rect(e, hearth_client.my_field_center - 100, hearth_client.enemy_hero_y, 200, 150)) {
+    else if (is_in_rect(e, hearth_client.my_field_center_x - 100, hearth_client.enemy_hero_y, 200, 150)) {
       if (hearth_client.need_to_select) {
         hearth_client.socket.emit('select-done', {
           id: 'enemy'
@@ -788,8 +831,8 @@ HearthClient.prototype.init_field_click = function() {
 
     // Hero Power
     hearth_client.field_ctx.strokeStyle = 'white';
-    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center + 300, hearth_client.my_hero_y, 50, 50);
-    if (is_in_rect(e, hearth_client.my_field_center + 300, hearth_client.my_hero_y, 50, 50)) {
+    hearth_client.field_ctx.strokeRect(hearth_client.my_field_center_x + 300, hearth_client.my_hero_y, 50, 50);
+    if (is_in_rect(e, hearth_client.my_field_center_x + 300, hearth_client.my_hero_y, 50, 50)) {
       hearth_client.socket.emit('hero_power');
     }
 
@@ -877,7 +920,12 @@ HearthClient.prototype.choose_remove_card = function(card_list) {
       }
     }
   }
-}
+};
+HearthClient.prototype.show_message = function() {
+  for (var i = 0; i < this.message_list.length; i++) {
+
+  }
+};
 HearthClient.prototype.log = function(e) {
   var log = '';
   if (e) log += '[' + e + '] ';

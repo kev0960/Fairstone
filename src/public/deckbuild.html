@@ -1,0 +1,129 @@
+<html lang="en">
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+<script src="deckbuild.js"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<link href="/style/deckbuild.css" rel="stylesheet">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Fairstone Deck Builder </title>
+
+  <body>
+
+    <div class="site-wrapper">
+      <div class="site-wrapper-inner">
+        <div class="cover-container">
+          <div class="masthead clearfix">
+            <div class="inner">
+              <h3 class="masthead-brand">Fairstone</h3>
+              <nav>
+                <ul class="nav masthead-nav">
+                  <li>
+                    <a id="userInfo"></a>
+                  </li>
+                  <li>
+                    <a id="userSignin"></a>
+                  </li>
+                  <li>
+                    <a id="userLogin"></a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+
+          <div class="deck-builder">
+            <div class="job-info">
+              <ul>
+                <li class='select-job'>Mage</li>
+                <li class='select-job'>Warlock</li>
+                <li class='select-job'>Warrior</li>
+                <li class='select-job'>Druid</li>
+                <li class='select-job'>Shaman</li>
+                <li class='select-job'>Paladin</li>
+                <li class='select-job'>Priest</li>
+                <li class='select-job'>Rogue</li>
+                <li class='select-job'>Hunter</li>
+              </ul>
+            </div>
+            <div class="row">
+              <div class="col-md-8">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                  <li role="presentation" class="card-job-category active" id="neutral-cards">
+                    <a href="#neutral" aria-controls="neutral" role="tab" data-toggle="tab">Neutral</a>
+                  </li>
+                  <li role="presentation" class="card-job-category" id="job-cards">
+                    <a href="#job" aria-controls="job" role="tab" data-toggle="tab" id="job-name"></a>
+                  </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content card-image-container clearfix">
+                  <div role="tabpanel" class="tab-pane active" id="neutral">
+                    <div class="col-xs-6 col-md-4 ">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="neutral-card-image">
+                    </div>
+                    <div>
+                      <button type="button" class="btn btn-warning" id="back-neutral">Back</button>
+                      <button type="button" class="btn btn-info" id="next-neutral">Next</button>
+                    </div>
+                  </div>
+                  <div role="tabpanel" class="tab-pane" id="job">
+                    <div class="col-xs-6 col-md-4 ">
+                      <img class="job-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="job-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="job-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="job-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="job-card-image">
+                    </div>
+                    <div class="col-xs-6 col-md-4">
+                      <img class="job-card-image">
+                    </div>
+                    <div>
+                      <button type="button" class="btn btn-warning" id="back-job">Back</button>
+                      <button type="button" class="btn btn-info" id="next-job">Next</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+  </body>
+</head>
+
+</html>

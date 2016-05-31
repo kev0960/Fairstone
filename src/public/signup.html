@@ -1,0 +1,109 @@
+<html lang="en">
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<link href="/style/login.css" rel="stylesheet">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in</title>
+
+  <body>
+    <div class="container">
+      <form action="javascript:submit()" class="form-signin">
+        <h2 class="form-signin-heading">Welcome to Fairstone</h2>
+        <label for="inputEmail" class="sr-only">Email address</label>
+        <input type="email" id="inputEmail" class="form-control" placeholder="Email address" data-toggle="popover" data-trigger="focus" title="Your Id is already taken" data-content="Change your id please!" required autofocus>
+
+        <label for="inputNickname" class="sr-only">Nickname</label>
+        <input type="text" id="inputNickname" class="form-control" placeholder="Nickname" required>
+
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input type="password" id="inputPassword" class="form-control" placeholder="Password" data-toggle="popover" data-trigger="focus" title="Password is not matched!" data-content="Check your password please!" required>
+
+        <label for="inputPassword" class="sr-only">Confirm Password</label>
+        <input type="password" id="PasswordConfirm" class="form-control" placeholder="Confirm Password" required>
+
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" id="term-agree"> <span data-toggle="modal" data-target="#term" id="terms-of-license">I Agree Terms of License</span>
+          </label>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" id="signupBtn" type="submit">Sign Up</button>
+      </form>
+
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="term" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h2 class="modal-title" id="myModalLabel">Terms of License</h4>
+          </div>
+          <div class="modal-body">
+          <p class='head'>As you agree on Terms of License, You MUST ...</p>
+          <p class='rule'>Play at least 10 matches with 3 different jobs </p>
+          <p class='rule'>Participate actively on Fairstone community </p>
+          <p class='rule'>Report any found bugs during a match (If the bug turns out to be legit, you will get a special gift from us)</p>
+          <p class='rule'>Be nice to community members </p>
+          <p class='rule'>and most importantly, Have Fun!</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      function submit() {
+        var user_id = $('#inputEmail').val();
+        var password = $('#inputPassword').val();
+        var confirm = $('#PasswordConfirm').val();
+        var nickname = $('#inputNickname').val();
+
+        if (password != confirm) {
+          $('#inputPassword').popover('show');
+          return;
+        }
+        if (!$('#term-agree').val()) {
+          $('#inputPassword').popover('show');
+          return;
+        }
+
+        $.ajax({
+          url: '/signup',
+          data: {
+            user_id: user_id,
+            password: password,
+            nickname: nickname
+          },
+          type: 'POST'
+        }).success(function(data) {
+          console.log('data ', data)
+          var d = JSON.parse(data);
+          if (d.result == 'success') {
+
+            $(location).attr('href', '/');
+            console.log('success');
+          }
+          else {
+            // Empty the form inputs
+            $('#inputMail').val('');
+            $('#inputPassword').val('');
+            $('#PasswordConfirm').val('');
+          }
+        });
+      }
+    </script>
+  </body>
+</head>
+
+</html>

@@ -14,7 +14,6 @@ $('#loginBtn').click(function() {
     if(d.token) {
       // Save the server issued token to local storage
       localStorage.setItem('hearth-server-token', d.token);
-      localStorage.setItem('hearth-user-id', d.user_id);
 
       // redirect to Home
       $(location).attr('href', '/');
@@ -23,6 +22,7 @@ $('#loginBtn').click(function() {
       // Empty the form inputs
       $('#inputMail').val('');
       $('#inputPassword').val('');
+      $('#loginfail').show();
     }
   });
 })

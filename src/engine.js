@@ -549,7 +549,8 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
       c.target = available_list[Math.floor(available_list.length * Math.random())];
       console.log('Random Target :: ', c.target.card_data.name);
       success(c);
-    } else {
+    }
+    else {
       console.log('No Target!');
     }
     return;
@@ -597,9 +598,10 @@ Player.prototype.play_spell = function(c) {
   var card = card_manager.load_card(c.card_data.unique);
   this.turn_card_play.push(c);
 
-  if(this.chk_aura('fandral_staghelm')) {
+  if (this.chk_aura('fandral_staghelm')) {
     card.on_play(c, false, false, 2);
-  } else {
+  }
+  else {
     card.on_play(c);
   }
 };
@@ -725,9 +727,10 @@ Player.prototype.play_minion = function(c, at) {
   var card = card_manager.load_card(c.card_data.unique);
   this.turn_card_play.push(c);
 
-  if(this.chk_aura('fandral_staghelm')) {
+  if (this.chk_aura('fandral_staghelm')) {
     card.on_play(c, true, true, at, 2);
-  } else {
+  }
+  else {
     card.on_play(c, true, true, at);
   }
 };
@@ -1547,7 +1550,7 @@ Player.prototype.silence = function(from, target) {
       }
     }
   }
-  
+
   target.current_life = (target.current_life > target.life() ? target.life() : target.current_life);
 
   // Non Attacking Minions can attack when they are silenced (in that turn)
@@ -1631,12 +1634,12 @@ Player.prototype.give_cthun_buff = function(d, l) {
 };
 Player.prototype.random_cast_spell = function(unique) {
   var c = create_card(unique);
-  
+
   c.owner = this;
   c.status = 'field';
-  
+
   var card = card_manager.load_card(unique);
-  
+
   card.on_play(c, false, true, false, true);
   this.g_handler.death_creation(true); // Forced Death Phase
 };
@@ -2064,7 +2067,15 @@ Handler.prototype.death_creation = function(is_forced) {
   dq.splice(0, dq.length);
 
   // Death Creation step 이 끝나면 end phase 를 실행할 수 있게 된다.
-  if (this.next_phase && !is_forced) this.add_callback(this.end_phase, this, []);
+  if (this.next_phase && !is_forced) {
+    this.add_callback(this.end_phase, this, []);
+  } else if(this.queue.length == 0 && this.destroyed_queue.length == 0 && this.queue_resolved_callback.length == 0) {
+    console.log('Phase is ended anyway (OUTTER MOST PHASE)! (without next phase to chk) ');
+    this.engine.update_aura();
+
+    // After the aura update, Engine checks for the win or lose
+    this.engine.chk_win_or_lose();
+  }
 
   this.exec_lock = false;
   if (this.queue.length || this.queue_resolved_callback.length) {
@@ -2074,6 +2085,9 @@ Handler.prototype.death_creation = function(is_forced) {
 Handler.prototype.end_phase = function() {
   console.log('end phase invoked!');
   this.engine.update_aura();
+
+  // After the aura update, Engine checks for the win or lose
+  this.engine.chk_win_or_lose();
 
   if (this.next_phase) {
     var f = this.next_phase;
@@ -2107,11 +2121,14 @@ UserInterface.prototype.get_user_input = function(socket, send, recv) {
   });
 };
 
-function Engine(p1_socket, p2_socket, p1, p2, io) {
-  // TODO Returns current turn
+function Engine(p1_socket, p2_socket, p1, p2, game_result_callback) {
+  this.p1_info = p1;
+  this.p2_info = p2;
+  
   this.current_turn = 0;
 
-  this.server_io = io;
+  this.game_result_callback = game_result_callback;
+  this.is_game_finished = false;
 
   function UniqueId() {
     this.id = 0;
@@ -2364,6 +2381,47 @@ Engine.prototype.start_match = function() {
   this.p1.selection_fail_timer = setTimeout(fail_client_select(this.p1), 90000);
   this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
 };
+Engine.prototype.chk_win_or_lose = function() {
+  this.is_game_finished = false;
+  
+  // Draw!
+  if (this.p1.hero.current_life <= 0 && this.p2.hero.current_life <= 0) {
+    this.is_game_finished = true;
+    this.game_result_callback(2, this.p1_info, this.p2_info); // DRAW
+    
+    this.p1_socket.emit('hearth-game-end', {
+      info : 'draw'
+    });
+    
+    this.p2_socket.emit('hearth-game-end', {
+      info : 'draw'
+    });
+  }
+  else if (this.p1.hero.current_life <= 0) { // p1 lose
+    this.is_game_finished = true;
+    this.game_result_callback(1, this.p1_info, this.p2_info); // p2 wins!
+    
+    this.p1_socket.emit('hearth-game-end', {
+      info : 'lose'
+    });
+    
+    this.p2_socket.emit('hearth-game-end', {
+      info : 'win'
+    });
+  }
+  else if (this.p2.hero.current_life <= 0) { // p2 lose
+    this.is_game_finished = true;
+    this.game_result_callback(0, this.p1_info, this.p2_info); // p1 wins!
+    
+    this.p1_socket.emit('hearth-game-end', {
+      info : 'win'
+    });
+    
+    this.p2_socket.emit('hearth-game-end', {
+      info : 'lose'
+    });
+  }
+};
 // Begins the game by putting selected cards to each player's deck
 Engine.prototype.begin_game = function() {
   function hand_card(player) {
@@ -2432,7 +2490,7 @@ Engine.prototype.start_turn = function() {
 
   // current player draws 1 card from a deck
   this.current_player.draw_cards(1);
-}
+};
 Engine.prototype.set_up_listener = function(p) {
   p.socket.on('hearth-user-play-card', function(e) {
     return function(data) {
@@ -2668,10 +2726,10 @@ Engine.prototype.socket = function(p) {
 
 var current_working_engine = null;
 module.exports = {
-  start_match: function(p1_socket, p2_socket, p1, p2) {
+  start_match: function(p1_socket, p2_socket, p1, p2, game_result) {
     card_db.init_implemented(card_manager.implemented_card_list());
     console.log(p1, p2);
-    var e = new Engine(p1_socket, p2_socket, p1, p2);
+    var e = new Engine(p1_socket, p2_socket, p1, p2, game_result);
     e.start_match();
 
     // FOR THE DEBUG !! 
@@ -2680,7 +2738,7 @@ module.exports = {
 
     return e;
   },
-  init_implemented : function() {
+  init_implemented: function() {
     card_db.init_implemented(card_manager.implemented_card_list());
   }
 };
@@ -2706,8 +2764,8 @@ stdin.addListener('data', function(d) {
     for (var i = 3; i < args.length; i++) card_name += (' ' + args[i]);
 
     var list = card_db.get_implemented_list();
-    for(var i = 0; i < list.length; i ++) {
-      if(list[i].name == card_name) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].name == card_name) {
         to.hand_card(card_name);
         break;
       }

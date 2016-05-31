@@ -62,7 +62,7 @@ HearthAPI.prototype.get_card_db = function() {
             type: c.type.toLowerCase(),
             level: (c.rarity ? c.rarity.toLowerCase() : null),
             kind: (c.race ? c.race.toLowerCase() : null),
-            job: (c.playerClass ? c.playerClass.toLowerCase() : null),
+            job: (c.playerClass ? c.playerClass.toLowerCase() : 'neutral'),
             img: c.img,
             info: [c.cost, (c.attack ? c.attack : 0), (c.health ? c.health : c.durability)],
             unique: c.cardId,
