@@ -2367,7 +2367,7 @@
                       return 15;
                     }, 'life', me);
                   }
-                  me.current_life = 15;
+                  me.target.current_life = 15;
                 }
                 end(me, non_bc, bc);
               });

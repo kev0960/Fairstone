@@ -19,9 +19,9 @@ else {
         var deck_list = d.deck_list;
         var str = '';
         for (var i = 0; i < deck_list.length; i++) {
-          str += '<button class="list-group-item deck-name">' + deck_list[i].name + ' job : ' + deck_list[i].job + '</button>'
+          str += '<button class="list-group-item deck-name">' + deck_list[i].name + ' [' + deck_list[i].job + ']</button>';
         }
-        $('#deck-list').html(str)
+        $('#deck-list').html(str);
       }
       else {
         // Not a valid token!!
@@ -30,19 +30,25 @@ else {
       }
     });
 
+    var selected_deck = 0;
+
     $('#begin_match').click(function() {
       socket.emit('find-match', {
-        token: token
-      })
+        token: token,
+        deck_id: selected_deck // Index of selected deck
+      });
+      
+      $('#match-found').text('You are added to the Matchmaking queue');
     });
     $('#deck-list').on('click', '.deck-name', function() {
       var index = $(this).prevAll().length;
+      selected_deck = index;
 
       $.ajax({
         url: '/match',
         data: {
           'token': token,
-          'deck_id': index
+          'deck_id': selected_deck
         },
         type: 'POST'
       }).success(function(data) {
@@ -51,7 +57,7 @@ else {
           var deck_info = d.selected_deck;
           var str = '';
           for (var i = 0; i < deck_info.cards.length / 2; i++) {
-            str += '<button class="list-group-item deck-card">' + deck_info.cards[2 * i] + '&times;' + deck_info.cards[2 * i + 1] + '</button>'
+            str += '<button class="list-group-item deck-card">' + deck_info.cards[2 * i] + '<span class="num-card">&times;' + deck_info.cards[2 * i + 1] + '</span></button>'
           }
           $('#deck-cards').html(str);
         }
@@ -61,6 +67,15 @@ else {
           $(location).attr('href', '/');
         }
       });
+
+      var all_decks = $('.deck-name');
+      for (var i = 0; i < all_decks.length; i++) {
+        if(i != selected_deck) {
+          $(all_decks[i]).css('background-color', 'transparent');
+        } else {
+          $(all_decks[i]).css('background-color', 'rgba(222, 194, 97, 0.48)');
+        }
+      }
     })
   });
 }

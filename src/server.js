@@ -278,7 +278,7 @@ app.post('/deckbuild/done', function(req, res) {
           return;
         }
 
-        if (!chk_deck_validity(card_deck, job)) {
+        if (!chk_deck_validity(card_deck, job.toLowerCase())) {
           res.send(JSON.stringify({
             result: 'fail'
           }));
@@ -298,7 +298,7 @@ app.post('/deckbuild/done', function(req, res) {
           r.table('user').get(decoded.id).update({
             deck_list: r.row('deck_list').append({
               name: deck_name,
-              job: job,
+              job: job.toLowerCase(),
               cards: convert(card_deck)
             })
           }).run(r_con, function(err, result) {
@@ -446,7 +446,7 @@ io.of('/match').on('connection', function(socket) {
       if (err) throw err;
 
       console.log('match queue added');
-      match_maker.find_match(decoded.id, 0);
+      match_maker.find_match(decoded.id, data.deck_id);
     });
   });
 });

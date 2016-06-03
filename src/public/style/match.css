@@ -99,69 +99,51 @@ body {
 }
 
 
-/*
- * Cover
- */
-
-.cover {
-  padding: 0 20px;
-}
-.cover .btn-lg {
-  padding: 10px 20px;
-  font-weight: bold;
-}
-.cover-heading {
-    font-size: 30px;
-    margin : 30px;
+.content-container {
+  margin-top : 30px;
 }
 
 /*
-  Lead Body
-  
+*  Show Deck List
 */
-.cover-heading .lead {
-  margin : 10px;
-}
-/*
- * Footer
- */
 
-.mastfoot {
-  color: #999; /* IE8 proofing */
-  color: rgba(3,3,3,.5);
+.deck-name {
+  padding : 3px;
+  padding-left : 5px;
 }
 
+.panel-body {
+  padding : 0px;
+}
+.panel {
+  border : none;
+}
+.panel-heading {
+  border-bottom: none;
+}
+.deck-card {
+  padding : 3px;
+  padding-left : 5px;
+}
 
+.num-card {
+  float : right;
+  color : green;
+}
 /*
  * Affix and center
  */
 
 @media (min-width: 768px) {
-  /* Pull out the header and footer */
-  .masthead {
-    position: fixed;
-    top: 0;
-  }
-  .mastfoot {
-    position: fixed;
-    bottom: 0;
-  }
-  /* Start the vertical centering */
-  .site-wrapper-inner {
-    vertical-align: middle;
-  }
   /* Handle the widths */
-  .masthead,
-  .mastfoot,
-  .cover-container {
-    width: 100%; /* Must be percentage or pixels for horizontal alignment */
+  .masthead, .mastfoot, .cover-container {
+    width: 100%;
+    /* Must be percentage or pixels for horizontal alignment */
   }
 }
 
 @media (min-width: 1000px) {
-  .masthead,
-  .mastfoot,
-  .cover-container {
+  .masthead, .mastfoot, .cover-container {
     width: 900px;
   }
 }

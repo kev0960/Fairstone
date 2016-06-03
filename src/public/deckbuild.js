@@ -301,7 +301,7 @@ $(document).ready(function() {
         type: 'POST'
       }).success(function(data) {
           var d = JSON.parse(data);
-          if (d.result) {
+          if (d.result != 'fail') {
             console.log('Deck building is successful');
           }
       })
