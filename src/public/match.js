@@ -1,41 +1,76 @@
 var token = localStorage.getItem('hearth-server-token');
 
 // If the user does not have access-token then goes back to login page
-if(!token) {
+if (!token) {
   // redirect to Home
   $(location).attr('href', '/');
 }
 else {
   $(document).ready(function() {
     $.ajax({
-      url : '/match',
-      data  : {
-        'token' : token
+      url: '/match',
+      data: {
+        'token': token
       },
-      type : 'POST'
-    }).success (function (data) {
+      type: 'POST'
+    }).success(function(data) {
       var d = JSON.parse(data);
-      if(d.id) {
-        $('#user_id').text(d.id);
+      if (d.id) {
         var deck_list = d.deck_list;
         var str = '';
-        for(var i = 0; i < deck_list.length; i ++) {
-          str += '<div>' + deck_list[i].name + ' job : ' + deck_list[i].job + '</div>'
+        for (var i = 0; i < deck_list.length; i++) {
+          str += '<button class="list-group-item deck-name">' + deck_list[i].name + ' job : ' + deck_list[i].job + '</button>'
         }
-        $('#my-deck-list').html(str)
-      } else {
+        $('#deck-list').html(str)
+      }
+      else {
         // Not a valid token!!
         // redirect to Home
         $(location).attr('href', '/');
       }
     });
+
+    $('#begin_match').click(function() {
+      socket.emit('find-match', {
+        token: token
+      })
+    });
+    $('#deck-list').on('click', '.deck-name', function() {
+      var index = $(this).prevAll().length;
+
+      $.ajax({
+        url: '/match',
+        data: {
+          'token': token,
+          'deck_id': index
+        },
+        type: 'POST'
+      }).success(function(data) {
+        var d = JSON.parse(data);
+        if (d.id) {
+          var deck_info = d.selected_deck;
+          var str = '';
+          for (var i = 0; i < deck_info.cards.length / 2; i++) {
+            str += '<button class="list-group-item deck-card">' + deck_info.cards[2 * i] + '&times;' + deck_info.cards[2 * i + 1] + '</button>'
+          }
+          $('#deck-cards').html(str);
+        }
+        else {
+          // Not a valid token!!
+          // redirect to Home
+          $(location).attr('href', '/');
+        }
+      });
+    })
   });
 }
 
 var socket = io.connect('/match');
 
 // Hi Server!
-socket.emit('send-token', {token : token});
+socket.emit('send-token', {
+  token: token
+});
 
 socket.on('token-not-valid', function(data) {
   // return to Home page
@@ -50,35 +85,3 @@ socket.on('match-found', function(data) {
   // Redirect the player to the matching room
   $(location).attr('href', '/match/' + data.token.substr(0, 32));
 });
-$('#begin_match').click(function() {
-  socket.emit('find-match', {token : token})
-});
-$('#my-deck-list').click(function() {
-  var index = $('#my-deck-list').index(this);
-  $.ajax({
-    url : '/match',
-    data  : {
-      'token' : token,
-      'deck_id' : index
-    },
-    type : 'POST'
-  }).success (function (data) {
-    var d = JSON.parse(data);
-    if(d.id) {
-      $('#user_id').text(d.id);
-      var deck_info = d.selected_deck;
-      var str = '';
-      for(var i = 0; i < deck_info.cards.length / 2; i ++) {
-        str += '<div>' + deck_info.cards[2 * i];
-        var num = parseInt(deck_info.cards[2 * i + 1]);
-        if(num > 1) str += ' x ' + num;
-        str += '</div>'
-      }
-      $('#my-deck-card-info').html(str);
-    } else {
-      // Not a valid token!!
-      // redirect to Home
-      $(location).attr('href', '/');
-    }
-  });
-})

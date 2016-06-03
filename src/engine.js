@@ -2382,8 +2382,7 @@ Engine.prototype.start_match = function() {
   this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
 };
 Engine.prototype.chk_win_or_lose = function() {
-  this.is_game_finished = false;
-  
+  this.is_game_finished = false;  
   // Draw!
   if (this.p1.hero.current_life <= 0 && this.p2.hero.current_life <= 0) {
     this.is_game_finished = true;

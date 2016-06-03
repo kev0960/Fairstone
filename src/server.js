@@ -220,12 +220,114 @@ app.get('/deckbuild', function(req, res) {
     root: __dirname
   });
 });
+app.post('/deckbuild/done', function(req, res) {
+  var token = req.body.token;
+  var card_deck = JSON.parse(req.body.current_deck);
+  var job = req.body.job;
+  var deck_name = req.body.deck_name;
+
+  if (!card_deck || !job) return;
+
+
+  function convert(deck) {
+    var arr = [];
+    for (var i = 0; i < deck.length; i++) {
+      arr.push(deck[i].name);
+      arr.push(deck[i].num);
+    }
+    return arr;
+  }
+
+  function chk_deck_validity(deck, job) {
+    card_db.init_implemented(card_manager.implemented_card_list());
+    var list = card_db.get_implemented_list();
+    var num = 0;
+    for (var i = 0; i < deck.length; i++) {
+      var card_found = false;
+      for (var j = 0; j < list.length; j++) {
+        if (list[j].name == deck[i].name && !list[j].is_token) {
+          if (list[j].job != 'neutral' && list[j].job != job) return false;
+          if (list[j].num > 2 || list[j].num <= 0) return false;
+          if (list[j].level == 'legendary' && list[j].num > 1) return false;
+          card_found = true;
+        }
+      }
+      if (!card_found) return false;
+    }
+    return true;
+  }
+
+  console.log("Deck name :: ", deck_name);
+  jwt.verify(token, hearth_secret, function(card_deck, job, deck_name) {
+    return function(err, decoded) {
+      if (err) {
+        res.send(JSON.stringify({
+          src: ''
+        }));
+      }
+      else {
+        var total_cards = 0;
+        for (var i = 0; i < card_deck.length; i++) {
+          total_cards += card_deck[i].num;
+        }
+
+        if (total_cards != 30) {
+          res.send(JSON.stringify({
+            result: 'fail'
+          }));
+          return;
+        }
+
+        if (!chk_deck_validity(card_deck, job)) {
+          res.send(JSON.stringify({
+            result: 'fail'
+          }));
+          return;
+        }
+        r.table('user').get(decoded.id).update(function(row) {
+          return {
+            deck_list: row('deck_list').filter(
+              function(deck) {
+                return deck('name').ne(deck_name);
+              })
+          }
+        }).run(r_con, function(err, res) {
+          console.log(err);
+          console.log(res);
+
+          r.table('user').get(decoded.id).update({
+            deck_list: r.row('deck_list').append({
+              name: deck_name,
+              job: job,
+              cards: convert(card_deck)
+            })
+          }).run(r_con, function(err, result) {
+            console.log(result);
+          });
+        });
+
+        /*
+        r.table('user').get(decoded.id).update({
+          deck_list: r.row('deck_list').append({
+            name: 'New Deck',
+            job: job,
+            cards: convert(card_deck)
+          })
+        }).run(r_con, function(err, result) {
+          console.log(result);
+        });
+        */
+      }
+    };
+  }(card_deck, job, deck_name));
+  console.log('Received :: DONE ');
+});
 app.post('/deckbuild/:job/:id', function(req, res) {
   var job = req.params.job;
   var id = req.params.id;
   var token = req.body.token;
 
-
+  console.log('Received :: ', job, ' id : ', id);
   card_db.init_implemented(card_manager.implemented_card_list());
   jwt.verify(token, hearth_secret, function(job, id) {
     return function(err, decoded) {
@@ -240,15 +342,21 @@ app.post('/deckbuild/:job/:id', function(req, res) {
         for (var i = 0; i < list.length; i++) {
           if (list[i].job == job.toLowerCase() && !list[i].is_token) {
             if (num == id) {
-              console.log('SEND ::', list[i].name);
+              console.log('SEND ::', list[i].name, ' job : ', job, ' id : ', id);
               res.send(JSON.stringify({
-                img_url: list[i].img
+                img_url: list[i].img,
+                name: list[i].name,
+                info: list[i].info,
+                job: list[i].job
               }));
               return;
             }
             num++;
           }
         }
+        res.send(JSON.stringify({
+          img_url: ''
+        }));
       }
     };
   }(job, id));
@@ -383,7 +491,7 @@ function UserManager() {
           }],
           match: []
         }], {
-          conflict: 'error' // Do not insert if same thing already exists
+          conflict: 'update' // Do not insert if same thing already exists
         }).run(r_con, function(err, result) {
           if (err) throw err;
           console.log(JSON.stringify(result, null, 2));
