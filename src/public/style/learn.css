@@ -2,7 +2,9 @@
  * Globals
  */
 
-
+a {
+  color : black;
+}
 /* Custom default button */
 .btn-default,
 .btn-default:hover,

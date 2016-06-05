@@ -47,6 +47,8 @@ HearthAPI.prototype.get_card_db = function() {
 
         var t = data[collection][i].type;
         if (t === 'Minion' || t === 'Weapon' || t === 'Spell' || t === 'Hero Power') {
+          if(t == 'Hero Power') t = 'hero_power';
+          
           var c = data[collection][i];
 
           if (!c.cost) {
@@ -101,6 +103,7 @@ module.exports = {
     else if (name === 'Starfall') search = 'NEW1_007';
     else if (name === 'Raven Idol') search = 'LOE_115';
     else if (name === 'Druid of the Claw') search = 'EX1_165';
+    else if (name === 'Living Roots') search = 'AT_037';
 
     for (var i = 0; i < hearth_api.card_db.length; i++) {
       if (hearth_api.card_db[i].name == search || hearth_api.card_db[i].unique == search) {

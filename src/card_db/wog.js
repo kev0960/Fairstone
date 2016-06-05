@@ -662,7 +662,7 @@
 
                 if (arr.length) {
                   var lucky = rand(arr);
-                  me.owner.hand_card(lucky.card_data.unique);
+                  me.owner.hand_card(lucky.unique);
                   me.owner.deck.remove_card(lucky);
                 }
               }
@@ -897,7 +897,7 @@
                 if (mine.length) {
                   var lucky = rand(mine);
                   me.owner.hand.remove_card(lucky);
-                  me.owner.summon_card(lucky.card_data.unique, me.owner.field.get_pos(me) + 1);
+                  me.owner.summon_card(lucky.unique, me.owner.field.get_pos(me) + 1);
                 }
               }
             }, 'turn_end', me);
@@ -1347,7 +1347,7 @@
                 var lucky = rand(me.owner.engine.find_card_cond(function(c) {
                   if (c.job == me.owner.job && !c.is_token) return true;
                 }));
-                me.owner.hand_card(lucky.card_data.unique, 1);
+                me.owner.hand_card(lucky.unique, 1);
               }
             }, 'deathrattle', me);
           }
@@ -2397,7 +2397,7 @@
               if (e.card == me) {
                 if (me.owner.enemy.deck.num_card()) {
                   var lucky = rand(me.owner.enemy.deck.card_list);
-                  me.owner.hand_card(lucky.card_data.unique, 1);
+                  me.owner.hand_card(lucky.unique, 1);
                 }
               }
             }, 'deathrattle', me);

@@ -2,6 +2,9 @@
  * Globals
  */
 
+a {
+  color : black;
+}
 
 /* Custom default button */
 
@@ -180,7 +183,13 @@ Deck Builder
 .job-info > ul > li {
   list-style-type: none;
   display: table-cell;
+  cursor : pointer;
 }
+
+.select-job:hover {
+  background-color:aqua;
+}
+
 
 #job-cards {
   display: none;

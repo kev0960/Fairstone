@@ -1,7 +1,9 @@
 /*
  * Globals
  */
-
+a {
+  color : black;
+}
 
 /* Custom default button */
 .btn-default,
@@ -129,6 +131,13 @@ body {
 .num-card {
   float : right;
   color : green;
+}
+
+#begin_match {
+  width : 80%;
+  height : 100%;
+  padding-top : 15px;
+  padding-bottom : 15px;
 }
 /*
  * Affix and center

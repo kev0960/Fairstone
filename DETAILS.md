@@ -33,7 +33,7 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 
 # Implementation Details
     
-## 하수인이 카드를 내는 방식 
+## 하수인 카드를 내는 방식 
 
 현재 하수인 카드 내는 방식은 Hearthstone wiki 의 [Advanced rulebook](http://hearthstone.gamepedia.com/Advanced_rulebook) 을 참조하였습니다.
 
