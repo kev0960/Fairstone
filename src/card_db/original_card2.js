@@ -339,7 +339,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -396,7 +397,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -572,7 +574,8 @@
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
           if (me.owner.max_mana >= 10) {
             me.owner.hand_card('Excess Mana');
-          } else me.owner.boosted_mana += 1;
+          }
+          else me.owner.boosted_mana += 1;
 
           end_spell(me);
         });
@@ -614,7 +617,7 @@
                 }
                 return d;
               };
-            }, 'dmg', me);
+            }(me.owner.engine.current_turn), 'dmg', me);
           }
 
           me.owner.add_hero_dmg(2);
@@ -642,27 +645,35 @@
     },
     'Swipe': {
       on_play: function(me, forced_target, random_target) {
-        me.owner.play_success(me, -1,
-          function(me) {
-            if (me.target) {
-              var target = me.owner.enemy.get_all_character([], function(c) {
-                if (c == me.target) return false;
-                return true;
-              });
+        me.owner.select_one(me, function(c) {
+            if (c.owner != me.owner) return true;
+          },
+          function select_success(me) { 
+            me.owner.play_success(me, -1,
+              function(me) {
+                if (me.target) {
+                  var target = me.owner.enemy.get_all_character([], function(c) {
+                    if (c == me.target) return false;
+                    return true;
+                  });
 
-              var dmg = [];
-              for (var i = 0; i < target.length; i++) {
-                dmg.push(me.spell_dmg(1));
+                  var dmg = [];
+                  for (var i = 0; i < target.length; i++) {
+                    dmg.push(me.spell_dmg(1));
+                  }
+
+                  target.push(me.target);
+                  dmg.push(me.spell_dmg(4));
+
+                  me.owner.deal_dmg_many(dmg, me, target);
+                }
+                end_spell(me);
               }
-
-              target.push(me.target);
-              dmg.push(me.spell_dmg(4));
-
-              me.owner.deal_dmg_many(dmg, me, target);
-            }
-            end_spell(me);
-          }
-        );
+            );
+          },
+          nothing,
+          forced_target, 
+          random_target);
       }
     },
     'Starfire': {
@@ -735,7 +746,8 @@
                 }
                 end_spell(me);
               });
-            } else if (choice == 1) {
+            }
+            else if (choice == 1) {
               me.owner.play_success(me, -1, function(me, non_bc, bc) {
                 me.owner.summon_card('Panther', 10);
                 end_spell(me);
@@ -781,7 +793,8 @@
                 nothing,
                 forced_target,
                 random_target);
-            } else if (choice == 1) {
+            }
+            else if (choice == 1) {
               me.owner.select_one(me, function(c) {
                   if (c.card_data.type == 'minion') return true;
                 }, function select_success(me) {
@@ -842,7 +855,8 @@
                 nothing,
                 forced_target,
                 random_target);
-            } else if (choice == 1) {
+            }
+            else if (choice == 1) {
               me.owner.select_one(me, function(c) {
                   if (c.card_data.type == 'minion') return true;
                 }, function select_success(me) {
@@ -893,7 +907,7 @@
           for (var i = 0; i < target.length; i++) {
             me.owner.engine.g_handler.add_handler(function(e, me, target) {
               if (e.card == target) {
-                me.owner.summon_card('Treant', target.last_position);
+                me.owner.summon_card('EX1_158t', target.last_position);
               }
             }, 'deathrattle', me, false, false, target[i]);
           }
@@ -901,42 +915,52 @@
         });
       }
     },
+    'EX1_158t': { // Treant
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
     'Druid of the Claw': {
       on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Cat Form', 'Bear Form'], function(me, at) {
-            return function(choice) {
-              if (choice == 0) { // Cat Form
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.make_charge(me);
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 1) { // Bear Form
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(2), 'life', me);
-                    me.current_life += 2;
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 2) {
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(2), 'life', me);
-                    me.current_life += 2;
-                    me.make_charge(me);
-                  }
-                  end(me, non_bc, bc);
-                });
-              }
-            };
-          }(me, at),
-          nothing,
-          false,
-          forced_choose);
-        } else {
+              return function(choice) {
+                if (choice == 0) { // Cat Form
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.make_charge(me);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 1) { // Bear Form
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.add_state(inc(2), 'life', me);
+                      me.current_life += 2;
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 2) {
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.add_state(inc(2), 'life', me);
+                      me.current_life += 2;
+                      me.make_charge(me);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+              };
+            }(me, at),
+            nothing,
+            false,
+            forced_choose);
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -991,7 +1015,8 @@
                   nothing,
                   false
                 );
-              } else if (choice == 1) {
+              }
+              else if (choice == 1) {
                 me.owner.select_one(me,
                   function(c) {
                     if (c.card_data.type == 'minion') return true;
@@ -1007,7 +1032,8 @@
                   nothing,
                   false
                 );
-              } else if (choice == 2) {
+              }
+              else if (choice == 2) {
                 me.owner.select_one(me,
                   function(c) {
                     if (c.card_data.type == 'minion') return true;
@@ -1029,7 +1055,8 @@
             nothing,
             false,
             forced_choose);
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1056,7 +1083,8 @@
                 nothing,
                 forced_target,
                 random_target);
-            } else if (choice == 1) {
+            }
+            else if (choice == 1) {
               me.owner.play_success(me, -1, function(me, non_bc, bc) {
                 var target = me.owner.enemy.get_all_character([me.owner.hero]);
                 var dmg = [];
@@ -1112,7 +1140,8 @@
                 if (me.owner.current_mana > 10) me.owner.current_mana = 10;
                 end_spell(me);
               });
-            } else if (choice == 1) {
+            }
+            else if (choice == 1) {
               me.owner.play_success(me, -1, function(me, non_bc, bc) {
                 me.owner.draw_cards(3);
                 end_spell(me);
@@ -1149,38 +1178,41 @@
       on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Uproot', 'Rooted'], function(me, at) {
-            return function(choice) {
-              if (choice == 0) { // Cat Form
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(5), 'dmg', me);
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 1) { // Bear Form
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(5), 'life', me);
-                    me.current_life += 5;
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 2) {
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.add_state(inc(5), 'life', me);
-                    me.current_life += 5;
-                    me.add_state(inc(5), 'dmg', me);
-                  }
-                  end(me, non_bc, bc);
-                });
-              }
-            };
-          }(me, at),
-          nothing,
-          false,
-          forced_choose);
-        } else {
+              return function(choice) {
+                if (choice == 0) { // Cat Form
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.add_state(inc(5), 'dmg', me);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 1) { // Bear Form
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.add_state(inc(5), 'life', me);
+                      me.current_life += 5;
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 2) {
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.add_state(inc(5), 'life', me);
+                      me.current_life += 5;
+                      me.add_state(inc(5), 'dmg', me);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+              };
+            }(me, at),
+            nothing,
+            false,
+            forced_choose);
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1191,54 +1223,57 @@
       on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Ancient Teachings', 'Ancient Secrets'], function(me, at) {
-            return function(choice) {
-              if (choice == 0) { // Cat Form
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    me.owner.draw_cards(1);
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 1) { // Bear Form
-                me.owner.select_one(me,
-                  function(c) {
-                    return true;
-                  },
-                  function() {
-                    me.owner.play_success(me, at, function(me, non_bc, bc) {
-                      if (non_bc && me.target) { // Choose One Effects are not BATTLECRY
-                        me.owner.heal(5, me, me.target);
-                      }
-                      end(me, non_bc, bc);
-                    });
-                  },
-                  function() {},
-                  false
-                );
-              } else if (choice == 2) {
-                me.owner.select_one(me,
-                  function(c) {
-                    return true;
-                  },
-                  function() {
-                    me.owner.play_success(me, at, function(me, non_bc, bc) {
-                      if (non_bc && me.target) {
-                        me.owner.heal(5, me, me.target);
-                        me.owner.draw_cards(1);
-                      }
-                      end(me, non_bc, bc);
-                    });
-                  },
-                  function() {},
-                  false
-                );
-              }
-            };
-          }(me, at),
-          nothing,
-          false,
-          forced_choose);
-        } else {
+              return function(choice) {
+                if (choice == 0) { // Cat Form
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      me.owner.draw_cards(1);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 1) { // Bear Form
+                  me.owner.select_one(me,
+                    function(c) {
+                      return true;
+                    },
+                    function() {
+                      me.owner.play_success(me, at, function(me, non_bc, bc) {
+                        if (non_bc && me.target) { // Choose One Effects are not BATTLECRY
+                          me.owner.heal(5, me, me.target);
+                        }
+                        end(me, non_bc, bc);
+                      });
+                    },
+                    function() {},
+                    false
+                  );
+                }
+                else if (choice == 2) {
+                  me.owner.select_one(me,
+                    function(c) {
+                      return true;
+                    },
+                    function() {
+                      me.owner.play_success(me, at, function(me, non_bc, bc) {
+                        if (non_bc && me.target) {
+                          me.owner.heal(5, me, me.target);
+                          me.owner.draw_cards(1);
+                        }
+                        end(me, non_bc, bc);
+                      });
+                    },
+                    function() {},
+                    false
+                  );
+                }
+              };
+            }(me, at),
+            nothing,
+            false,
+            forced_choose);
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1259,52 +1294,55 @@
       on_play: function(me, bc, user_play, at, forced_choose) {
         if (user_play) {
           me.owner.choose_one(me, ['Demigod\'s Favor', 'Shan\'do\'s Lesson'], function(me, at) {
-            return function(choice) {
-              if (choice == 0) {
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    var target = me.owner.get_all_character([me.owner.hero, me]);
-                    for (var i = 0; i < target.length; i++) {
-                      target[i].add_state(inc(2), 'dmg', me);
-                      target[i].add_state(inc(2), 'life', me);
-                      target[i].current_life += 2;
+              return function(choice) {
+                if (choice == 0) {
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      var target = me.owner.get_all_character([me.owner.hero, me]);
+                      for (var i = 0; i < target.length; i++) {
+                        target[i].add_state(inc(2), 'dmg', me);
+                        target[i].add_state(inc(2), 'life', me);
+                        target[i].current_life += 2;
+                      }
                     }
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 1) {
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    var pos = me.owner.field.get_pos(me);
-                    me.owner.summon_card('EX1_573t', pos + 1);
-                    me.owner.summon_card('EX1_573t', pos + 2);
-                  }
-                  end(me, non_bc, bc);
-                });
-              } else if (choice == 2) {
-                me.owner.play_success(me, at, function(me, non_bc, bc) {
-                  if (non_bc) {
-                    var pos = me.owner.field.get_pos(me);
-                    me.owner.summon_card('EX1_573t', pos + 1);
-                    me.owner.summon_card('EX1_573t', pos + 2, false,
-                      function(c) {
-                        var target = me.owner.get_all_character([me.owner.hero, me]);
-                        for (var i = 0; i < target.length; i++) {
-                          target[i].add_state(inc(2), 'dmg', me);
-                          target[i].add_state(inc(2), 'life', me);
-                          target[i].current_life += 2;
-                        }
-                      });
-                  }
-                  end(me, non_bc, bc);
-                });
-              }
-            };
-          }(me, at),
-          nothing,
-          false,
-          forced_choose);
-        } else {
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 1) {
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      var pos = me.owner.field.get_pos(me);
+                      me.owner.summon_card('EX1_573t', pos + 1);
+                      me.owner.summon_card('EX1_573t', pos + 2);
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+                else if (choice == 2) {
+                  me.owner.play_success(me, at, function(me, non_bc, bc) {
+                    if (non_bc) {
+                      var pos = me.owner.field.get_pos(me);
+                      me.owner.summon_card('EX1_573t', pos + 1);
+                      me.owner.summon_card('EX1_573t', pos + 2, false,
+                        function(c) {
+                          var target = me.owner.get_all_character([me.owner.hero, me]);
+                          for (var i = 0; i < target.length; i++) {
+                            target[i].add_state(inc(2), 'dmg', me);
+                            target[i].add_state(inc(2), 'life', me);
+                            target[i].current_life += 2;
+                          }
+                        });
+                    }
+                    end(me, non_bc, bc);
+                  });
+                }
+              };
+            }(me, at),
+            nothing,
+            false,
+            forced_choose);
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1381,7 +1419,8 @@
                 if (me.target) {
                   if (me.target == me.owner.hero || me.target == me.owner.enemy.hero) {
                     me.target.owner.add_hero_dmg(3, me);
-                  } else {
+                  }
+                  else {
                     me.target.add_state(function(t) {
                       return function(d, c) {
                         if (c.owner.engine.current_turn == t) return d + 3;
@@ -1472,7 +1511,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1515,7 +1555,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -1840,7 +1881,8 @@
                     end_spell(me);
                   });
                   me.owner.deal_dmg(me.spell_dmg(1), me, me.target);
-                } else end_spell(me);
+                }
+                else end_spell(me);
               }
             );
           },
@@ -2374,7 +2416,11 @@
             me.owner.play_success(me, -1,
               function(me) {
                 if (me.target) {
-                  me.target.add_state(function(d) { return function() { return d;};}(me.target.current_life), 'dmg', me);
+                  me.target.add_state(function(d) {
+                    return function() {
+                      return d;
+                    };
+                  }(me.target.current_life), 'dmg', me);
                 }
                 end_spell(me);
               }
@@ -2439,7 +2485,7 @@
         }
       }
     },
-    'Hunter\'s Mask': {
+    'Hunter\'s Mark': {
       on_play: function(me, forced_target, random_target) {
         me.owner.select_one(me, function(c) {
             if (c.card_data.type == 'minion') return true;
@@ -2485,10 +2531,10 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.enigne.g_aura.add_aura(function(d, c, me) {
+            me.owner.enigne.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c.card_data.kind == 'beast') return d + 1;
               return d;
-            })
+            }, 'dmg', me)
           }
           end(me, non_bc, bc);
         });
@@ -2527,10 +2573,10 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.enigne.g_aura.add_aura(function(d, c, me) {
+            me.owner.enigne.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c.card_data.type == 'minion') return d + 1;
               return d;
-            })
+            }, 'dmg', me)
           }
           end(me, non_bc, bc);
         });
@@ -2586,7 +2632,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -2642,7 +2689,7 @@
         me.owner.play_success(me, -1,
           function(me) {
             me.owner.g_handler.add_handler(function(e, me) {
-              if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
+              if (e.who.owner == me.owner.enemy && e.who.card_data.type == 'minion' &&
                 me.owner.engine.current_player != me.owner) {
                 me.owner.hand_card(e.card.card_data.unique, function(c) {
                   c.add_state(inc(2), 'mana', me);
@@ -3178,7 +3225,8 @@
                 if (me.target) {
                   if (me.owner.turn_card_play.length >= 2) {
                     me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
-                  } else me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
+                  }
+                  else me.owner.deal_dmg(me.spell_dmg(2), me, me.target);
                 }
                 end_spell(me);
               }
@@ -3225,7 +3273,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -3263,7 +3312,8 @@
                 if (bc && me.target) {
                   if (me.owner.turn_card_play.length >= 2) {
                     me.owner.deal_dmg(2, me, me.target);
-                  } else {
+                  }
+                  else {
                     me.owner.deal_dmg(1, me, me.target);
                   }
                 }
@@ -3273,7 +3323,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -3298,7 +3349,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -3338,7 +3390,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.g_handler.add_handler(function(e, me) {
-              if(e.attacker == me && e.victim.card_data.type == 'minion') {
+              if (e.attacker == me && e.victim.card_data.type == 'minion') {
                 me.owner.instant_kill(me, e.victim);
               }
             }, 'take_dmg', me);
@@ -3366,7 +3418,8 @@
             function() {},
             false
           );
-        } else {
+        }
+        else {
           me.owner.play_success(me, at, function(me, non_bc, bc) {
             end(me, non_bc, bc);
           });
@@ -3398,9 +3451,9 @@
       if (card_do[name]) return true;
       return false;
     },
-    get_card_names : function() {
-      if(!card_names.length) {
-        for(var x in card_do) {
+    get_card_names: function() {
+      if (!card_names.length) {
+        for (var x in card_do) {
           card_names.push(x);
         }
       }

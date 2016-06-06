@@ -47,8 +47,6 @@ HearthAPI.prototype.get_card_db = function() {
 
         var t = data[collection][i].type;
         if (t === 'Minion' || t === 'Weapon' || t === 'Spell' || t === 'Hero Power') {
-          if(t == 'Hero Power') t = 'hero_power';
-          
           var c = data[collection][i];
 
           if (!c.cost) {
@@ -58,10 +56,10 @@ HearthAPI.prototype.get_card_db = function() {
           if (!c.durability) {
             c.durability = 0;
           }
-          
+
           hearth_api.card_db.push({
             name: c.name.replace('\\', ''),
-            type: c.type.toLowerCase(),
+            type: (c.type.toLowerCase() === 'hero power' ? 'hero_power' : c.type.toLowerCase() ),
             level: (c.rarity ? c.rarity.toLowerCase() : null),
             kind: (c.race ? c.race.toLowerCase() : null),
             job: (c.playerClass ? c.playerClass.toLowerCase() : 'neutral'),

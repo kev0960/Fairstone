@@ -305,6 +305,39 @@
         });
       }
     },
+    'Sir Finley Mrrgglton': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if (bc) {
+            var avail_list = ['Life Tap', 'Silver Hand Recruit', 'Lesser Heal', 'Shapeshift', 'Fireblast',
+                         'Armor Up!', 'Steady Shot', 'Totemic Call', 'Dagger Mastery'];
+            var jobs = ['warlock', 'paladin', 'priest', 'druid', 'mage', 'warrior', 'hunter', 'shaman', 'rogue'];
+            
+            for(var i = 0; i < jobs.length; i ++) {
+              if(me.owner.hero.card_data.job == jobs[i]) {
+                avail_list.splice(i, 1); break;
+              }
+            }
+            
+            avail_list = rand(avail_list, 3);
+            me.owner.choose_one(me, avail_list,
+              function(choice) {
+                me.owner.change_hero_power(avail_list[choice]);
+                end(me, non_bc, bc);
+              },
+              nothing,
+              true,
+              false,
+              false,
+              null,
+              null);
+          }
+          else {
+            end(me, non_bc, bc);
+          }
+        });
+      }
+    },
     'Brann Bronzebeard': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {

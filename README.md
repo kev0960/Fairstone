@@ -1,7 +1,7 @@
 # 흙스스톤 - Fairstone #
 
 흙스스톤은 본인과 같은 하스스톤에 과금할 생각이 없는 사람들을 위한 하스스톤 서버로, 모든 사용자들이 자유롭게 모든 카드들을
-이용할 수 있도록 하는 것을 목표로 합니다. 또한, 등급전 보다 좀 더 실질적으로 내 등급을 알려주기 위해 MMR 을 기반으로 한 매칭을
+이용할 수 있도록 하는 것을 목표로 합니다. 또한, 등급전 보다 좀 더 정확한 내 등급을 알려주기 위해 MMR 을 기반으로 한 매칭을
 수행하며, 특히 각 직업 별 MMR 을 따로 기록 해서, Rank Match 에서 승률이 낮은 직업을 사용하더라도, 그 직업을 플레이 
 하는 사람 들 중에서 내가 얼마나 돋보이는지를 평가할 수 있게 하였습니다. 
 
@@ -12,7 +12,7 @@
 
 기존 하스스톤 클라이언트와는 달리 더욱 편리한 덱 구성 UI 를 제공하며, 저장할 수 있는 덱의 개수도 50 개로 거의 제한이 없다고
 볼 수 있습니다. 또한 기존에 하스스톤 클라이언트에 Deck Tracker 를 설치해야만 볼 수 있었던 여러가지 정보들을 웹 화면에서 기본
-으로 제공하고, 또 승률 또한 기본으로 Record 하기 때문에 좀 더 편리한 매치를 즐길 수 있습니다.
+으로 제공하고, 또 승률 또한 기본으로 기록 하기 때문에 좀 더 편리한 매치를 즐길 수 있습니다.
 
 This Hearthstone server - Fairstone aims people like me who are not willing to buy the cards for the real Hearthstone. We want
 every player to play in a same condition by providing them entire collections of Hearthstone cards. Also, we want to measure
@@ -36,7 +36,9 @@ page.
 ## Basic Info ##
 
 This Hearthstone Server - Fairstone is based on Node.js and Express engine. It uses Socket.io to communicate between
-the server and a client. Entire source is purely written in Javascript. 
+the server and a client. Entire source is purely written in Javascript (Now considering porting to Typescript). 
+
+We are using RethinkDB as a database which will record all of the matches and user information. 
 
 All of source files are located in /src folder.
 
@@ -46,7 +48,11 @@ Download the Fairstone source files
 
 `git clone https://kev0960@bitbucket.org/kev0960/hearthstone-server.git`
 
-Start the server
+You first need to start RethinkDB server so that Fairstone server can connect to. 
+
+`rethinkdb --no-http-admin`
+
+Start the server (You may need to install npm dependencies too)
 
 `npm start`
 
@@ -55,6 +61,7 @@ As the server starts, card_api will automatically download the latest Hearthston
 ## Current Progress ##
 
 As of April 24 '16, Most of the neutral original cards are created (total 178)
+As of June 6 '16, All of the Original, The Grant Tournament, League of the Explorers, Whispers of the Old Gods cards are created (total ~700)
 
 ## Admin Commands ##
 

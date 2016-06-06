@@ -506,7 +506,7 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
 // select_one 작동 개요 설명
 // 일단 select_cond 에 부합하는 후보들을 데이터로 하여서, socket 으로 'select-one' 소켓을 
 // 전송하게 된다. 그리고 해당 player 의 selection_waiting 를 on 시킨다.
-// 이 소켓을 client 에서 수신하게 된다면 'selected-done' 이라는 소켓을 보내게 되는데
+// 이 소켓을 client 에서 수신하게 된다면 'selected-done' 이라는 소켓에 보내게 되는데
 // 만일 해당 Player 의 selection_waiting 가 on 되어 있다면, 결과에 따라 이에 대응하는
 // success 함수, 혹은 fail 함수를 호출하면 된다.
 // 참고로 force_target 의 경우 이 것이 설정되어 있다면 target 을 유저로 부터 받는게
@@ -655,12 +655,12 @@ Player.prototype.hand_card = function(unique, n, after_hand, force) {
   }
 };
 // Draw n cards from a deck
-Player.prototype.draw_cards = function(n, after_draw, done) {
+Player.prototype.draw_cards = function(n, after_draw, who, done) {
   if(!n) n = 1;
   if(!done) done = 0;
   
   if(done < n) {
-    this.g_handler.add_callback(this.draw_cards, this, [n, after_draw, done + 1]);
+    this.g_handler.add_callback(this.draw_cards, this, [n, after_draw, who, done + 1]);
     
     if (this.deck.num_card() == 0) {
       this.exhaust_dmg = this.exhaust_dmg > 8 ? 8 : this.exhaust_dmg + 1;
@@ -687,10 +687,11 @@ Player.prototype.draw_cards = function(n, after_draw, done) {
     this.hand.put_card(c, 10);
 
     if (after_draw) {
-      this.g_handler.add_callback(after_draw, this, [c]);
+      this.g_handler.add_callback(after_draw, this, [c, who]);
     }
 
-    this.g_handler.add_event(new Event('draw_card', [c, this]));
+    if(who) this.g_handler.add_event(new Event('draw_card', [c, who]));
+    else  this.g_handler.add_event(new Event('draw_card', [c, this.hero]));
   }
   this.g_handler.execute();
 };
@@ -745,7 +746,7 @@ Player.prototype.play_success = function(c, at, next) {
   // if the status of card is already specified as 'field',
   // then this means that the minion is not summoning by user card play
   // but forcefully summoned
-  if (c.status == 'field') {
+  if (c.status == 'field' && c.card_data.type != 'hero_power') {
     this.g_handler.add_callback(this.summon_phase, this, [c]);
 
     // only turn on non-battlecry stuff (어치파 bc phase 로 들어갈 일은 없다)
@@ -1465,7 +1466,7 @@ Player.prototype.use_hero_power = function() {
   var default_max = 1;
   for (var i = 0; i < this.engine.g_aura.length; i++) {
     if (this.engine.g_aura[i].state == 'hero_power_num') {
-      default_max = this.engine.g_aura[i].f(default_max, this, this.engine.g_aura[i].me);
+      default_max = this.engine.g_aura[i].f(default_max, this.hero_power, this.engine.g_aura[i].who);
     }
   }
   
@@ -2424,7 +2425,8 @@ Engine.prototype.start_match = function() {
   this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
 };
 Engine.prototype.chk_win_or_lose = function() {
-  this.is_game_finished = false;
+  if(this.is_game_finished) return ;
+  
   // Draw!
   if (this.p1.hero.current_life <= 0 && this.p2.hero.current_life <= 0) {
     this.is_game_finished = true;
@@ -2512,7 +2514,7 @@ Engine.prototype.end_turn = function() {
   this.current_player.current_mana = Math.floor(this.current_turn / 2) + 1 + this.current_player.boosted_mana;
   if (this.current_player.current_mana > 10) this.current_player.current_mana = 10;
 
-  this.max_mana = this.current_player.current_mana;
+  this.current_player.max_mana = this.current_player.current_mana;
 
   // Apply overloaded mana deduction
   this.current_player.current_mana -= this.current_player.next_overload_mana;

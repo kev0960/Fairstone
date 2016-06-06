@@ -1,24 +1,24 @@
 # Some Notes
 
-** Heroku 설정 **
+## Heroku 설정 
 
 1) heroku create
 2) git push heroku 하면 설정된 곳으로 push
 3) heroku git:remote -a sleepy-ravine-57378
 
-** c9.io Node.js server 주소 **
+## c9.io Node.js server 주소 
 
 http://hearthstoneserver.jaebumlee.c9users.io/
 
 
-** 서버 관련 알아야 될 사항들 **
+## 서버 관련 알아야 될 사항들
 
 1) Json web token 의 경우 (id) 를 인자로 가진다 (user_id 가 아니다!!)
 2) 기본적으로 인증 방식은 일단 웹 페이지를 load 한 뒤에, AJAX 호출로 유저를 verify 한 후에
    그에 따른 정보를 로드하게 된다.
 
 
-** 매치 서버 구현 방식 요약 **
+## 매치 서버 구현 방식 요약 
 
 1) Queue 가 잡히면 현재 /match 에 listen 중인 socket 에 match-found socket 을 보낸다.
    그 socket 에는 현재 생성된 match 의 64 자리 (hex) 의 match-token 과 상대방 ID 정보가 들어가있다.

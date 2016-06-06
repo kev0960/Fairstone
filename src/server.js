@@ -470,10 +470,19 @@ function UserManager() {
           nickname: "Jaebum the Legendary Hearthstone Player",
           mmr: 1000,
           deck_list: [{
-            name: '법사 덱',
-            job: 'mage',
-            cards: ['Fireball', 2, 'Kobold Geomancer', 2, 'Bluegill Warrior', 2, 'Mortal Coil', 2, 'Abusive Sergeant', 2, 'Hellfire', 2, 'Tinkmaster Overspark', 2,
-              'Murloc Tidehunter', 2, 'Ironfur Grizzly', 2, 'Succubus', 2, 'Sunfury Protector', 2, 'Coldlight Oracle', 2, 'Questing Adventurer', 2
+            name: '전사 덱',
+            job: 'warrior',
+            cards: ['Execute', 2, 'N\'Zoth\'s First Mate', 1, 'Battle Rage', 2, 'Cleave', 1, 'Cruel Taskmaster', 2, 'Fiery War Axe', 2,
+              'Slam', 2, 'Ravaging Ghoul', 2, 'Arathi Weaponsmith', 2, 'Bloodhoof Brave', 2, 'Kor\'kron Elite', 2, 'Acidic Swamp Ooze', 2,
+              'Loot Hoarder', 2, 'Acolyte of Pain', 2, 'Shattered Sun Cleric', 2, 'Gurubashi Berserker', 2
+            ]
+          }, {
+            name: '미드렌지 냥꾼',
+            job: 'hunter',
+            cards: ['Fiery Bat', 2, 'Hunter\'s Mark', 2, 'Freezing Trap', 1, 'King\'s Elekk', 2, 'Animal Companion', 2, 'Eaglehorn Bow', 2,
+              'Kill Command', 2, 'Unleash the Hounds', 2, 'Houndmaster', 2, 'Infested Wolf', 2, 'Princess Huhuran', 1, 'Savannah Highmane', 2,
+              'Call of the Wild', 2, 'Huge Toad', 2, 'Harrison Jones', 1, 'Stampeding Kodo', 1, 'Sylvanas Windrunner', 1, 'Ragnaros the Firelord', 1,
+              'Tundra Rhino', 2
             ]
           }],
           match: []
@@ -483,10 +492,17 @@ function UserManager() {
           nickname: "Jaebum the Legendary Hearthstone Player",
           mmr: 1000,
           deck_list: [{
-            name: '냥꾼 덱',
-            job: 'hunter',
+            name: '흑마 덱',
+            job: 'warlock',
             cards: ['Emperor Thaurissan', 2, 'Elven Archer', 2, 'Murloc Raider', 2, 'Magma Rager', 2, 'Leper Gnome', 2, 'Ysera', 2, 'Big Game Hunter', 2,
               'Raid Leader', 2, 'Shattered Sun Cleric', 2, 'Chillwind Yeti', 2, 'Knife Juggler', 2, 'Alarm-o-Bot', 2, 'Mind Control Tech', 2, 'Doomhammer', 2
+            ]
+          }, {
+            name: '토큰드루',
+            job: 'druid',
+            cards: ['Innervate', 2, 'Living Roots', 2, 'Raven Idol', 2, 'Power of the Wild', 2, 'Wild Growth', 2, 'Wrath', 2, 'Feral Rage', 1,
+              'Mulch', 1, 'Savage Roar', 1, 'Fandral Staghelm', 1, 'Mire Keeper', 2, 'Swipe', 2, 'Nourish', 2, 'Wisps of the Old Gods', 2, 'Cenarius', 1,
+              'Bloodmage Thalnos', 1, 'Violet Teacher', 2, 'Yogg-Saron, Hope\'s End', 1
             ]
           }],
           match: []

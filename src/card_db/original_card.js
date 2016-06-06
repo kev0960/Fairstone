@@ -48,7 +48,7 @@
       on_play: function(me) {
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
           me.owner.deal_dmg(2, me, me.owner.hero);
-          me.owner.draw_cards(1);
+          me.owner.draw_cards(1, null, me);
         });
       }
     },
@@ -82,7 +82,7 @@
           forced_target); // if forced_target is enabled then we don't make user to choose
       }
     },
-    'Shape Shift': {
+    'Shapeshift': {
       on_play: function(me) {
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
           me.owner.turn_dmg.dmg += 1;
@@ -137,7 +137,7 @@
               if (e.who == me.owner) {
                 var target = me.owner.get_all_character([me.owner.hero]);
 
-                var arr = []
+                var arr = [];
                 for (var i = 0; i < target.length; i++) {
                   arr.push(1);
                 }
@@ -358,6 +358,18 @@
     'Bloodfen Raptor': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
+          end(me, non_bc, bc);
+        });
+      }
+    },
+    'Acidic Swamp Ooze': {
+      on_play: function(me, bc, user_play, at) {
+        me.owner.play_success(me, at, function(me, non_bc, bc) {
+          if(bc) {
+            if(me.owner.enemy.weapon) {
+              me.owner.enemy.weapon_dec_durability(me.owner.enemy.weapon.current_life, this.hero);
+            }
+          }
           end(me, non_bc, bc);
         });
       }
@@ -1717,7 +1729,7 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (bc) {
             var target = me.owner.enemy.get_all_character([me.owner.enemy.hero], function(c) {
-              if (c.dmg() == 2) return true;
+              if (c.dmg() <= 2) return true;
             });
             if (target.length) me.owner.instant_kill(me, rand(target));
           }
