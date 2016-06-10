@@ -11,7 +11,6 @@ Kirin Tor Mage -> 다음에 소환되는 것에 대한 정보 없음
 Unbound Elemental -> HearthAPI Mechanics 를 분석해서 카드 정보를 card_data 에 카드 정보를 넣었어야 함
 Sense Demons -> 아직 Deck 에서 직접 핸드로 가져오는거 없음
 Bane of Doom -> 무작위 카드 추출하는 함수 없음
-Sir Finley Mrrgglton -> 영능 Discover 구현 필요
 썩은지느러미 심문관 -> 영능 바꾸는 것 구현 필요
 Renounce Darkness -> 영능 바꾸는 것 없음!
 초갈
@@ -20,3 +19,4 @@ Fencing Coach -  '다음 번에'..
 모고르의 용사 - 50% 확률로 
 Master of Ceremonies -> 수정할 필요가 있다!!
 Sideshow Spelleater
+Poisoned Blade

@@ -417,6 +417,10 @@ function Player(player_name, job, engine) {
   // C'Thun Buffs
   this.cthun_dmg_buff = 0;
   this.cthun_life_buff = 0;
+  
+  // User Play Stacks
+  // (애니메이션이 끝나기 전에 여러가지 행동을 하는 경우 이 stack 에 저장된다)
+  this.user_play_stack = []; 
 }
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.aura.length; i++) {
