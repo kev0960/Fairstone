@@ -9,7 +9,8 @@ var jwt = require('jsonwebtoken');
 var flash = require('connect-flash');
 var crypto = require('crypto');
 var r = require('rethinkdb');
-
+const unirest = require('unirest');
+const fs = require('fs');
 const hearth_secret = 'hearth-server-secret';
 
 const hearth_game = require('./engine.js');
@@ -367,6 +368,32 @@ app.get('/match', function(req, res) {
     root: __dirname
   });
 });
+
+var supported_card_images = [];
+app.get('/card-image/:class/:card', function(req, res) {
+  var class_name = req.params.class;
+  var card = req.params.card;
+  console.log('IMG REQ :: ' + class_name, card);
+  for(var i = 0; i < supported_card_images.length; i ++) {
+    if(supported_card_images[i] == card) {
+      res.sendFile('/public/cards/' + class_name + '/' + card, { root : __dirname });
+      return;
+    }
+  }
+  
+  // If not found, search for it
+  unirest.get('http://wow.zamimg.com/images/hearthstone/cards/enus/' + class_name + '/' + card).encoding('binary').end(function(result) {
+    fs.writeFile(__dirname + '/public/cards/' + class_name + '/' + card, result.raw_body, 'binary', function(err) {
+      if(err) {
+        console.log('error :: ', err);
+        return;
+      }
+      supported_card_images.push(card);
+      res.sendFile('/public/cards/' + class_name + '/' + card, { root : __dirname });
+    });
+  });
+  
+})
 
 // 유저가 match room 에 GET 요청을 보내면 그 즉시, 이 위치에 대한
 // socket listener 를 등록한다.
