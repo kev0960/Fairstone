@@ -49,10 +49,18 @@ function HearthCard(unique, id, owner, name, mana, health, dmg, img_src, state, 
   this.x = 0;
   this.y = 0;
 
-  // UI Related
+  /* 
+  
+  UI Related properties
+  
+  */
+
+  // Only used for mulligun
   this.bitmap = null;
   this.real_img = false;
   this.offset = 0;
+
+  this.display = null;
 
   // Location of the card where it is selected
   this.sel_x = 0;
@@ -70,6 +78,19 @@ Deck.prototype.add_card = function(c) {
 }
 Deck.prototype.num_card = function() {
   return this.card_list.length;
+}
+
+function DisplayCard(c) {
+  this.c = c; // Refering card
+
+  this.bitmap = null;
+  this.load_img_name = ''; // Name of the image to load
+
+  this.real_img = false;
+  this.offset = 0;
+
+  // Check whether event handler is registered
+  this.eh_registered = false;
 }
 
 function Hearthstone() {
@@ -104,9 +125,17 @@ function Hearthstone() {
   this.stage.enableMouseOver(20);
 
   this.my_field_cont = new createjs.Container();
+  this.my_fields = [];
+
   this.my_hand_cont = new createjs.Container();
+  this.my_hands = [];
+
   this.enemy_field_cont = new createjs.Container();
+  this.enemy_fields = [];
+
   this.enemy_hand_cont = new createjs.Container();
+  this.enemy_hands = [];
+
   this.center_cont = new createjs.Container();
 
   this.stage.addChild(this.my_field_cont);
@@ -118,6 +147,12 @@ function Hearthstone() {
   // Screen Info 
   this.my_hand_y = 300;
   this.enemy_hand_y = 100;
+
+  this.my_field_cont.y = 400;
+  this.my_hand_cont.y = 300;
+
+  this.enemy_field_cont.y = 200;
+  this.enemy_hand_cont.t = 0;
 
   // UI
   this.selected_card = null;
@@ -159,9 +194,9 @@ Hearthstone.prototype.init = function() {
   // Initialize UI
   this.stage.addEventListener('pressmove', function(h) {
     return function(e) {
-      if (h.selected_card) {
-        h.selected_card.bitmap.x = e.stageX - h.selected_card.sel_x;
-        h.selected_card.bitmap.y = e.stageY - h.selected_card.sel_y;
+      if (h.selected_card && h.selected_card.where == 'hand') {
+        h.selected_card.display.bitmap.x = e.stageX - h.selected_card.sel_x;
+        h.selected_card.display.bitmap.y = e.stageY - h.selected_card.sel_y;
 
         h.stage.update();
       }
@@ -169,18 +204,173 @@ Hearthstone.prototype.init = function() {
   }(this));
 }
 Hearthstone.prototype.draw_field = function() {
+  var num_my_card = 0;
+  var num_enemy_card = 0;
   for (var i = 0; i < this.cards.num_card(); i++) {
-    if (this.card_list.owner == 'me') {
-      var img = hearth_resource.get_img(this.card_list[i].unique, this.card_list[i].img_src).img;
-      if (img) {
-        this.card_list[i].bitmap = new createjs.Bitmap(img);
+    if (this.cards.card_list[i].where == 'field') {
+      if (this.cards.card_list[i].owner == 'me') {
+        num_my_card++;
+      }
+      else {
+        num_enemy_card++;
+      }
+    }
+  }
 
+  var mine = -1,
+    enemy = -1;
+
+  for (var i = 0; i < this.cards.num_card(); i++) {
+    if (this.cards.card_list[i].where != 'field') continue;
+
+    var c = this.cards.card_list[i];
+    if (c.owner == 'me') mine++;
+    else if (c.owner == 'enemy') enemy++;
+
+    var deg = 0;
+    var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
+      return function() {
+        h.draw_field();
+      }
+    }(this));
+
+    var display = null;
+    var new_display = false;
+
+    // Check whether there are available slot for DisplayCard
+    if (c.owner == 'me') {
+      if (this.my_fields.length <= mine) {
+        this.my_fields.push(new DisplayCard(c));
+        new_display = true;
+      }
+      else {
+        this.my_fields[mine].c = c;
+      }
+      display = this.my_fields[mine];
+    }
+    else if (c.owner == 'enemy') {
+      if (this.enemy_fields.length <= enemy) {
+        this.enemy_fields.push(new DisplayCard(c));
+        new_display = true;
+      }
+      else {
+        this.enemy_fields[enemy].c = c;
+      }
+      display = this.enemy_fields[enemy];
+    }
+
+    c.display = display;
+
+    console.log('Display : ', display, ' card? ', c);
+
+    if (img) {
+      // 처음으로 이미지를 등록하는 순간 
+      if (!display.real_img || (display.load_img_name != c.unique)) {
+        display.bitmap.removeAllEventListeners();
+
+        if (c.owner == 'me') {
+          var res = this.my_field_cont.removeChild(display.bitmap);
+          console.log('removed? ', res);
+          console.log(this.my_field_cont.children);
+        }
+        else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
+
+        display.bitmap = new createjs.Bitmap(img.img);
+        display.real_img = true;
+        display.load_img_name = c.unique;
+        display.eh_registered = false;
+
+        var mask = new createjs.Shape(new createjs.Graphics().f("#000").drawEllipse(0, 0, 170, 230));
+        display.bitmap.mask = mask;
+
+        if (c.owner == 'me') {
+          this.my_field_cont.addChild(display.bitmap);
+        }
+        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
+      }
+      else {
+        continue; // if it is not first time registering the image, then we don't have to do process below
       }
     }
     else {
+      if (!display.real_img && !display.bitmap) {
+        // Replace image with white blank
+        display.bitmap = new createjs.Shape();
+        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 150, 200)
 
+        if (c.owner == 'me') this.my_field_cont.addChild(display.bitmap);
+        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
+      }
+      // when the image is changed but changed image is not found
+      // We first erase the previous image and replace with the blank image
+      else if (display.load_img_name != c.unique) {
+        display.bitmap.removeAllEventListeners();
+        display.eh_registered = false;
+        display.real_img = false;
+
+        if (c.owner == 'me') {
+          this.my_field_cont.removeChild(display.bitmap);
+        }
+        else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
+
+        // Replace image with white blank
+        display.bitmap = new createjs.Shape();
+        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 160, 210)
+
+        if (c.owner == 'me') this.my_field_cont.addChild(display.bitmap);
+        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
+      }
+      else continue; // when the blank image is already registered
     }
+
+    // If Event handlers are already registered
+    if (display.eh_registered) return;
+    if (display.real_img) display.eh_registered = true;
+
+    if (c.owner == 'me') {
+      display.bitmap.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300;
+      display.offset = mine;
+      
+      if(display.bitmap.mask) {
+        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
+        display.bitmap.mask.y = 58;
+      }
+    }
+    else {
+      display.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 100 + enemy * 300;
+      display.offset = enemy;
+      
+      if(display.bitmap.mask) {
+        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + enemy * 300 + 50;
+      }
+    }
+
+    display.bitmap.addEventListener('mouseover', function(c, h) {
+      return function(e) {
+        // When hovers on the field minion, shows the card info
+        h.current_hover = c;
+
+        h.stage.update();
+      }
+    }(c, this));
+
+    display.bitmap.addEventListener('mouseout', function(c, h) {
+      return function(e) {
+        if (h.current_hover == c) {
+          h.current_hover = null;
+        }
+
+        h.stage.update();
+      }
+    }(c, this));
+    display.bitmap.addEventListener('mousedown', function(c, h) {
+      return function(e) {
+        h.selected_card = c;
+        console.log('Selected :: ', c);
+      };
+    }(c, this));
   }
+  this.stage.update();
 }
 Hearthstone.prototype.draw_hand = function() {
   var num_my_card = 0;
@@ -196,11 +386,16 @@ Hearthstone.prototype.draw_hand = function() {
     }
   }
 
-  var mine = 0,
-    enemy = 0;
+  var mine = -1,
+    enemy = -1;
 
   for (var i = 0; i < this.cards.num_card(); i++) {
+    if (this.cards.card_list[i].where != 'hand') continue;
+
     var c = this.cards.card_list[i];
+    if (c.owner == 'me') mine++;
+    else if (c.owner == 'enemy') enemy++;
+
     var deg = 0;
     var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
       return function() {
@@ -208,64 +403,118 @@ Hearthstone.prototype.draw_hand = function() {
       }
     }(this));
 
+    var display = null;
+    var new_display = false;
 
-    // Choose Image to display. 
-    var new_bitmap = false;
-    if (img) {
-      if (!c.real_img) {
-        // Remove dummy image
-        if (c.bitmap) {
-          c.bitmap.removeAllEventListeners();
-          if (c.owner == 'me') {
-            var res = this.my_hand_cont.removeChild(c.bitmap);
-          }
-          else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(c.bitmap);
-        }
-        img.img.crossOrigin = 'Anonymous'
-        c.bitmap = new createjs.Bitmap(img.img);
-        c.real_img = true;
-        new_bitmap = true;
+    // Check whether there are available slot for DisplayCard
+    if (c.owner == 'me') {
+      if (this.my_hands.length <= mine) {
+        this.my_hands.push(new DisplayCard(c));
+        new_display = true;
       }
       else {
-        return; // if it is not first time registering the image, then we don't have to do process below
+        this.my_hands[mine].c = c;
+      }
+      display = this.my_hands[mine];
+    }
+    else if (c.owner == 'enemy') {
+      if (this.enemy_hands.length <= enemy) {
+        this.enemy_hands.push(new DisplayCard(c));
+        new_display = true;
+      }
+      else {
+        this.enemy_hands[enemy].c = c;
+      }
+      display = this.enemy_hands[enemy];
+    }
+
+    c.display = display;
+
+    console.log('Display : ', display, ' card? ', c);
+
+    if (img) {
+      // 처음으로 이미지를 등록하는 순간 
+      if (!display.real_img || (display.load_img_name != c.unique)) {
+        display.bitmap.removeAllEventListeners();
+
+        if (c.owner == 'me') {
+          var res = this.my_hand_cont.removeChild(display.bitmap);
+          console.log('removed? ', res);
+          console.log(this.my_hand_cont.children);
+        }
+        else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
+
+        display.bitmap = new createjs.Bitmap(img.img);
+        display.real_img = true;
+        display.load_img_name = c.unique;
+        display.eh_registered = false;
+
+        if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
+        else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
+      }
+      else {
+        continue; // if it is not first time registering the image, then we don't have to do process below
       }
     }
     else {
-      if (!c.real_img && !c.bitmap) {
+      if (!display.real_img && !display.bitmap) {
         // Replace image with white blank
-        c.bitmap = new createjs.Shape();
-        c.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150)
-        new_bitmap = true;
+        display.bitmap = new createjs.Shape();
+        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150)
+
+        if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
+        else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
       }
-      else return; // when the blank image is already registered
+      // when the image is changed but changed image is not found
+      // We first erase the previous image and replace with the blank image
+      else if (display.load_img_name != c.unique) {
+        display.bitmap.removeAllEventListeners();
+        display.eh_registered = false;
+        display.real_img = false;
+
+        if (c.owner == 'me') {
+          var res = this.my_hand_cont.removeChild(display.bitmap);
+          console.log('removed? ', res);
+          console.log(this.my_hand_cont.children);
+        }
+        else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
+
+        // Replace image with white blank
+        display.bitmap = new createjs.Shape();
+        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150)
+
+        if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
+        else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
+      }
+      else continue; // when the blank image is already registered
     }
+
+    // If Event handlers are already registered
+    if (display.eh_registered) return;
+    if (display.real_img) display.eh_registered = true;
 
     // Rotate a image a bit. 
     if (c.owner == 'me') {
-      c.bitmap.rotation = -30 + (60 / num_my_card) * mine;
-      c.bitmap.x = 400 - Math.floor(num_my_card / 2) * 100 + mine * 100;
-      c.bitmap.y = this.my_hand_y;
-      c.offset = mine;
-      mine++;
+      display.bitmap.rotation = -30 + (60 / num_my_card) * mine;
+      display.bitmap.x = 400 - Math.floor(num_my_card / 2) * 100 + mine * 100;
+      display.offset = mine;
     }
     else {
-      c.bitmap.rotation = -30 + (60 / num_enemy_card) * enemy;
-      c.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 100 + enemy * 100;
-      c.bitmap.y = this.enemy_hand_y;
-      c.offset = enemy;
-      enemy++;
+      display.bitmap.rotation = -30 + (60 / num_enemy_card) * enemy;
+      display.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 100 + enemy * 100;
+      display.offset = enemy;
     }
 
-    c.prev_rot = c.bitmap.rotation;
-    c.bitmap.addEventListener('mouseover', function(c, h) {
+    c.prev_rot = display.bitmap.rotation;
+    display.bitmap.addEventListener('mouseover', function(c, h) {
       return function(e) {
         if (h.current_hover) {
           // If two cards overlaps, select the one that has higher offset
           if (h.current_hover.offset < c.offset) {
             // Revert previously hovered card to a orignal state
-            h.current_hover.bitmap.rotation = h.current_hover.prev_rot;
-            h.current_hover.bitmap.scaleX = 1;
-            h.current_hover.bitmap.scaleY = 1;
+            h.current_hover.display.bitmap.rotation = h.current_hover.prev_rot;
+            h.current_hover.display.bitmap.scaleX = 1;
+            h.current_hover.display.bitmap.scaleY = 1;
 
             h.current_hover = c;
             h.stage.update();
@@ -275,59 +524,55 @@ Hearthstone.prototype.draw_hand = function() {
         else {
           h.current_hover = c;
         }
-        c.prev_rot = c.bitmap.rotation;
-        c.bitmap.rotation = 0;
+        c.prev_rot = c.display.bitmap.rotation;
+        c.display.bitmap.rotation = 0;
 
-        c.bitmap.scaleX = 1.5;
-        c.bitmap.scaleY = 1.5;
+        c.display.bitmap.scaleX = 1.2;
+        c.display.bitmap.scaleY = 1.2;
 
         h.stage.update();
       }
     }(c, this));
 
-    c.bitmap.addEventListener('mouseout', function(c, h) {
+    display.bitmap.addEventListener('mouseout', function(c, h) {
       return function(e) {
         if (h.current_hover == c) {
           h.current_hover = null;
         }
 
-        c.bitmap.rotation = c.prev_rot;
-        c.bitmap.scaleX = 1;
-        c.bitmap.scaleY = 1;
+        c.display.bitmap.rotation = c.prev_rot;
+        c.display.bitmap.scaleX = 1;
+        c.display.bitmap.scaleY = 1;
 
         h.stage.update();
       }
     }(c, this));
 
-    c.bitmap.addEventListener('mousedown', function(c, h) {
+    display.bitmap.addEventListener('mousedown', function(c, h) {
       return function(e) {
         // Click is only available for a current hovering object
         if (h.current_hover && h.current_hover == c) {
           h.selected_card = c;
-          h.selected_card.sel_x = e.stageX - h.selected_card.bitmap.x;
-          h.selected_card.sel_y = e.stageY - h.selected_card.bitmap.y;
+          h.selected_card.sel_x = e.stageX - h.selected_card.display.bitmap.x;
+          h.selected_card.sel_y = e.stageY - h.selected_card.display.bitmap.y;
         }
       };
     }(c, this));
-
-    if (c.owner == 'me') this.my_hand_cont.addChild(c.bitmap);
-    else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(c.bitmap);
   }
   this.stage.update();
 };
 
 Hearthstone.prototype.test = function() {
-  var c1 = new HearthCard('ooze', 1, 'me', 'Ooze', 2, 3, 2, '/acidic swamp ooze.jpg', [], 'hand');
-  var c2 = new HearthCard('some', 2, 'me', 'some', 2, 3, 2, '/card-image/original/CS2_221.png', [], 'hand');
+  var c1 = new HearthCard('ooze', 1, 'me', 'Ooze', 2, 3, 2, '/acidic swamp ooze.jpg', [], 'field');
+  var c2 = new HearthCard('some', 2, 'me', 'some', 2, 3, 2, '/card-image/original/CS2_221.png', [], 'field');
 
   hearth_resource.reg_img('ooze', '/acidic swamp ooze.jpg');
   hearth_resource.reg_img('some', '/card-image/original/CS2_221.png');
-  this.center_cards.add_card(c1);
-  this.center_cards.add_card(c2);
+  this.cards.add_card(c1);
+  this.cards.add_card(c2);
   c1.offset = 0;
   c2.offset = 1;
-  this.is_selecting_center = true;
-  this.mulligun();
+  this.draw_field();
 
   this.stage.update();
 };
@@ -352,11 +597,7 @@ Hearthstone.prototype.mulligun = function() {
         // Remove dummy image
         if (c.bitmap) {
           c.bitmap.removeAllEventListeners();
-          if (c.owner == 'me') {
-            var res = this.center_cont.removeChild(c.bitmap);
-            console.log(res)
-          }
-          else if (c.owner == 'enemy') this.center_cont.removeChild(c.bitmap);
+          this.center_cont.removeChild(c.bitmap);
         }
         c.bitmap = new createjs.Bitmap(img.img);
         c.real_img = true;
@@ -376,27 +617,32 @@ Hearthstone.prototype.mulligun = function() {
       else continue; // when the blank image is already registered
     }
 
-    c.bitmap.addEventListener('mousedown', function(c, h) {
-      return function(e) {
-        for (var i = 0; i < h.remove_candidate.length; i++) {
-          if (h.remove_candidate[i] == c.offset) {
-            // Off 
-            h.center_cont.removeChild(c.added_images[0]);
-            h.remove_candidate.splice(i, 1);
-            h.stage.update();
-            return;
-          }
+    var on_mouse_down = function(c) {
+      for (var i = 0; i < this.remove_candidate.length; i++) {
+        if (this.remove_candidate[i] == c.offset) {
+          // Off 
+          c.added_images[0].removeAllEventListeners();
+          this.center_cont.removeChild(c.added_images[0]);
+          this.remove_candidate.splice(i, 1);
+          this.stage.update();
+          return;
         }
-        h.remove_candidate.push(c.offset);
-        var text = new createjs.Text('X', '150px Arial', 'black');
-        c.added_images = [];
-        c.added_images.push(text);
-
-        text.x = c.bitmap.x + 25;
-        text.y = c.bitmap.y + 26;
-        h.center_cont.addChild(text);
-        h.stage.update();
       }
+      this.remove_candidate.push(c.offset);
+      var text = new createjs.Text('X', '250px Arial', 'red');
+      text.addEventListener('mousedown', on_mouse_down.bind(this, c));
+
+      c.added_images = [];
+      c.added_images.push(text);
+
+      text.x = c.bitmap.x + c.bitmap.getBounds().width / 2 - text.getBounds().width / 2;
+      text.y = c.bitmap.y + c.bitmap.getBounds().height / 2 - text.getBounds().height / 2;
+      this.center_cont.addChild(text);
+      this.stage.update();
+    }
+
+    c.bitmap.addEventListener('mousedown', function(c, h) {
+      return on_mouse_down.bind(h, c);
     }(c, this));
 
     c.bitmap.x = 100 + 400 * i;
@@ -456,6 +702,8 @@ Hearthstone.prototype.show_cards = function() {
           id: c.id
         });
         h.center_cards.card_list = []; // Remove center cards
+        h.center_cont.removeAllChildren();
+        h.stage.update();
       }
     }(c, this));
   }
