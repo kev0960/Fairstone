@@ -434,7 +434,7 @@ app.get('/match/:id', function(req, res) {
       }(socket, match_maker));
     });
 
-    res.sendFile('/public/hearth.html', {
+    res.sendFile('/public/hearth_new.html', {
       root: __dirname
     });
   }

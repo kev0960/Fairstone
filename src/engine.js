@@ -2361,6 +2361,8 @@ Engine.prototype.start_match = function() {
   this.p2_socket.emit('choose-starting-cards', {
     cards: this.p2.starting_cards
   });
+  
+  console.log('Choose starting cards emit done')
 
   function remove_some_cards(p, starting_cards, util, num) {
     return function(data) {
