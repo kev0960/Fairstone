@@ -2531,7 +2531,7 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.enigne.add_aura(function(d, c, me) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c.card_data.kind == 'beast') return d + 1;
               return d;
             }, 'dmg', me)
@@ -2573,10 +2573,10 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
-            me.owner.enigne.add_aura(function(d, c, me) {
+            me.owner.engine.add_aura(function(d, c, me) {
               if (c.owner == me.owner && c.card_data.type == 'minion') return d + 1;
               return d;
-            }, 'dmg', me)
+            }, 'dmg', me);
           }
           end(me, non_bc, bc);
         });

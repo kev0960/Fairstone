@@ -1,12 +1,12 @@
 // Whenever the size of the screen changes we have to make sure
 // that the canvas fills the entire screen
 $(window).on('resize', function() {
-  $('#world').width($(window).width())
-  $('#world').height($(window).width())
+  $('#world').width($(window).width());
+  $('#world').height($(window).width());
 })
 
 function Card(id, unique) {
-  this.id = id
+  this.id = id;
   this.unique = unique;
 
   this.card_draw = null;

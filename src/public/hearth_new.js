@@ -9,7 +9,6 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
   // Convert source to server loading version
   var arr = src.split('/');
   src = '/card-image/' + arr[arr.length - 2] + '/' + arr[arr.length - 1];
-  console.log('Reg image source :: ', src);
   img.src = src;
 
   img.onload = function(that) {
@@ -30,9 +29,9 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
         });
       }
       if (call_back) call_back(unique, src, img);
-    }
+    };
   }(this);
-}
+};
 HearthResource.prototype.get_img = function(unique, src, callback) {
   for (var i = 0; i < this.img_list.length; i++) {
     if (this.img_list[i].unique == unique) return this.img_list[i];
@@ -40,7 +39,7 @@ HearthResource.prototype.get_img = function(unique, src, callback) {
 
   // If not found
   this.reg_img(unique, src, true, callback);
-}
+};
 
 var hearth_resource = new HearthResource();
 
@@ -87,10 +86,10 @@ function Deck() {
 }
 Deck.prototype.add_card = function(c) {
   this.card_list.push(c);
-}
+};
 Deck.prototype.num_card = function() {
   return this.card_list.length;
-}
+};
 
 function DisplayCard(c) {
   this.c = c; // Refering card
@@ -127,9 +126,8 @@ function Hearthstone() {
           match_token: match_token,
           user_id: d.id
         });
-        console.log('emit done, match-token :: ', match_token, ' user_id : ', d.id)
       }
-    }
+    };
   }(this.socket, this.match_token));
 
   // List of the cards
@@ -163,10 +161,10 @@ function Hearthstone() {
   this.my_hand_y = 550;
   this.enemy_hand_y = 100;
 
-  this.my_field_cont.y = 400;
+  this.my_field_cont.y = 300;
   this.my_hand_cont.y = this.my_hand_y;
 
-  this.enemy_field_cont.y = 200;
+  this.enemy_field_cont.y = 100;
   this.enemy_hand_cont.x = 0;
 
   // UI
@@ -183,10 +181,12 @@ Hearthstone.prototype.init = function() {
   this.socket.on('hearth-event', function(h) {
     return function(data) {
       if (data.event) {
-
+        console.log('Event :: ', data.event);
       }
 
       h.cards.card_list = []; // Change the entire card list with newly received ones
+
+      console.log('Data is received!', data.card_info);
 
       for (var i = 0; i < data.card_info.length; i++) {
         var c = data.card_info[i];
@@ -208,7 +208,7 @@ Hearthstone.prototype.init = function() {
 
       h.draw_hand();
       h.draw_field();
-    }
+    };
   }(this));
 
   this.socket.on('choose-starting-cards', function(h) {
@@ -252,12 +252,27 @@ Hearthstone.prototype.init = function() {
 
       h.is_selecting_center = true;
       h.mulligun();
-    }
+    };
+  }(this));
+
+  /*
+
+  Register Turn End Button 
+
+  */
+  var end_turn_btn = new createjs.Shape();
+  end_turn_btn.graphics.beginFill('yellow').drawRect(500, 100, 50, 100);
+  this.stage.addChild(end_turn_btn);
+
+  end_turn_btn.addEventListener('click', function(h) {
+    return function() {
+      // Notify the server that the client has ended its turn
+      h.socket.emit('hearth-end-turn', {});
+    };
   }(this));
 
   this.socket.on('new-starting-cards', function(h) {
     return function(data) {
-      console.log('New Starting Cards :: ', data)
       for (var i = 0; i < h.remove_candidate.length; i++) {
         var c = data.cards[i];
         h.center_cards.card_list[h.remove_candidate[i]] = new HearthCard(
@@ -279,7 +294,7 @@ Hearthstone.prototype.init = function() {
 
       h.remove_candidate = [];
       h.mulligun(true);
-    }
+    };
   }(this));
 
   this.socket.on('begin-match', function(h) {
@@ -290,24 +305,23 @@ Hearthstone.prototype.init = function() {
       // When the game is started remove all of the mulligun cards
       for (var i = 0; i < h.center_cards.num_card(); i++) {
         var res = h.center_cont.removeChild(h.center_cards.card_list[i].bitmap);
-        console.log("removed? : ", res);
         h.center_cards.card_list[i].bitmap.removeAllEventListeners();
       }
 
       h.stage.update();
-    }
+    };
   }(this));
 
   // Initialize UI
   this.stage.addEventListener('pressmove', function(h) {
     return function(e) {
-      if (h.selected_card && h.selected_card.where == 'hand') {
+      if (h.selected_card && h.selected_card.where === 'hand') {
         h.selected_card.display.bitmap.x = e.stageX - h.selected_card.sel_x;
         h.selected_card.display.bitmap.y = e.stageY - h.selected_card.sel_y;
 
         h.stage.update();
       }
-    }
+    };
   }(this));
 
   this.stage.addEventListener('pressup', function(h) {
@@ -316,14 +330,14 @@ Hearthstone.prototype.init = function() {
         console.log('Card Dropped AT :: ', e.stageY);
         h.draw_hand();
         // TODO : Change to a field
-        if (e.stageY <= 100) {
+        if (e.stageY <= 150) {
           h.socket.emit('hearth-user-play-card', {
             id: h.selected_card.id,
             at: 0
           });
         }
       }
-    }
+    };
   }(this));
 };
 Hearthstone.prototype.draw_field = function() {
@@ -334,8 +348,7 @@ Hearthstone.prototype.draw_field = function() {
       if (this.cards.card_list[i].owner == 'me') {
         this.cards.card_list[i].offset = num_my_card;
         num_my_card++;
-      }
-      else {
+      } else {
         this.cards.card_list[i].offset = num_enemy_card;
         num_enemy_card++;
       }
@@ -356,7 +369,7 @@ Hearthstone.prototype.draw_field = function() {
     var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
       return function() {
         h.draw_field();
-      }
+      };
     }(this));
 
     var display = null;
@@ -368,19 +381,16 @@ Hearthstone.prototype.draw_field = function() {
         this.my_fields.push(new DisplayCard(c));
         new_display = true;
       }
-      else {
-        this.my_fields[mine].c = c;
-      }
+      this.my_fields[mine].c = c;
+
       display = this.my_fields[mine];
-    }
-    else if (c.owner == 'enemy') {
+    } else if (c.owner == 'enemy') {
       if (this.enemy_fields.length <= enemy) {
         this.enemy_fields.push(new DisplayCard(c));
         new_display = true;
       }
-      else {
-        this.enemy_fields[enemy].c = c;
-      }
+      this.enemy_fields[enemy].c = c;
+
       display = this.enemy_fields[enemy];
     }
 
@@ -389,12 +399,13 @@ Hearthstone.prototype.draw_field = function() {
     if (img) {
       // 처음으로 이미지를 등록하는 순간 
       if (!display.real_img || (display.load_img_name != c.unique)) {
-        display.bitmap.removeAllEventListeners();
+        if (display.bitmap) {
+          display.bitmap.removeAllEventListeners();
 
-        if (c.owner == 'me') {
-          var res = this.my_field_cont.removeChild(display.bitmap);
+          if (c.owner == 'me') {
+            var res = this.my_field_cont.removeChild(display.bitmap);
+          } else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
         }
-        else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
 
         display.bitmap = new createjs.Bitmap(img.img);
         display.real_img = true;
@@ -406,21 +417,18 @@ Hearthstone.prototype.draw_field = function() {
 
         if (c.owner == 'me') {
           this.my_field_cont.addChild(display.bitmap);
-        }
-        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
-      }
-      else {
+        } else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
+      } else {
         continue; // if it is not first time registering the image, then we don't have to do process below
       }
-    }
-    else {
+    } else {
       if (!display.real_img && !display.bitmap) {
         // Replace image with white blank
         display.bitmap = new createjs.Shape();
-        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 150, 200)
+        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 150, 200);
 
-        if (c.owner == 'me') this.my_field_cont.addChild(display.bitmap);
-        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
+        if (c.owner == 'me') this.my_field_cont.addChildAt(display.bitmap, mine);
+        else if (c.owner == 'enemy') this.enemy_field_cont.addChildAt(display.bitmap, enemy);
       }
       // when the image is changed but changed image is not found
       // We first erase the previous image and replace with the blank image
@@ -431,40 +439,20 @@ Hearthstone.prototype.draw_field = function() {
 
         if (c.owner == 'me') {
           this.my_field_cont.removeChild(display.bitmap);
-        }
-        else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
+        } else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
 
         // Replace image with white blank
         display.bitmap = new createjs.Shape();
-        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 160, 210)
+        display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 160, 210);
 
-        if (c.owner == 'me') this.my_field_cont.addChild(display.bitmap);
-        else if (c.owner == 'enemy') this.enemy_field_cont.addChild(display.bitmap);
-      }
-      else continue; // when the blank image is already registered
+        if (c.owner == 'me') this.my_field_cont.addChildAt(display.bitmap, mine);
+        else if (c.owner == 'enemy') this.enemy_field_cont.addChildAt(display.bitmap, enemy);
+      } else continue; // when the blank image is already registered
     }
 
     // If Event handlers are already registered
     if (display.eh_registered) return;
     if (display.real_img) display.eh_registered = true;
-
-    if (c.owner == 'me') {
-      display.bitmap.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300;
-      display.offset = mine;
-
-      if (display.bitmap.mask) {
-        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
-        display.bitmap.mask.y = 58;
-      }
-    }
-    else {
-      display.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 100 + enemy * 300;
-      display.offset = enemy;
-
-      if (display.bitmap.mask) {
-        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + enemy * 300 + 50;
-      }
-    }
 
     display.bitmap.addEventListener('mouseover', function(c, h) {
       return function(e) {
@@ -472,7 +460,7 @@ Hearthstone.prototype.draw_field = function() {
         h.current_hover = c;
 
         h.stage.update();
-      }
+      };
     }(c, this));
 
     display.bitmap.addEventListener('mouseout', function(c, h) {
@@ -482,7 +470,7 @@ Hearthstone.prototype.draw_field = function() {
         }
 
         h.stage.update();
-      }
+      };
     }(c, this));
     display.bitmap.addEventListener('mousedown', function(c, h) {
       return function(e) {
@@ -491,8 +479,49 @@ Hearthstone.prototype.draw_field = function() {
       };
     }(c, this));
   }
+
+  mine = -1, enemy = -1;
+
+  for (var i = 0; i < this.cards.num_card(); i++) {
+    if (this.cards.card_list[i].where != 'field') continue;
+
+    var c = this.cards.card_list[i];
+    var display = c.display;
+
+    if (c.owner == 'me') mine++;
+    else enemy++;
+
+    if (c.owner == 'me') {
+      display.bitmap.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300;
+      display.offset = mine;
+
+      if (display.bitmap.mask) {
+        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
+        display.bitmap.mask.y = 58;
+      }
+    } else {
+      display.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 100 + enemy * 300;
+      display.offset = enemy;
+
+      if (display.bitmap.mask) {
+        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + enemy * 300 + 50;
+      }
+    }
+  }
+
+  while (this.my_fields.length > num_my_card) {
+    this.my_field_cont.removechildAt(num_my_card);
+    this.my_fields.splice(num_my_card, 1);
+  }
+
   this.stage.update();
-}
+};
+
+
+/*
+ * Draw Hand of the user
+ */
+
 Hearthstone.prototype.draw_hand = function() {
   var num_my_card = 0;
   var num_enemy_card = 0;
@@ -500,8 +529,7 @@ Hearthstone.prototype.draw_hand = function() {
     if (this.cards.card_list[i].where == 'hand') {
       if (this.cards.card_list[i].owner == 'me') {
         num_my_card++;
-      }
-      else {
+      } else {
         num_enemy_card++;
       }
     }
@@ -521,7 +549,7 @@ Hearthstone.prototype.draw_hand = function() {
     var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
       return function() {
         h.draw_hand();
-      }
+      };
     }(this));
 
     var display = null;
@@ -533,36 +561,31 @@ Hearthstone.prototype.draw_hand = function() {
         this.my_hands.push(new DisplayCard(c));
         new_display = true;
       }
-      else {
-        this.my_hands[mine].c = c;
-      }
+      this.my_hands[mine].c = c;
       display = this.my_hands[mine];
-    }
-    else if (c.owner == 'enemy') {
+    } else if (c.owner == 'enemy') {
       if (this.enemy_hands.length <= enemy) {
         this.enemy_hands.push(new DisplayCard(c));
         new_display = true;
       }
-      else {
-        this.enemy_hands[enemy].c = c;
-      }
+      this.enemy_hands[enemy].c = c;
       display = this.enemy_hands[enemy];
     }
 
     c.display = display;
 
-    console.log('Display : ', display, ' card? ', c);
 
     if (img) {
       // 처음으로 이미지를 등록하는 순간 
       if (!display.real_img || (display.load_img_name != c.unique)) {
-        if (display.bitmap) display.bitmap.removeAllEventListeners();
+        if (display.bitmap) {
+          display.bitmap.removeAllEventListeners();
 
-        if (c.owner == 'me') {
-          var res = this.my_hand_cont.removeChild(display.bitmap);
+          if (display.c.owner == 'me') {
+            console.log('Remove :: ', this.my_hand_cont.removeChild(display.bitmap));
+            console.log('[what removed :: ', display.c);
+          } else if (display.c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
         }
-        else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
-
         display.bitmap = new createjs.Bitmap(img.img);
         display.bitmap.scaleX = 0.7;
         display.bitmap.scaleY = 0.7;
@@ -571,18 +594,16 @@ Hearthstone.prototype.draw_hand = function() {
         display.load_img_name = c.unique;
         display.eh_registered = false;
 
-        if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
-        else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
-      }
-      else {
+        if (c.owner == 'me') this.my_hand_cont.addChildAt(display.bitmap, mine);
+        else if (c.owner == 'enemy') this.enemy_hand_cont.addChildAt(display.bitmap, enemy);
+      } else {
         continue; // if it is not first time registering the image, then we don't have to do process below
       }
-    }
-    else {
+    } else {
       if (!display.real_img && !display.bitmap) {
         // Replace image with white blank
         display.bitmap = new createjs.Shape();
-        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150)
+        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150);
 
         if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
         else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
@@ -595,22 +616,21 @@ Hearthstone.prototype.draw_hand = function() {
         display.real_img = false;
 
         if (c.owner == 'me') {
-          var res = this.my_hand_cont.removeChild(display.bitmap);
-        }
-        else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
+          var res = this.my_hand_cont.removeChild(display.bitmap); 
+          console.log('is removed:: ? ', res, ' : ', display, ' vs ', c.unique, ' disp name ', display.load_img_name);
+        } else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
 
         // Replace image with white blank
         display.bitmap = new createjs.Shape();
-        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150)
+        display.bitmap.graphics.beginFill('blue').drawEllipse(50, 50, 100, 150);
 
         if (c.owner == 'me') this.my_hand_cont.addChild(display.bitmap);
         else if (c.owner == 'enemy') this.enemy_hand_cont.addChild(display.bitmap);
-      }
-      else continue; // when the blank image is already registered
+      } else continue; // when the blank image is already registered
     }
 
     // If Event handlers are already registered
-    if (display.eh_registered) return;
+    if (display.eh_registered) continue;
     if (display.real_img) display.eh_registered = true;
 
     c.prev_rot = display.bitmap.rotation;
@@ -628,7 +648,7 @@ Hearthstone.prototype.draw_hand = function() {
             h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset);
 
             if (h.current_hover.offset + 1 < h.my_hands.length) {
-              h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.offset + 1], h.current_hover.display.offset + 1);
+              h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.offset + 1].bitmap, h.current_hover.display.offset + 1);
             }
 
             h.current_hover = c;
@@ -637,13 +657,11 @@ Hearthstone.prototype.draw_hand = function() {
             h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.display.offset + 1);
 
             if (h.current_hover.offset + 1 < h.my_hands.length) {
-              h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.display.offset + 1], h.current_hover.display.offset);
+              h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.display.offset + 1].bitmap, h.current_hover.display.offset);
             }
             h.stage.update();
-          }
-          else return;
-        }
-        else {
+          } else return;
+        } else {
           h.current_hover = c;
         }
         c.prev_rot = c.display.bitmap.rotation;
@@ -656,16 +674,16 @@ Hearthstone.prototype.draw_hand = function() {
         h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset + 1);
 
         if (h.current_hover.offset + 1 < h.my_hands.length) {
-          h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.display.offset + 1], h.current_hover.display.offset);
+          h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.display.offset + 1].bitmap, h.current_hover.display.offset);
         }
 
 
-        console.log('Index :: ', h.current_hover.offset, h.my_hand_cont.getChildIndex(h.current_hover.display.bitmap));
+        //  console.log('Index :: ', h.current_hover.offset, h.my_hand_cont.getChildIndex(h.current_hover.display.bitmap));
         if (h.current_hover.offset == -1) {
           console.error('something is wrong', h.current_hover);
         }
         h.stage.update();
-      }
+      };
     }(c, this));
 
     display.bitmap.addEventListener('mouseout', function(c, h) {
@@ -675,7 +693,7 @@ Hearthstone.prototype.draw_hand = function() {
           h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset);
 
           if (h.current_hover.offset + 1 < h.my_hands.length) {
-            h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.offset + 1], h.current_hover.offset + 1);
+            h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.offset + 1].bitmap, h.current_hover.offset + 1);
           }
           h.current_hover = null;
         }
@@ -684,7 +702,7 @@ Hearthstone.prototype.draw_hand = function() {
         c.display.bitmap.scaleX = 0.7;
         c.display.bitmap.scaleY = 0.7;
         h.stage.update();
-      }
+      };
     }(c, this));
 
     display.bitmap.addEventListener('mousedown', function(c, h) {
@@ -704,6 +722,7 @@ Hearthstone.prototype.draw_hand = function() {
 
   console.log('Processed :: ', this.cards.num_card());
   for (var i = 0; i < this.cards.num_card(); i++) {
+    if (this.cards.card_list[i].where != 'hand') continue;
     var c = this.cards.card_list[i];
     var display = c.display;
 
@@ -712,29 +731,39 @@ Hearthstone.prototype.draw_hand = function() {
 
     // Rotate a image a bit. 
     if (c.owner == 'me') {
-      var deg = display.bitmap.rotation = -30 + (60 / (num_my_card - 1)) * mine;
+      display.bitmap.rotation = 0;
+      if(num_my_card >= 2) display.bitmap.rotation = -30 + (60 / (num_my_card - 1)) * mine;
 
       display.bitmap.x = 700 - Math.floor(num_my_card / 2) * 200 + mine * 200;
       display.bitmap.y = 0;
 
       var x = 0;
       var y = 0;
+
       if (display.bitmap.image) {
-        x = display.bitmap.image.width * 0.7
-        y = display.bitmap.image.height * 0.7
+        x = display.bitmap.image.width * 0.7;
+        y = display.bitmap.image.height * 0.7;
       }
+
+      var deg = display.bitmap.rotation;
+      c.prev_rot = deg;
+      
 
       deg = 2 * Math.PI * deg / 360;
       display.bitmap.x += (y * Math.sin(deg) + x * (1 - Math.cos(deg))) / 2;
       display.bitmap.y = -(y * (Math.cos(deg) - 1) + x * Math.sin(deg)) / 2;
 
-      console.log('X :: ', display.bitmap.x, ' Y : ', display.bitmap.y);
-      console.log('x, y, deg, mine', x, y, display.bitmap.rotation, mine);
-
       c.offset = mine;
       display.offset = mine;
-    }
-    else {
+
+      //this.my_hand_cont.setChildIndex(display.bitmap, )
+
+      console.log('Num My Card :: ', num_my_card, 'Deg :: ', display.bitmap.rotation);
+      console.log('Cards :: ', this.cards.card_list);
+      console.log('My Hands :: ', this.my_hands);
+      console.log('Hand Container :: ', this.my_hand_cont.children);
+      console.log('location :: x ', display.bitmap.x, ' y :: ', display.bitmap.y);
+    } else {
       display.bitmap.rotation = -30 + (60 / num_enemy_card) * enemy;
       if (num_enemy_card % 2 == 0 && enemy == num_enemy_card / 2) display.bitmap.rotation += (60 / num_enemy_card);
 
@@ -744,30 +773,25 @@ Hearthstone.prototype.draw_hand = function() {
       display.offset = enemy;
     }
   }
-  
-  for(var i = num_my_card; i < this.my_hands.length; i ++) {
-    this.my_hand_cont.removeChild(this.my_hands[i].bitmap);
-    i --;
+
+  for (var i = num_my_card; i < this.my_hands.length; i++) {
+    var res = this.my_hand_cont.removeChild(this.my_hands[i].bitmap);
+    this.my_hands.splice(i, 1);
+    console.log('Removed :: ', res);
+    i--;
   }
-  
-  this.stage.update();
-};
 
-Hearthstone.prototype.test = function() {
-  var c1 = new HearthCard('ooze', 1, 'me', 'Ooze', 2, 3, 2, '/acidic swamp ooze.jpg', [], 'field');
-  var c2 = new HearthCard('some', 2, 'me', 'some', 2, 3, 2, '/card-image/original/CS2_221.png', [], 'field');
+  var chk = false;
+  for(var i = 0; i < this.my_hands.length; i ++) {
+    if(this.my_hands[i].bitmap != this.my_hand_cont.children[i]) {
+      console.log('NOT EQUAL :: ', i, ' :: ', this.my_hands[i].bitmap, this.my_hand_cont.children[i]);
+    }
+  }
 
-  hearth_resource.reg_img('ooze', '/acidic swamp ooze.jpg');
-  hearth_resource.reg_img('some', '/card-image/original/CS2_221.png');
-  this.cards.add_card(c1);
-  this.cards.add_card(c2);
-  c1.offset = 0;
-  c2.offset = 1;
-  this.draw_field();
+  console.log('------------------------------------');
 
   this.stage.update();
 };
-
 Hearthstone.prototype.begin_match = function() {
 
 };
@@ -781,7 +805,7 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
     var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
       return function() {
         h.mulligun();
-      }
+      };
     }(this));
 
     // Choose Image to display. 
@@ -796,19 +820,16 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
         c.bitmap = new createjs.Bitmap(img.img);
         c.real_img = true;
         new_bitmap = true;
-      }
-      else {
+      } else {
         continue; // if it is not first time registering the image, then we don't have to do process below
       }
-    }
-    else {
+    } else {
       if (!c.real_img && !c.bitmap) {
         // Replace image with white blank
         c.bitmap = new createjs.Shape();
-        c.bitmap.graphics.beginFill('blue').drawRect(0, 0, 100, 150)
+        c.bitmap.graphics.beginFill('blue').drawRect(0, 0, 100, 150);
         new_bitmap = true;
-      }
-      else continue; // when the blank image is already registered
+      } else continue; // when the blank image is already registered
     }
 
     var on_mouse_down = function(c) {
@@ -833,7 +854,7 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
       text.y = c.bitmap.y + c.bitmap.getBounds().height / 2 - text.getBounds().height / 2;
       this.center_cont.addChild(text);
       this.stage.update();
-    }
+    };
 
     if (!no_card_remove) {
       c.bitmap.addEventListener('mousedown', function(c, h) {
@@ -856,7 +877,7 @@ Hearthstone.prototype.show_cards = function() {
     var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
       return function() {
         h.show_cards();
-      }
+      };
     }(this));
 
     // Choose Image to display. 
@@ -868,26 +889,22 @@ Hearthstone.prototype.show_cards = function() {
           c.bitmap.removeAllEventListeners();
           if (c.owner == 'me') {
             var res = this.my_hand_cont.removeChild(c.bitmap);
-          }
-          else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(c.bitmap);
+          } else if (c.owner == 'enemy') this.enemy_hand_cont.removeChild(c.bitmap);
         }
 
         c.bitmap = new createjs.Bitmap(img.img);
         c.real_img = true;
         new_bitmap = true;
+      } else {
+        continue; // if it is not first time registering the image, then we don't have to do process below`
       }
-      else {
-        continue; // if it is not first time registering the image, then we don't have to do process below
-      }
-    }
-    else {
+    } else {
       if (!c.real_img && !c.bitmap) {
         // Replace image with white blank
         c.bitmap = new createjs.Shape();
-        c.bitmap.graphics.beginFill('blue').drawRect(0, 0, 100, 150)
+        c.bitmap.graphics.beginFill('blue').drawRect(0, 0, 100, 150);
         new_bitmap = true;
-      }
-      else continue; // when the blank image is already registered
+      } else continue; // when the blank image is already registered
     }
 
     c.bitmap.addEventListener('mousedown', function(c, h) {
@@ -900,41 +917,9 @@ Hearthstone.prototype.show_cards = function() {
         h.center_cards.card_list = []; // Remove center cards
         h.center_cont.removeAllChildren();
         h.stage.update();
-      }
+      };
     }(c, this));
   }
 };
 
 var hearthstone = new Hearthstone();
-//hearthstone.test();
-
-//var stage = new createjs.Stage(document.getElementById('field'));
-
-/*
-var img = new Image();
-img.onload = function() {
-  var container = new createjs.Container();
-
-  var bitmap = new createjs.Bitmap(img);
-  bitmap.regX = bitmap.regY = 0;
-  bitmap.y = bitmap.x = 0;
-
-  var maskShape = new createjs.Shape(new createjs.Graphics().f("#000").drawEllipse(0, 0, 150, 200));
-  bitmap.mask = maskShape;
-
-  container.addChild(bitmap);
-
-  stage.addChild(container);
-
-  var shape = new createjs.Shape(new createjs.Graphics().drawEllipse(0, 0, 150, 200));
-  //shape.addEventListener('click', function() { alert('hi')});
-
-  bitmap.addEventListener('pressmove', function() {
-    console.log('hi!')
-  })
-
-  stage.enableMouseOver(20);
-  stage.update();
-};
-img.src = 'acidic swamp ooze.jpg';
-*/

@@ -393,7 +393,7 @@ app.get('/card-image/:class/:card', function(req, res) {
     });
   });
   
-})
+});
 
 // 유저가 match room 에 GET 요청을 보내면 그 즉시, 이 위치에 대한
 // socket listener 를 등록한다.
@@ -438,7 +438,7 @@ app.get('/match/:id', function(req, res) {
       root: __dirname
     });
   }
-  else res.redirect('/');
+  else res.redirect('/match');
 });
 
 var server_port = process.env.PORT || 80;

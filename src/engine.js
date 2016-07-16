@@ -116,7 +116,7 @@ Card.prototype.chk_mech = function(mech) {
 };
 Card.prototype.do_action = function(action) {
   this.owner.engine.send_client_minion_action(this.id, action);
-}
+};
 
 Card.prototype.calc_state = function(state, init_value, should_sort) {
   var x = init_value;
@@ -143,7 +143,7 @@ Card.prototype.calc_state = function(state, init_value, should_sort) {
   if (should_sort) {
     // Sort by ascending order
     modifiers.sort(function(a, b) {
-      return a.when > b.when
+      return a.when > b.when;
     });
   }
 
@@ -156,7 +156,7 @@ Card.prototype.dmg = function() {
   var d = this.calc_state('dmg', this.card_data.dmg, false);
   if (d < 0) return 0;
   return d;
-}
+};
 
 // Calculates the maximum possible life point
 // Enchantment has a higher priority over Auras 
@@ -218,7 +218,7 @@ Card.prototype.is_attackable = function() {
 Card.prototype.frozen = function() {
   if (this.is_frozen.until >= this.owner.engine.current_turn) return true;
   return false;
-}
+};
 Card.prototype.stealth = function() {
   if (this.is_stealth.until >= this.owner.engine.current_turn) return true;
   return false;
@@ -255,7 +255,7 @@ Card.prototype.is_good = function() {
     return true;
   }
   return false;
-}
+};
 
 function create_card(id, owner) {
   var cd = card_db.load_card(id);
@@ -686,6 +686,7 @@ Player.prototype.draw_cards = function(n, after_draw, who, done) {
     c.status = 'hand';
     c.id = this.g_id.get_id();
 
+    console.log('Trying to draw :: ', c.card_data.unique, c.card_data.name);    
     if (card.on_draw) card.on_draw(c);
 
     this.hand.put_card(c, 10);
@@ -993,7 +994,7 @@ Player.prototype.forced_combat = function(c, target) {
   this.g_handler.add_callback(this.attack, this, [c]);
 
   this.g_handler.execute();
-}
+};
 Player.prototype.combat = function(c, target) {
   if (!c.is_attackable() // chks whether the attacker has not exhausted its attack chances
     || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
@@ -1447,7 +1448,7 @@ Player.prototype.add_hero_dmg = function(d) {
     this.turn_dmg.turn = this.engine.current_turn;
     this.turn_dmg.dmg = d;
   }
-}
+};
 Player.prototype.hero_dmg = function() {
   var dmg = 0;
   if (this.weapon) {
@@ -1524,7 +1525,7 @@ Player.prototype.joust = function(after_joust) {
   else {
     return false;
   }
-}
+};
 Player.prototype.change_hero_power = function(name) {
   var default_max = 1;
   for (var i = 0; i < this.engine.g_aura.length; i++) {
@@ -2044,7 +2045,7 @@ Handler.prototype.log_event = function(e) {
   console.log(colors.red(s));
 };
 Handler.prototype.do_event = function(e) {
-  this.log_event(e)
+  this.log_event(e);
 
   // Whenever some event is handled, notify it to clients
   this.engine.send_client_data(e);
@@ -2362,7 +2363,7 @@ Engine.prototype.start_match = function() {
     cards: this.p2.starting_cards
   });
   
-  console.log('Choose starting cards emit done')
+  console.log('Choose starting cards emit done');
 
   function remove_some_cards(p, starting_cards, util, num) {
     return function(data) {
