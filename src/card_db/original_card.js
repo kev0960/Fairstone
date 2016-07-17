@@ -2349,7 +2349,7 @@
         });
       }
     },
-    'Ragnaros The Firelord': {
+    'Ragnaros the Firelord': {
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
