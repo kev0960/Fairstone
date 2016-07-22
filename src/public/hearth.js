@@ -466,7 +466,7 @@ function HearthClient() {
 
   this.field_ctx.canvas.width = window.innerWidth;
   this.field_ctx.canvas.height = window.innerHeight;
-
+  
   this.init_field_click();
   this.field_selected = null; // If something is selected, then store the id of that card
 

@@ -3202,7 +3202,7 @@
 
                 var dmg = [];
                 for (var i = 0; i < target.length; i++) {
-                  target.is_frozen.until = me.owner.engine.current_turn + 1;
+                  target[i].is_frozen.until = me.owner.engine.current_turn + 1;
                   dmg.push(me.spell_dmg(1));
                 }
 
