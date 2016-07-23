@@ -2691,7 +2691,7 @@
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.who.owner == me.owner.enemy && e.who.card_data.type == 'minion' &&
                 me.owner.engine.current_player != me.owner) {
-                me.owner.hand_card(e.card.card_data.unique, function(c) {
+                me.owner.hand_card(e.who.card_data.unique, function(c) {
                   c.add_state(inc(2), 'mana', me);
                 });
                 me.status = 'destroyed';
