@@ -311,7 +311,7 @@ function HearthClient() {
           card.mana = src[i].mana;
           card.dmg = src[i].dmg;
           card.name = src[i].name;
-          card.img_path = src[i].img_path
+          card.img_path = src[i].img_path;
           card.state = (src[i].state ? src[i].state : []);
 
           if (!dest.add_card) dest.push(card);

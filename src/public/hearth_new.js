@@ -92,13 +92,15 @@ Deck.prototype.num_card = function() {
 };
 
 function DisplayCard(c) {
-  this.c = c; // Refering card
+  this.c = c; // Referring card
 
   this.bitmap = null;
   this.load_img_name = ''; // Name of the image to load
 
   this.real_img = false;
   this.offset = 0;
+
+  this.added_images = [];
 }
 
 function Hearthstone() {
@@ -154,14 +156,17 @@ function Hearthstone() {
   this.stage.addChild(this.enemy_hand_cont);
   this.stage.addChild(this.center_cont);
 
-  // Screen Info 
-  this.my_hand_y = 580;
+  // Screen Info
+  this.screen_x = $(window).width();
+  this.screen_y = $(window).height();
+
+  this.my_hand_y = 700;
   this.enemy_hand_y = 100;
 
-  this.my_field_cont.y = 300;
+  this.my_field_cont.y = 370;
   this.my_hand_cont.y = this.my_hand_y;
 
-  this.enemy_field_cont.y = 50;
+  this.enemy_field_cont.y = 120;
   this.enemy_hand_cont.x = 0;
 
   // UI
@@ -206,7 +211,7 @@ Hearthstone.prototype.init = function() {
           c.owner,
           c.name,
           c.mana,
-          c.health,
+          c.life,
           c.dmg,
           c.img_path,
           c.state,
@@ -235,7 +240,7 @@ Hearthstone.prototype.init = function() {
           c.owner,
           c.name,
           c.mana,
-          c.health,
+          c.life,
           c.dmg,
           c.img_path,
           c.state,
@@ -260,7 +265,6 @@ Hearthstone.prototype.init = function() {
         for (var i = 0; i < h.remove_candidate.length; i++) {
           // Erasing X mark
           h.center_cont.removeChild(h.center_cards.card_list[h.remove_candidate[i]].added_images[0]);
-
           h.center_cont.removeChild(h.center_cards.card_list[h.remove_candidate[i]].bitmap);
         }
       });
@@ -287,7 +291,7 @@ Hearthstone.prototype.init = function() {
           c.owner,
           c.name,
           c.mana,
-          c.health,
+          c.life,
           c.dmg,
           c.img_path,
           c.state,
@@ -312,7 +316,7 @@ Hearthstone.prototype.init = function() {
 
       h.draw_hand();
       h.draw_field();
-    }
+    };
   }(this));
 
   /*
@@ -321,7 +325,7 @@ Hearthstone.prototype.init = function() {
 
   */
   var end_turn_btn = new createjs.Shape();
-  end_turn_btn.graphics.beginFill('yellow').drawRect(500, 100, 50, 100);
+  end_turn_btn.graphics.beginFill('yellow').drawRect(1000, 100, 150, 50);
   this.stage.addChild(end_turn_btn);
 
   end_turn_btn.addEventListener('click', function(h) {
@@ -341,7 +345,7 @@ Hearthstone.prototype.init = function() {
           c.owner,
           c.name,
           c.mana,
-          c.health,
+          c.life,
           c.dmg,
           c.img_path,
           c.state,
@@ -403,6 +407,7 @@ Hearthstone.prototype.init = function() {
     };
   }(this));
 };
+
 /*
  * 
  * Draw Field
@@ -415,7 +420,7 @@ Hearthstone.prototype.is_selectable = function(c) {
     if (this.selectable_lists[i] == c.id) return true;
   }
   return false;
-}
+};
 Hearthstone.prototype.draw_field = function() {
   var num_my_card = 0;
   var num_enemy_card = 0;
@@ -477,8 +482,14 @@ Hearthstone.prototype.draw_field = function() {
           display.bitmap.removeAllEventListeners();
 
           if (c.owner == 'me') {
-            var res = this.my_field_cont.removeChild(display.bitmap);
+            this.my_field_cont.removeChild(display.bitmap);
           } else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
+        }
+
+        // Remove all of the added images (Life and Health)
+        while (display.added_images.length) {
+          this.stage.removeChild(display.added_images[0]);
+          display.added_images.splice(0, 1);
         }
 
         display.bitmap = new createjs.Bitmap(img.img);
@@ -511,6 +522,12 @@ Hearthstone.prototype.draw_field = function() {
           this.my_field_cont.removeChild(display.bitmap);
         } else if (c.owner == 'enemy') this.enemy_field_cont.removeChild(display.bitmap);
 
+        while (display.added_images.length) {
+          this.stage.removeChild(display.added_images[0]);
+          console.log(display, 'Removed :: ', display.added_images.length);
+          display.added_images.splice(0, 1);
+        }
+
         // Replace image with white blank
         display.bitmap = new createjs.Shape();
         display.bitmap.graphics.beginFill('blue').drawEllipse(0, 0, 160, 210);
@@ -519,7 +536,7 @@ Hearthstone.prototype.draw_field = function() {
         else if (c.owner == 'enemy') this.enemy_field_cont.addChildAt(display.bitmap, enemy);
       }
     }
-    
+
     display.bitmap.removeAllEventListeners();
     display.bitmap.addEventListener('mouseover', function(c, h) {
       return function(e) {
@@ -566,7 +583,7 @@ Hearthstone.prototype.draw_field = function() {
   }
 
   mine = -1, enemy = -1;
-
+  
   for (var i = 0; i < this.cards.num_card(); i++) {
     if (this.cards.card_list[i].where != 'field') continue;
 
@@ -577,33 +594,51 @@ Hearthstone.prototype.draw_field = function() {
     else enemy++;
 
     if (c.owner == 'me') {
-      display.bitmap.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300;
+      display.bitmap.x = this.screen_x / 2 - 150 - Math.floor(num_my_card / 2) * 150 + mine * 300;
       display.offset = mine;
 
       if (display.bitmap.mask) {
-        display.bitmap.mask.x = 400 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
+        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
         display.bitmap.mask.y = 58;
       }
     } else {
-      display.bitmap.x = 400 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300;
+      display.bitmap.x = this.screen_x / 2 - 150 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300;
       display.offset = enemy;
 
       if (display.bitmap.mask) {
-        display.bitmap.mask.x = 400 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300 + 68;
+        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300 + 68;
         display.bitmap.mask.y = 58;
       }
     }
 
-    // Add a filter 
-    console.log(c, c.name, " >> selectable? ", this.is_selectable(c));
+    console.log('Added images :: ', display.added_images);
+    // if text field for Health and Damage are empty, we should add it 
+    if (display.added_images.length == 0) {
+      display.added_images.push(new createjs.Text(c.dmg, "40px Arial", "yellow"));
+      display.added_images.push(new createjs.Text(c.health, "40px Arial", "red"));
 
+      this.stage.addChild(display.added_images[0]);
+      this.stage.addChild(display.added_images[1]);
+    }
+
+    var offset_x = (c.owner == 'me' ? this.my_field_cont.x : this.enemy_field_cont.x);
+    var offset_y = (c.owner == 'me' ? this.my_field_cont.y : this.enemy_field_cont.y);
+
+    display.added_images[0].text = c.dmg;
+    display.added_images[0].x = display.bitmap.x + offset_x + 50;
+    display.added_images[0].y = display.bitmap.y + offset_y + 200;
+
+    display.added_images[1].text = c.health;
+    display.added_images[1].x = display.bitmap.x + offset_x + 200;
+    display.added_images[1].y = display.bitmap.y + offset_y + 200;
+
+    // Add a filter 
     if (!this.is_selectable(c) && this.need_to_select && display.real_img) {
-      console.log("Not Selectable :: ", c);
       display.bitmap.filters = [this.gray_scale];
 
       // We must cache a bitmap in order to set a filter on it
       display.bitmap.cache(0, 0, display.bitmap.getBounds().width, display.bitmap.getBounds().height);
-    } else if(display.real_img && display.bitmap.filters) {
+    } else if (display.real_img && display.bitmap.filters) {
       display.bitmap.filters = [];
       display.bitmap.updateCache();
     }
@@ -611,11 +646,21 @@ Hearthstone.prototype.draw_field = function() {
 
   // Remove outnumbered cards
   while (this.my_fields.length > num_my_card) {
+    while (this.my_fields[num_my_card].added_images.length) {
+      this.stage.removeChild(this.my_fields[num_my_card].added_images[0]);
+      this.my_fields[num_my_card].added_images.splice(0, 1);
+    }
+
     this.my_field_cont.removeChild(this.my_fields[num_my_card].bitmap);
     this.my_fields.splice(num_my_card, 1);
   }
 
   while (this.enemy_fields.length > num_enemy_card) {
+    while (this.enemy_fields[num_enemy_card].added_images.length) {
+      this.stage.removeChild(this.enemy_fields[num_enemy_card].added_images[0]);
+      this.enemy_fields[num_enemy_card].added_images.splice(0, 1);
+    }
+
     this.enemy_field_cont.removeChild(this.enemy_fields[num_enemy_card].bitmap);
     this.enemy_fields.splice(num_enemy_card, 1);
   }
@@ -687,8 +732,7 @@ Hearthstone.prototype.draw_hand = function() {
           display.bitmap.removeAllEventListeners();
 
           if (display.c.owner == 'me') {
-            console.log('Remove :: ', this.my_hand_cont.removeChild(display.bitmap));
-            console.log('[what removed :: ', display.c);
+            this.my_hand_cont.removeChild(display.bitmap);
           } else if (display.c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
         }
         display.bitmap = new createjs.Bitmap(img.img);
@@ -835,7 +879,7 @@ Hearthstone.prototype.draw_hand = function() {
       display.bitmap.rotation = 0;
       if (num_my_card >= 2) display.bitmap.rotation = -30 + (60 / (num_my_card - 1)) * mine;
 
-      display.bitmap.x = 700 - Math.floor(num_my_card / 2) * 200 + mine * 200;
+      display.bitmap.x = this.screen_x / 2 - Math.floor(num_my_card / 2) * 200 + mine * 200;
       display.bitmap.y = 0;
 
       var x = 0;
@@ -1032,3 +1076,9 @@ Hearthstone.prototype.show_cards = function() {
 };
 
 var hearthstone = new Hearthstone();
+
+// Whenever the window resizes, we should adjust the size of the canvas too
+$(window).on('resize', function() {
+  $('#field').width($(window).width());
+  $('#field').height($(window).height());
+});

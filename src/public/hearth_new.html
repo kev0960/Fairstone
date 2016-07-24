@@ -1,15 +1,26 @@
 <html>
 
 <head>
-	<title>New Client</title>
-	<canvas id="field" width="1800" height="1000"></canvas>
-	<script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
-	<script src="/socket.io/socket.io.js"></script>
-	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <title>New Client</title>
+  <canvas id="field" width="1800" height="1000"></canvas>
+  <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
 </head>
 
 <body>
-	<script type="text/javascript" src="/hearth_new.js"></script>
+  <script type="text/javascript" src="/hearth_new.js"></script>
 </body>
+
+<style>
+  { margin: 0; padding: 0; }
+  html {
+    background: url(/field.png) no-repeat center center fixed;  
+    -webkit-background-size: 100%;
+    -moz-background-size: 100%;
+    -o-background-size: 100%;
+    background-size: 100% 100%;
+  }
+</style>
 
 </html>
