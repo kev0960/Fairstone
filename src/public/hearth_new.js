@@ -27,7 +27,7 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
           src: src,
           img: img
         });
-      }
+      } 
       if (call_back) call_back(unique, src, img);
     };
   }(this);
@@ -160,7 +160,7 @@ function Hearthstone() {
   this.screen_x = $(window).width();
   this.screen_y = $(window).height();
 
-  this.my_hand_y = 700;
+  this.my_hand_y = 800;
   this.enemy_hand_y = 100;
 
   this.my_field_cont.y = 370;
@@ -394,7 +394,7 @@ Hearthstone.prototype.init = function() {
         console.log('Card Dropped AT :: ', e.stageY);
         h.draw_hand();
         // TODO : Change to a field
-        if (e.stageY <= 150) {
+        if (e.stageY <= 350) {
           h.socket.emit('hearth-user-play-card', {
             id: h.selected_card.id,
             at: 0
@@ -736,8 +736,8 @@ Hearthstone.prototype.draw_hand = function() {
           } else if (display.c.owner == 'enemy') this.enemy_hand_cont.removeChild(display.bitmap);
         }
         display.bitmap = new createjs.Bitmap(img.img);
-        display.bitmap.scaleX = 0.7;
-        display.bitmap.scaleY = 0.7;
+        display.bitmap.scaleX = 0.5;
+        display.bitmap.scaleY = 0.5;
 
         display.real_img = true;
         display.load_img_name = c.unique;
@@ -786,8 +786,8 @@ Hearthstone.prototype.draw_hand = function() {
           if (h.current_hover.offset < c.offset) {
             // Revert previously hovered card to a orignal state
             h.current_hover.display.bitmap.rotation = h.current_hover.prev_rot;
-            h.current_hover.display.bitmap.scaleX = 1;
-            h.current_hover.display.bitmap.scaleY = 1;
+            h.current_hover.display.bitmap.scaleX = 0.5;
+            h.current_hover.display.bitmap.scaleY = 0.5;
 
             // unhover hovered card
             h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset);
@@ -809,11 +809,13 @@ Hearthstone.prototype.draw_hand = function() {
         } else {
           h.current_hover = c;
         }
+
         c.prev_rot = c.display.bitmap.rotation;
         c.display.bitmap.rotation = 0;
 
-        c.display.bitmap.scaleX = 1;
-        c.display.bitmap.scaleY = 1;
+        c.display.bitmap.scaleX = 0.8;
+        c.display.bitmap.scaleY = 0.8;
+        c.display.bitmap.y -= 150;
 
         // move hovered card into the front
         h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset + 1);
@@ -822,8 +824,6 @@ Hearthstone.prototype.draw_hand = function() {
           h.my_hand_cont.setChildIndex(h.my_hands[h.current_hover.display.offset + 1].bitmap, h.current_hover.display.offset);
         }
 
-
-        //  console.log('Index :: ', h.current_hover.offset, h.my_hand_cont.getChildIndex(h.current_hover.display.bitmap));
         if (h.current_hover.offset == -1) {
           console.error('something is wrong', h.current_hover);
         }
@@ -844,9 +844,10 @@ Hearthstone.prototype.draw_hand = function() {
         }
 
         c.display.bitmap.rotation = c.prev_rot;
-        c.display.bitmap.scaleX = 0.7;
-        c.display.bitmap.scaleY = 0.7;
-        h.stage.update();
+        c.display.bitmap.scaleX = 0.5;
+        c.display.bitmap.scaleY = 0.5;
+
+        h.draw_hand();
       };
     }(c, this));
 
@@ -879,15 +880,15 @@ Hearthstone.prototype.draw_hand = function() {
       display.bitmap.rotation = 0;
       if (num_my_card >= 2) display.bitmap.rotation = -30 + (60 / (num_my_card - 1)) * mine;
 
-      display.bitmap.x = this.screen_x / 2 - Math.floor(num_my_card / 2) * 200 + mine * 200;
+      display.bitmap.x = this.screen_x / 2 - Math.floor(num_my_card / 2) * 130 + mine * 130;
       display.bitmap.y = 0;
 
       var x = 0;
       var y = 0;
 
       if (display.bitmap.image) {
-        x = display.bitmap.image.width * 0.7;
-        y = display.bitmap.image.height * 0.7;
+        x = display.bitmap.image.width * 0.5;
+        y = display.bitmap.image.height * 0.5;
       }
 
       var deg = display.bitmap.rotation;
@@ -913,7 +914,7 @@ Hearthstone.prototype.draw_hand = function() {
       display.bitmap.rotation = -30 + (60 / num_enemy_card) * enemy;
       if (num_enemy_card % 2 == 0 && enemy == num_enemy_card / 2) display.bitmap.rotation += (60 / num_enemy_card);
 
-      display.bitmap.x = 700 - Math.floor(num_enemy_card / 2) * 300 + enemy * 300;
+      display.bitmap.x = 700 - Math.floor(num_enemy_card / 2) * 130 + enemy * 130;
 
       c.offset = enemy;
       display.offset = enemy;
@@ -1050,6 +1051,8 @@ Hearthstone.prototype.show_cards = function() {
         // Replace image with white blank
         c.bitmap = new createjs.Shape();
         c.bitmap.graphics.beginFill('blue').drawRect(0, 0, 100, 150);
+        console.log('Fail loading image, replacing it with bitmap ', c)
+
         new_bitmap = true;
       } else continue; // when the blank image is already registered
     }
