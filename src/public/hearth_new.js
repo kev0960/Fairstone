@@ -27,7 +27,7 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
           src: src,
           img: img
         });
-      } 
+      }
       if (call_back) call_back(unique, src, img);
     };
   }(this);
@@ -376,6 +376,49 @@ Hearthstone.prototype.init = function() {
     };
   }(this));
 
+  /*
+
+     Initialize Heros and its abilities
+
+  */
+  var my_hero_btn = new createjs.Shape();
+  var enemy_hero_btn = new createjs.Shape();
+
+  my_hero_btn.graphics.beginFill('yellow').drawRect(this.screen_x / 2 - 100, this.screen_y - 400, 200, 200);
+  enemy_hero_btn.graphics.beginFill('yellow').drawRect(this.screen_x / 2 - 100, 50, 200, 200);
+
+  var my_hero = new HearthCard('me', 'me');
+  var enemy_hero = new HearthCard('enemy', 'enemy');
+
+  var on_mouse_down = function(c, h) {
+    return function(e) {
+        if (h.need_to_select) {
+          h.socket.emit('select-done', {
+            id: c.id
+          });
+          h.selected_card = null;
+          h.need_to_select = false;
+          h.selectable_lists = [];
+          return;
+        }
+
+        // Cannot attack itself
+        if (h.selected_card && h.selected_card != c) {
+          h.socket.emit('hearth-combat', {
+            from_id: h.selected_card.id,
+            to_id: c.id
+          });
+          h.selected_card = null;
+        } else h.selected_card = c;
+    };
+  };
+
+  my_hero_btn.addEventListener('mousedown', on_mouse_down(my_hero, this));
+  enemy_hero_btn.addEventListener('mousedown', on_mouse_down (enemy_hero, this));
+
+  this.stage.addChild(my_hero_btn);
+  this.stage.addChild(enemy_hero_btn);
+
   // Initialize UI
   this.stage.addEventListener('pressmove', function(h) {
     return function(e) {
@@ -583,7 +626,7 @@ Hearthstone.prototype.draw_field = function() {
   }
 
   mine = -1, enemy = -1;
-  
+
   for (var i = 0; i < this.cards.num_card(); i++) {
     if (this.cards.card_list[i].where != 'field') continue;
 
@@ -921,11 +964,9 @@ Hearthstone.prototype.draw_hand = function() {
     }
   }
 
-  for (var i = num_my_card; i < this.my_hands.length; i++) {
-    var res = this.my_hand_cont.removeChild(this.my_hands[i].bitmap);
-    this.my_hands.splice(i, 1);
-    // console.log('Removed :: ', res);
-    i--;
+  while (num_my_card < this.my_hands.length) {
+    this.my_hand_cont.removeChild(this.my_hands[num_my_card].bitmap);
+    this.my_hands.splice(num_my_card, 1);
   }
 
   var chk = false;
