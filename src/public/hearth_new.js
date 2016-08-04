@@ -539,7 +539,7 @@ Hearthstone.prototype.draw_field = function() {
         display.real_img = true;
         display.load_img_name = c.unique;
 
-        var mask = new createjs.Shape(new createjs.Graphics().f("#000").drawEllipse(0, 0, 170, 230));
+        var mask = new createjs.Shape(new createjs.Graphics().f("#000").drawEllipse(0, 0, 120, 161));
         display.bitmap.mask = mask;
 
         if (c.owner == 'me') {
@@ -641,18 +641,21 @@ Hearthstone.prototype.draw_field = function() {
       display.offset = mine;
 
       if (display.bitmap.mask) {
-        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68;
-        display.bitmap.mask.y = 58;
+        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_my_card / 2) * 150 + mine * 300 + 68 - 30;
+        display.bitmap.mask.y = 58 - 10;
       }
     } else {
       display.bitmap.x = this.screen_x / 2 - 150 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300;
       display.offset = enemy;
 
       if (display.bitmap.mask) {
-        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300 + 68;
-        display.bitmap.mask.y = 58;
+        display.bitmap.mask.x = this.screen_x / 2 - 150 - Math.floor(num_enemy_card / 2) * 150 + enemy * 300 + 68 - 30;
+        display.bitmap.mask.y = 58 - 10;
       }
     }
+
+    display.bitmap.scaleX = 0.7;
+    display.bitmap.scaleY = 0.7;
 
     console.log('Added images :: ', display.added_images);
     // if text field for Health and Damage are empty, we should add it 
