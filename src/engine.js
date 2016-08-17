@@ -2697,6 +2697,21 @@ Engine.prototype.send_client_data = function(e) {
 
     return state;
   }
+  
+  function weapon_info(p) {
+    var weapon_id = "none", weapon_life = 0;
+    if(p.weapon) {
+      weapon_id = p.weapon.card_data.id;
+      weapon_life = p.weapon.current_life;
+    }
+    
+    var hero_dmg = p.hero_dmg();
+    return {
+      'weapon_id' : weapon_id,
+      'weapon_life' : weapon_life,
+      'hero_dmg' : hero_dmg
+    };
+  }
 
   function put_deck_info(arr, deck, where, owner) {
     for (var i = 0; i < deck.length; i++) {
@@ -2748,19 +2763,24 @@ Engine.prototype.send_client_data = function(e) {
   if (e) {
     console.log(e.packer(), ' event has sent!');
   }
+  
   this.p1_socket.emit('hearth-event', {
     card_info: p1_card_info,
     enemy_num_hand: this.p2.hand.num_card(),
     event: (e ? e.packer() : null),
     me: hero_info(this.p1),
-    enemy: hero_info(this.p2)
+    enemy: hero_info(this.p2),
+    my_hero_dmg : weapon_info(this.p1),
+    enemy_hero_dmg :  weapon_info(this.p2)
   });
   this.p2_socket.emit('hearth-event', {
     card_info: p2_card_info,
     enemy_num_hand: this.p1.hand.num_card(),
     event: (e ? e.packer() : null),
     me: hero_info(this.p2),
-    enemy: hero_info(this.p1)
+    enemy: hero_info(this.p1),
+    my_hero_dmg : weapon_info(this.p2),
+    enemy_hero_dmg :  weapon_info(this.p1)
   });
 };
 
