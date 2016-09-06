@@ -2,7 +2,7 @@
 
 <head>
   <title>New Client</title>
-  <canvas id="field" width="1800" height="1000"></canvas>
+  <canvas id="field"></canvas>
   <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="http://code.jquery.com/jquery-latest.min.js"></script>
@@ -20,6 +20,15 @@
     -moz-background-size: 100%;
     -o-background-size: 100%;
     background-size: 100% 100%;
+  }
+  body, html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  canvas {
+    position:absolute;
   }
 </style>
 

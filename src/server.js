@@ -75,7 +75,7 @@ app.post('/info', function(req, res) {
     if (err) {
       res.send(JSON.stringify({
         id: ''
-      }))
+      }));
     }
     else {
       user_manager.get_user(decoded.id, (user) => {
@@ -86,7 +86,7 @@ app.post('/info', function(req, res) {
       });
     }
   });
-})
+});
 app.get('/info', function(req, res) {
   res.sendFile('/public/info.html', {
     root: __dirname

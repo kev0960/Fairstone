@@ -2683,7 +2683,8 @@ Engine.prototype.send_client_data = function(e) {
       life: p.hero.current_life,
       mana: p.current_mana,
       id: p.hero.id,
-      armor: p.hero.armor
+      armor: p.hero.armor,
+      job: p.player_job
     };
   }
 

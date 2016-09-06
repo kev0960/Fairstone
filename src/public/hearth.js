@@ -3,7 +3,7 @@
 $(window).on('resize', function() {
   $('#world').width($(window).width());
   $('#world').height($(window).width());
-})
+});
 
 function Card(id, unique) {
   this.id = id;
