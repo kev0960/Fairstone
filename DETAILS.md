@@ -32,7 +32,32 @@ http://hearthstoneserver.jaebumlee.c9users.io/
 
 
 # Implementation Details
-    
+
+## Matchmaking 방식
+
+1. 사용자가 Match 페이지에 들어가게 되면 server 에 자신의 정보(token)를 담은 socket 을 보내는데, 이 token 이 valid 하면
+   match_maker 에 자신의 id 와 해당 socket 의 정보를 저장해놓는다. 물론 페이지가 reload 되면 다시 정보를 보내게 되고, 
+   match_maker 에는 해당 id 에 대응되는 socket 정보가 update 된다.
+
+2. 사용자가 Match 페이지에서 매치 찾기를 누른다면, find-match 소켓이 전달되고, match_maker 에 해당 사용자가 선택한 덱
+   정보가 전달된다. 
+
+3. matching_queue 는 매 초 Matching pool 에 등록된 사용자들을 바탕으로 적절한 매치를 찾아준다. 만일 매치가 찾아졌다면 
+   해당하는 두 사용자의 등록된 socket 에 match-found 소켓을 전달하며 이와 함께 생성된 고유의 match_token 역시 전달한다.
+   이 match-found 소켓을 전달받은 클라이언트는 /match/(match_token 의 절반) 페이지로 이동하게 된다. 클라이언트는 
+   match-token 을 브라우저 storage 에 저장해놓는다.
+
+4. 따라서 클라이언트에서 /match/(match-token 의 절반) 으로 GET request 를 보내는데, 그 즉시 /match/(match-token 전체) 에
+   socket listener 를 등록하게 된다. match 주소가 match-token 의 절반만을 사용하는 이유는 외부에서 주소를 보아도, 함부로
+   match 에 접근할 수 없기 위함이다 (예를 들어 하스스톤 방송을 할 때). 물론 match-token 자체는 완전히 random 하게 생성되므로
+   사용자가 그 다음 절반을 알아 내기는 불가능하다.
+
+5. 클라이언트는 socket 통신이 establish 된 경우, player-info 소켓과 함께, 자신의 전체 match-token 과 id 를 전달한다.
+   따라서 서버에서는 어떤 사용자가 연결되었는지 확인할 수 있는데, 만일 두 플레이어 모두가 연결되었다면, match_maker 의
+   start_match 함수를 호출해서 match 를 시작한다. match_maker 의 start_match 함수는 hearth_game 의 start_match 함수를
+   호출해서 실제 match 를 등록하게 된다. 
+
+
 ## 하수인 카드를 내는 방식 
 
 현재 하수인 카드 내는 방식은 Hearthstone wiki 의 [Advanced rulebook](http://hearthstone.gamepedia.com/Advanced_rulebook) 을 참조하였습니다.

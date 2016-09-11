@@ -199,7 +199,9 @@ Card.prototype.update_atk_info = function() {
     this.atk_info.max = max;
   }
 
-  if (this.atk_info.turn == this.owner.engine.current_turn) return;
+  if (this.atk_info.turn == this.owner.engine.current_turn) {
+    return;
+  }
 
   this.atk_info.turn = this.owner.engine.current_turn;
   this.atk_info.max = max;
@@ -246,7 +248,7 @@ Card.prototype.make_windfury = function(who) {
   }, 'atk_num', who);
   this.update_atk_info();
 
-  if (this.atk_info.turn == this.atk_info.field_summon_turn && !this.chk_state('charge')) return;
+  if (this.atk_info.turn == this.field_summon_turn && !this.chk_state('charge')) return;
   this.atk_info.max = 2;
 };
 
@@ -2185,7 +2187,6 @@ function Engine(p1_socket, p2_socket, p1, p2, game_result_callback) {
     };
   }
 
-  console.log(p1);
   this.g_id = new UniqueId();
   this.g_when = new UniqueId(); // Object to give unique number to the events
 
@@ -2194,8 +2195,6 @@ function Engine(p1_socket, p2_socket, p1, p2, game_result_callback) {
 
   this.p1 = new Player(p1.id, p1.deck.job, this); // First
   this.p2 = new Player(p2.id, p2.deck.job, this); // Second
-
-  // TODO IMPLEMENT THIS
   this.current_player = this.p1;
 
   this.p1.enemy = this.p2;
@@ -2229,6 +2228,9 @@ function Engine(p1_socket, p2_socket, p1, p2, game_result_callback) {
   this.p2_selection_waiting = false;
 
   this.user_waiting_queue = [];
+
+  this.p1_last_emit_data = null;
+  this.p2_last_emit_data = null;
 }
 Engine.prototype.add_user_waiting = function(f, that, args) {
   this.user_waiting_queue.push({
@@ -2690,7 +2692,7 @@ Engine.prototype.send_client_data = function(e) {
 
   function chk_card_state(c) {
     var state = [];
-    if (c.is_attackable()) state.push('attackable');
+    if (c.is_attackable() && c.owner.engine.current_player == c.owner) state.push('attackable');
     if (c.stealth()) state.push('stealth');
     if (c.shield()) state.push('shield');
     if (c.frozen()) state.push('frozen');
@@ -2764,8 +2766,8 @@ Engine.prototype.send_client_data = function(e) {
   if (e) {
     console.log(e.packer(), ' event has sent!');
   }
-  
-  this.p1_socket.emit('hearth-event', {
+
+  this.p1_last_emit_data = {
     card_info: p1_card_info,
     enemy_num_hand: this.p2.hand.num_card(),
     event: (e ? e.packer() : null),
@@ -2773,8 +2775,11 @@ Engine.prototype.send_client_data = function(e) {
     enemy: hero_info(this.p2),
     my_hero_dmg : weapon_info(this.p1),
     enemy_hero_dmg :  weapon_info(this.p2)
-  });
-  this.p2_socket.emit('hearth-event', {
+  };
+  
+  this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
+
+  this.p2_last_emit_data = {
     card_info: p2_card_info,
     enemy_num_hand: this.p1.hand.num_card(),
     event: (e ? e.packer() : null),
@@ -2782,7 +2787,8 @@ Engine.prototype.send_client_data = function(e) {
     enemy: hero_info(this.p1),
     my_hero_dmg : weapon_info(this.p2),
     enemy_hero_dmg :  weapon_info(this.p1)
-  });
+  };
+  this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
 };
 
 Engine.prototype.socket = function(p) {
@@ -2793,6 +2799,26 @@ Engine.prototype.socket = function(p) {
     return this.p2_socket;
   }
   throw "SOCKET ERROR";
+};
+Engine.prototype.change_socket = function(who, socket) {
+  if(who == 'p1') {
+    this.p1_socket = socket;
+    this.p1.socket = socket;
+    this.set_up_listener(this.p1);
+
+    if(this.p1_last_emit_data) {
+      this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
+    }
+  } 
+  else if(who == 'p2') {
+    this.p2_socket = socket;
+    this.p2.socket = socket;
+    this.set_up_listener(this.p2);
+
+    if(this.p2_last_emit_data) {
+      this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
+    }
+  }
 };
 
 var current_working_engine = null;

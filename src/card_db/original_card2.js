@@ -2675,6 +2675,16 @@
       on_play: function(me, bc, user_play, at) {
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
+            for(var i = 0; i < me.owner.field.num_card(); i ++) {
+              var c = me.owner.field.card_list[i];
+              if(c.card_data.kind == 'beast') {
+                if(c.field_summon_turn == me.owner.engine.current_turn) {
+                  if(!(c.chk_state('charge') || me.owner.chk_charge(c))) {
+                    c.atk_info.did = 0;
+                  }
+                }
+              }
+            }
             me.owner.engine.add_aura(function(c, me) {
               if (c.owner == me.owner && c.card_data.kind == 'beast') return true;
               return false;

@@ -43,14 +43,12 @@ app.use(function(req, res, next) {
     jwt.verify(token, hearth_secret, function(err, decoded) {
       if (!err) {
         req.decoded = decoded.id;
-      }
-      else {
+      } else {
         req.decoded = '';
       }
       next();
     });
-  }
-  else {
+  } else {
     req.decoded = '';
     next();
   }
@@ -76,8 +74,7 @@ app.post('/info', function(req, res) {
       res.send(JSON.stringify({
         id: ''
       }));
-    }
-    else {
+    } else {
       user_manager.get_user(decoded.id, (user) => {
         res.send(JSON.stringify({
           id: user.id,
@@ -104,8 +101,7 @@ app.post('/auth', function(req, res) {
       res.send(JSON.stringify({
         id: ''
       }));
-    }
-    else res.send(JSON.stringify({
+    } else res.send(JSON.stringify({
       id: decoded.id
     }));
   });
@@ -162,8 +158,7 @@ app.post('/signup', function(req, res) {
       res.send(JSON.stringify({
         'result': 'success'
       }));
-    }
-    else {
+    } else {
       res.send(JSON.stringify({
         'result': 'failed'
       }));
@@ -180,8 +175,7 @@ app.post('/match', function(req, res) {
         res.send(JSON.stringify({
           id: ''
         }));
-      }
-      else {
+      } else {
         user_manager.get_user(decoded.id, (user) => {
           var deck_list = user.deck_list;
           if (req_deck_id) {
@@ -193,8 +187,7 @@ app.post('/match', function(req, res) {
               id: user.id,
               selected_deck: selected
             }));
-          }
-          else {
+          } else {
             var deck_names = [];
             for (var i = 0; i < deck_list.length; i++) {
               deck_names.push({
@@ -265,8 +258,7 @@ app.post('/deckbuild/done', function(req, res) {
         res.send(JSON.stringify({
           src: ''
         }));
-      }
-      else {
+      } else {
         var total_cards = 0;
         for (var i = 0; i < card_deck.length; i++) {
           total_cards += card_deck[i].num;
@@ -291,7 +283,7 @@ app.post('/deckbuild/done', function(req, res) {
               function(deck) {
                 return deck('name').ne(deck_name);
               })
-          }
+          };
         }).run(r_con, function(err, res) {
           console.log(err);
           console.log(res);
@@ -336,8 +328,7 @@ app.post('/deckbuild/:job/:id', function(req, res) {
         res.send(JSON.stringify({
           src: ''
         }));
-      }
-      else {
+      } else {
         var list = card_db.get_implemented_list();
         var num = 0;
         for (var i = 0; i < list.length; i++) {
@@ -374,25 +365,29 @@ app.get('/card-image/:class/:card', function(req, res) {
   var class_name = req.params.class;
   var card = req.params.card;
   console.log('IMG REQ :: ' + class_name, card);
-  for(var i = 0; i < supported_card_images.length; i ++) {
-    if(supported_card_images[i] == card) {
-      res.sendFile('/public/cards/' + class_name + '/' + card, { root : __dirname });
+  for (var i = 0; i < supported_card_images.length; i++) {
+    if (supported_card_images[i] == card) {
+      res.sendFile('/public/cards/' + class_name + '/' + card, {
+        root: __dirname
+      });
       return;
     }
   }
-  
+
   // If not found, search for it
   unirest.get('http://wow.zamimg.com/images/hearthstone/cards/enus/' + class_name + '/' + card).encoding('binary').end(function(result) {
     fs.writeFile(__dirname + '/public/cards/' + class_name + '/' + card, result.raw_body, 'binary', function(err) {
-      if(err) {
+      if (err) {
         console.log('error :: ', err);
         return;
       }
       supported_card_images.push(card);
-      res.sendFile('/public/cards/' + class_name + '/' + card, { root : __dirname });
+      res.sendFile('/public/cards/' + class_name + '/' + card, {
+        root: __dirname
+      });
     });
   });
-  
+
 });
 
 // 유저가 match room 에 GET 요청을 보내면 그 즉시, 이 위치에 대한
@@ -414,15 +409,24 @@ app.get('/match/:id', function(req, res) {
         return function(data) {
           var m = match_maker.get_match(data.match_token);
 
-          // Possible duplicated connection!
-          if (m.p1_join && m.p2_join) return;
+          // User reloaded
+          if (m.p1_join && m.p2_join) {
+            console.log("User has reloaded a page!");
+            if (data.user_id == m.m1.id) {
+              m.p1_socket = socket;
+              m.game.change_socket('p1', socket);
+            } else if (data.user_id == m.m2.id) {
+              m.p2_socket = socket;
+              m.game.change_socket('p2', socket);
+            }
+            return;
+          }
 
           console.log('Get ID :: ', data.user_id);
           if (data.user_id == m.m1.id) {
             m.p1_join = true;
             m.p1_socket = socket;
-          }
-          else if (data.user_id == m.m2.id) {
+          } else if (data.user_id == m.m2.id) {
             m.p2_join = true;
             m.p2_socket = socket;
           }
@@ -437,8 +441,7 @@ app.get('/match/:id', function(req, res) {
     res.sendFile('/public/hearth_new.html', {
       root: __dirname
     });
-  }
-  else res.redirect('/match');
+  } else res.redirect('/match');
 });
 
 var server_port = process.env.PORT || 80;
@@ -575,8 +578,7 @@ UserManager.prototype.chk_user = function(user_id, password, after) {
 
     if (result.password == password) {
       after(1);
-    }
-    else {
+    } else {
       after(101); // Error code :: user password is not matched
     }
   });
@@ -696,7 +698,6 @@ MatchMaker.prototype.match_found = function(m1, m2) {
       game: null
     });
   }
-
 };
 
 function chk_in_range(first, second) {
@@ -718,8 +719,7 @@ MatchMaker.prototype.matching_queue = function() {
           i -= 2;
           break;
         }
-      }
-      else {
+      } else {
         if (chk_in_range(this.match_queue[j], this.match_queue[i])) {
           this.match_found(this.match_queue[i], this.match_queue[j]);
           this.match_queue.splice(j, 1);
@@ -773,16 +773,14 @@ MatchMaker.prototype.start_match = function(m) {
 };
 MatchMaker.prototype.after_match = function(result, p1, p2) {
   var p1_result, p2_result;
-  console.log('GAME IS OVER :: ', result)
+  console.log('GAME IS OVER :: ', result);
   if (result == 0) {
     p1_result = 'win';
     p2_result = 'lose';
-  }
-  else if (result == 1) {
+  } else if (result == 1) {
     p1_result = 'lose';
     p2_result = 'win';
-  }
-  else if (result == 2) {
+  } else if (result == 2) {
     p1_result = 'draw';
     p2_result = 'draw';
   }
@@ -816,7 +814,7 @@ MatchMaker.prototype.after_match = function(result, p1, p2) {
   }).run(r_con, function(err, result) {
     console.log(result);
   });
-}
+};
 MatchMaker.prototype.get_match = function(match_token) {
   for (var i = 0; i < this.found_match.length; i++) {
     if (this.found_match[i].match_token == match_token) return this.found_match[i];
