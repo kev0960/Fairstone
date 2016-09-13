@@ -298,7 +298,7 @@
             me.owner.engine.add_aura(function(dmg, c) {
               if (c.card_data.kind == 'murloc') return dmg + 1;
               return dmg;
-            }, 'dmg', me)
+            }, 'dmg', me);
           }
           end(me, non_bc, bc);
         });
@@ -850,7 +850,7 @@
             function() {
               me.owner.play_success(me, at, function(me, non_bc, bc) {
                 if (bc && me.target) {
-                  me.owner.silence(me, me.target)
+                  me.owner.silence(me, me.target);
                 }
                 end(me, non_bc, bc);
               });
@@ -950,7 +950,7 @@
           if (non_bc) {
             me.owner.engine.g_handler.add_handler(function(e, me) {
               if (e.victim == me) me.owner.draw_cards(1);
-            }, 'take_dmg', me)
+            }, 'take_dmg', me);
           }
           end(me, non_bc, bc);
         });
@@ -961,8 +961,8 @@
         me.owner.play_success(me, at, function(me, non_bc, bc) {
           if (non_bc) {
             me.owner.engine.g_handler.add_handler(function(e, me) {
-              me.add_state(inc(1), 'dmg', me)
-            }, 'destroyed', me)
+              me.add_state(inc(1), 'dmg', me);
+            }, 'destroyed', me);
           }
           end(me, non_bc, bc);
         });
@@ -1168,7 +1168,7 @@
             function() {
               me.owner.play_success(me, at, function(me, non_bc, bc) {
                 if (bc && me.target) {
-                  me.owner.silence(me, me.target)
+                  me.owner.silence(me, me.target);
                 }
                 end(me, non_bc, bc);
               });
@@ -1209,7 +1209,7 @@
             me.owner.engine.add_aura(function(d, c, me) {
               if (me.owner.weapon && c == me.owner.weapon && me.current_life != me.life()) return d + 2;
               return d;
-            }, 'dmg', me)
+            }, 'dmg', me);
           }
           end(me, non_bc, bc);
         });
@@ -1297,7 +1297,7 @@
           if (non_bc) {
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.card.card_data.kind == 'murloc') me.add_state(inc(1), 'dmg', me);
-            }, 'summon', me)
+            }, 'summon', me);
           }
           end(me, non_bc, bc);
         });
@@ -2466,8 +2466,8 @@
                     me.owner.instant_kill(me, target);
                   }
                 }, 'turn_begin', me, false, false, me.target);
-                me.target.add_state(inc(5), 'dmg', me)
-                me.target.add_state(inc(5), 'life', me)
+                me.target.add_state(inc(5), 'dmg', me);
+                me.target.add_state(inc(5), 'life', me);
                 me.target.current_life += 5;
                 end_spell(me);
               }
@@ -3026,7 +3026,7 @@
               if (e.attacker === me) {
                 e.victim.is_frozen.until = me.owner.engine.current_turn + 1;
               }
-            }, 'take_dmg', me)
+            }, 'take_dmg', me);
           }
           end(me, non_bc, bc);
         });

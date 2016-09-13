@@ -184,7 +184,7 @@ function Hearthstone() {
   this.enemy_field_cont.y = this.screen_y * 0.25;
   this.enemy_hand_cont.x = 0;
 
-  this.card_distance = 30;
+  this.card_distance = 15;
 
   this.my_hero_y = this.screen_y / 1040 * 705;
   this.enemy_hero_y = this.screen_y / 1040 * 98;
@@ -222,6 +222,12 @@ function Hearthstone() {
 
   this.my_hero_life = null;
   this.enemy_hero_life = null;
+
+  this.my_hero_mana = 0;
+  this.my_hero_mana_img = [];
+
+  this.enemy_hero_mana = 0;
+  this.enemy_hero_mana_img = [];
 
   // UI
   this.selected_card = null;
@@ -376,6 +382,33 @@ Hearthstone.prototype.init = function() {
         h.enemy_hero_atk_img.visible = false;
       }
 
+      function min (a, b) {
+        if(a > b) return b;
+        return a;
+      }
+      // Draw mana crystals
+      if(h.my_hero_mana_img.length > min(10, data.me.mana)) {
+        // Remove some images
+        for(var i = min(10, data.me.mana); i < h.my_hero_mana_img.length; i ++) {
+          h.stage.removeChild(h.my_hero_mana_img[i]);
+        }
+        h.my_hero_mana_img.splice(min(10, data.me.mana));
+      }
+      else if(h.my_hero_mana_img.length < min(10, data.me.mana)) {
+        // Draw more images
+        var mana_distance = h.screen_x / 64; // --> which is 64 = 1920 / 30
+        for(var i = h.my_hero_mana_img.length; i < min(10, data.me.mana); i ++) {
+          var mana_crystal = new createjs.Bitmap("/assets/images/mana_crystal.png");
+          h.stage.addChildAt(mana_crystal, 0);
+          h.my_hero_mana_img.push(mana_crystal);
+
+          mana_crystal.x = mana_distance * i + 1300 / 1920 * h.screen_x;
+          mana_crystal.y = h.screen_y * 12 / 13;
+
+          mana_crystal.scaleX = mana_distance / 100;
+          mana_crystal.scaleY = mana_distance / 100;
+        }
+      }
       h.draw_hand();
       h.draw_field();
     };
@@ -459,6 +492,9 @@ Hearthstone.prototype.init = function() {
 
       h.is_selecting_center = true;
       h.show_cards();
+      $('div').css('filter', 'brightness(50%)');
+      $('div').css('-webkit-filter', 'brightness(50%)');
+      $('div').css('-moz-filter', 'brightness(50%)');
 
       console.log('Choose one ::', card_list);
     };
@@ -468,6 +504,9 @@ Hearthstone.prototype.init = function() {
     return function(data) {
       h.selectable_lists = data.list;
       h.need_to_select = true;
+      $('div').css('filter', 'brightness(50%)');
+      $('div').css('-webkit-filter', 'brightness(50%)');
+      $('div').css('-moz-filter', 'brightness(50%)');
 
       h.draw_hand();
       h.draw_field();
@@ -561,6 +600,10 @@ Hearthstone.prototype.init = function() {
         h.selected_card = null;
         h.need_to_select = false;
         h.selectable_lists = [];
+
+        $('div').css('filter', '');
+        $('div').css('-webkit-filter', '');
+        $('div').css('-moz-filter', '');
         return;
       }
 
@@ -799,6 +842,10 @@ Hearthstone.prototype.draw_field = function() {
           h.selected_card = null;
           h.need_to_select = false;
           h.selectable_lists = [];
+
+          $('div').css('filter', '');
+          $('div').css('-webkit-filter', '');
+          $('div').css('-moz-filter', '');
           return;
         }
 
@@ -1340,6 +1387,11 @@ Hearthstone.prototype.show_cards = function() {
         h.socket.emit('select-done', {
           id: i
         });
+
+        $('div').css('filter', '');
+        $('div').css('-webkit-filter', '');
+        $('div').css('-moz-filter', '');
+
         h.center_cards.card_list = []; // Remove center cards
         h.center_cont.removeAllChildren();
         h.stage.update();

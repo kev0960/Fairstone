@@ -90,9 +90,9 @@ function Card(card_data, id, owner) {
 
   // Last position before gets destroyed
   this.last_position = -1;
-  
+
   // Cannot Attack Hero
-  this.no_hero_attack = false; 
+  this.no_hero_attack = false;
 }
 Card.prototype.add_state = function(f, state, who) {
   this.state.push({
@@ -419,10 +419,10 @@ function Player(player_name, job, engine) {
   // C'Thun Buffs
   this.cthun_dmg_buff = 0;
   this.cthun_life_buff = 0;
-  
+
   // User Play Stacks
   // (애니메이션이 끝나기 전에 여러가지 행동을 하는 경우 이 stack 에 저장된다)
-  this.user_play_stack = []; 
+  this.user_play_stack = [];
 }
 Player.prototype.chk_aura = function(aura) {
   for (var i = 0; i < this.aura.length; i++) {
@@ -495,8 +495,7 @@ Player.prototype.choose_one = function(me, options, on_success, on_fail, must,
 
       if (p.must_choose) {
         p.on_select_success(0, c, p.forced_target, p.random_target);
-      }
-      else {
+      } else {
         p.on_select_fail(c);
       }
 
@@ -558,8 +557,7 @@ Player.prototype.select_one = function(c, select_cond, success, fail, forced_tar
       c.target = available_list[Math.floor(available_list.length * Math.random())];
       console.log('Random Target :: ', c.target.card_data.name);
       success(c);
-    }
-    else {
+    } else {
       console.log('No Target!');
     }
     return;
@@ -609,8 +607,7 @@ Player.prototype.play_spell = function(c) {
 
   if (this.chk_aura('fandral_staghelm')) {
     card.on_play(c, false, false, 2);
-  }
-  else {
+  } else {
     card.on_play(c);
   }
 };
@@ -662,12 +659,12 @@ Player.prototype.hand_card = function(unique, n, after_hand, force) {
 };
 // Draw n cards from a deck
 Player.prototype.draw_cards = function(n, after_draw, who, done) {
-  if(!n) n = 1;
-  if(!done) done = 0;
-  
-  if(done < n) {
+  if (!n) n = 1;
+  if (!done) done = 0;
+
+  if (done < n) {
     this.g_handler.add_callback(this.draw_cards, this, [n, after_draw, who, done + 1]);
-    
+
     if (this.deck.num_card() == 0) {
       this.exhaust_dmg = this.exhaust_dmg > 8 ? 8 : this.exhaust_dmg + 1;
 
@@ -688,7 +685,7 @@ Player.prototype.draw_cards = function(n, after_draw, who, done) {
     c.status = 'hand';
     c.id = this.g_id.get_id();
 
-    console.log('Trying to draw :: ', c.card_data.unique, c.card_data.name);    
+    console.log('Trying to draw :: ', c.card_data.unique, c.card_data.name);
     if (card.on_draw) card.on_draw(c);
 
     this.hand.put_card(c, 10);
@@ -697,8 +694,8 @@ Player.prototype.draw_cards = function(n, after_draw, who, done) {
       this.g_handler.add_callback(after_draw, this, [c, who]);
     }
 
-    if(who) this.g_handler.add_event(new Event('draw_card', [c, who]));
-    else  this.g_handler.add_event(new Event('draw_card', [c, this.hero]));
+    if (who) this.g_handler.add_event(new Event('draw_card', [c, who]));
+    else this.g_handler.add_event(new Event('draw_card', [c, this.hero]));
   }
   this.g_handler.execute();
 };
@@ -744,8 +741,7 @@ Player.prototype.play_minion = function(c, at) {
 
   if (this.chk_aura('fandral_staghelm')) {
     card.on_play(c, true, true, at, 2);
-  }
-  else {
+  } else {
     card.on_play(c, true, true, at);
   }
 };
@@ -775,16 +771,13 @@ Player.prototype.play_success = function(c, at, next) {
 
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.battlecry_phase, this, [c, next]);
-  }
-  else if (c.card_data.type == 'spell') {
+  } else if (c.card_data.type == 'spell') {
     this.g_handler.add_event(new Event('play_card', [c, this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
-  }
-  else if (c.card_data.type == 'hero_power') {
+  } else if (c.card_data.type == 'hero_power') {
     this.g_handler.add_event(new Event('inspire', [this]));
     this.g_handler.add_phase(this.chk_target, this, [c, next]);
-  }
-  else if (c.card_data.type == 'weapon') {
+  } else if (c.card_data.type == 'weapon') {
     this.load_weapon(c);
 
     this.g_handler.add_event(new Event('play_card', [c, this]));
@@ -836,12 +829,10 @@ Player.prototype.summon_phase = function(c) {
 
     if (c.chk_state('charge') || this.chk_charge(c)) {
       c.atk_info.did = 0;
-    }
-    else {
+    } else {
       c.atk_info.did = c.atk_info.max; // Cannot move at a spawned turn
     }
-  }
-  else if (c.card_data.type == 'weapon') {
+  } else if (c.card_data.type == 'weapon') {
     this.weapon = c;
     this.weapon.atk_info.max = this.weapon.calc_state('atk_num', 1, false);
     this.weapon.atk_info.turn = this.engine.current_turn;
@@ -906,7 +897,9 @@ Player.prototype.chk_enemy_taunt = function(target) {
 };
 Player.prototype.chk_invincible = function(target) {
   for (var i = 0; i < this.g_aura.length; i++) {
-    if (this.g_aura[i].state === 'invincible' && this.g_aura[i].who.is_good() && this.g_aura[i].f(target)) {
+    if (this.g_aura[i].state === 'invincible' &&
+      this.g_aura[i].who.is_good() &&
+      this.g_aura[i].f(target, this.g_aura[i].who)) {
       return true;
     }
   }
@@ -946,12 +939,10 @@ Player.prototype.hero_combat = function(target) {
 
     this.weapon.atk_info.did++;
     this.turn_hero_atk.did++;
-  }
-  else if (this.hero_dmg() != 0) {
+  } else if (this.hero_dmg() != 0) {
     if (this.turn_hero_atk.did == 0) {
       this.turn_hero_atk.did++;
-    }
-    else {
+    } else {
       return;
     }
   }
@@ -999,11 +990,15 @@ Player.prototype.forced_combat = function(c, target) {
 };
 Player.prototype.combat = function(c, target) {
   if (!c.is_attackable() // chks whether the attacker has not exhausted its attack chances
-    || !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
-    || target.owner == c.owner // chks whether the attacker is not attacker our own teammates
-    || this.chk_invincible(target)  // chks whether the attacker is attacking invincible target
-    || target.stealth() 
-    || (target.card_data.type == 'hero' && c.no_hero_attack)) return false; 
+    ||
+    !this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
+    ||
+    target.owner == c.owner // chks whether the attacker is not attacker our own teammates
+    ||
+    this.chk_invincible(target) // chks whether the attacker is attacking invincible target
+    ||
+    target.stealth() ||
+    (target.card_data.type == 'hero' && c.no_hero_attack)) return false;
 
   c.target = target;
   c.is_stealth.until = -1; // stealth is gone!
@@ -1062,8 +1057,7 @@ Player.prototype.actual_combat = function(c) {
 
   if (c.armor > target.dmg_given) {
     c.armor -= target.dmg_given;
-  }
-  else {
+  } else {
     c.armor = 0;
     c.current_life -= (target.dmg_given - c.armor);
   }
@@ -1071,8 +1065,7 @@ Player.prototype.actual_combat = function(c) {
   // Check for the Armor
   if (target.armor > c.dmg_given) {
     target.armor -= c.dmg_given;
-  }
-  else {
+  } else {
     target.armor = 0;
     target.current_life -= (c.dmg_given - target.armor);
   }
@@ -1145,8 +1138,7 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   // Check for the Armor
   if (to.armor > dmg) {
     to.armor -= dmg;
-  }
-  else {
+  } else {
     to.armor = 0;
     to.current_life -= (dmg - to.armor);
   }
@@ -1273,8 +1265,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
     this.g_handler.add_event(new Event('pre_dmg', [from, to_arr[done], dmg_arr[done]]));
     this.g_handler.add_callback(this.deal_dmg_many, this, [dmg_arr, from, to_arr, done + 1]);
     return;
-  }
-  else { // Now pre_dmg events are done
+  } else { // Now pre_dmg events are done
     dmg_arr[done - 1] = from.dmg_given;
 
     for (i = 0; i < to_arr.length; i++) {
@@ -1293,8 +1284,7 @@ Player.prototype.deal_dmg_many = function(dmg_arr, from, to_arr, done) {
         // Check for the Armor
         if (to_arr[i].armor > dmg_arr[i]) {
           to_arr[i].armor -= dmg_arr[i];
-        }
-        else {
+        } else {
           to_arr[i].armor = 0;
           to_arr[i].current_life -= (dmg_arr[i] - to_arr[i].armor);
         }
@@ -1327,8 +1317,9 @@ Player.prototype.return_to_hand = function(c, who, after_hand) {
 };
 // Discard a card on hand
 Player.prototype.discard_card = function(c, who) {
-  c.status = 'destroyed';
-
+  // Discard does not make card 'destroyed'
+  // (But still it removes from the hand so it becomes unplayable)
+  // This is because some cards have event handler on their own discard event
   this.hand.remove_card(c);
   this.g_handler.add_event(new Event('discard', [c, who]));
   this.g_handler.execute();
@@ -1345,8 +1336,7 @@ Player.prototype.take_control = function(c, who) {
 
   if (c.chk_state('charge')) {
     c.atk_info.did = 0;
-  }
-  else c.atk_info.did = c.atk_info.max;
+  } else c.atk_info.did = c.atk_info.max;
 };
 // Everything about src copies to dest
 Player.prototype.copy_minion = function(src, dest) {
@@ -1445,8 +1435,7 @@ Player.prototype.instant_kill_many = function(from, target_arr) {
 Player.prototype.add_hero_dmg = function(d) {
   if (this.turn_dmg.turn == this.engine.current_turn) {
     this.turn_dmg.dmg += d;
-  }
-  else {
+  } else {
     this.turn_dmg.turn = this.engine.current_turn;
     this.turn_dmg.dmg = d;
   }
@@ -1476,7 +1465,7 @@ Player.prototype.use_hero_power = function() {
       default_max = this.engine.g_aura[i].f(default_max, this.hero_power, this.engine.g_aura[i].who);
     }
   }
-  
+
   if (this.power_used.turn != this.engine.current_turn) {
     this.power_used.turn = this.engine.current_turn;
     this.power_used.max = default_max;
@@ -1484,7 +1473,7 @@ Player.prototype.use_hero_power = function() {
   } else if (this.power_used.max < default_max) {
     // There are some cases the Max hero power availablity 
     // can be increased during a turn
-    this.power_used.max = default_max; 
+    this.power_used.max = default_max;
   }
 
   if (this.power_used.did >= this.power_used.max) {
@@ -1523,8 +1512,7 @@ Player.prototype.joust = function(after_joust) {
 
   if (my_cost > enemy_cost) {
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 };
@@ -1578,7 +1566,7 @@ Player.prototype.silence = function(from, target) {
   target.is_frozen.until = -1;
   target.is_shielded.until = -1;
   target.is_invincible.until = -1;
-  target.no_hero_attack = false; 
+  target.no_hero_attack = false;
 
   for (var i = 0; i < this.g_aura.length; i++) {
     if (this.g_aura[i].who == target && !this.g_aura[i].must) {
@@ -1736,91 +1724,69 @@ function Event(event_type, args) {
     this.who = args[0];
     this.target = args[1];
     this.type = args[2];
-  }
-  else if (event_type == 'take_dmg') {
+  } else if (event_type == 'take_dmg') {
     this.victim = args[0];
     this.attacker = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'deal_dmg') {
+  } else if (event_type == 'deal_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'pre_dmg') {
+  } else if (event_type == 'pre_dmg') {
     this.attacker = args[0];
     this.victim = args[1];
     this.dmg = args[2];
-  }
-  else if (event_type == 'destroyed') {
+  } else if (event_type == 'destroyed') {
     this.destroyed = args[0];
     this.attacker = args[1];
-  }
-  else if (event_type == 'summon') {
+  } else if (event_type == 'summon') {
     this.card = args[0];
-  }
-  else if (event_type == 'draw_card') {
+  } else if (event_type == 'draw_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'hand_card') {
+  } else if (event_type == 'hand_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'play_card') {
+  } else if (event_type == 'play_card') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'after_play') {
+  } else if (event_type == 'after_play') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'turn_begin') {
+  } else if (event_type == 'turn_begin') {
     this.who = args[0];
-  }
-  else if (event_type == 'turn_end') {
+  } else if (event_type == 'turn_end') {
     this.who = args[0];
-  }
-  else if (event_type == 'deathrattle') {
+  } else if (event_type == 'deathrattle') {
     this.card = args[0];
-  }
-  else if (event_type == 'propose_attack') {
+  } else if (event_type == 'propose_attack') {
     this.who = args[0];
     this.target = args[1];
-  }
-  else if (event_type == 'target') {
+  } else if (event_type == 'target') {
     this.who = args[0];
-  }
-  else if (event_type == 'silence') {
+  } else if (event_type == 'silence') {
     this.who = args[0];
     this.target = args[1];
-  }
-  else if (event_type == 'card_burnt') {
+  } else if (event_type == 'card_burnt') {
     this.card = args[0];
-  }
-  else if (event_type == 'heal') {
+  } else if (event_type == 'heal') {
     this.who = args[0];
     this.target = args[1];
     this.heal = args[2];
-  }
-  else if (event_type == 'inspire') {
+  } else if (event_type == 'inspire') {
     this.who = args[0];
-  }
-  else if (event_type == 'armor') {
+  } else if (event_type == 'armor') {
     this.who = args[0];
     this.target = args[1];
     this.armor = args[2];
-  }
-  else if (event_type == 'overload') {
+  } else if (event_type == 'overload') {
     this.who = args[0];
     this.target = args[1];
     this.overload = args[2];
-  }
-  else if (event_type == 'discard') {
+  } else if (event_type == 'discard') {
     this.card = args[0];
     this.who = args[1];
-  }
-  else if (event_type == 'reveal') {
+  } else if (event_type == 'reveal') {
     this.card = args[0];
   }
 }
@@ -1829,21 +1795,18 @@ Event.prototype.packer = function() {
     return {
       event_type: this.event_type
     };
-  }
-  else if (this.args.length == 1) {
+  } else if (this.args.length == 1) {
     return {
       event_type: this.event_type,
       from: this.args[0].id
     };
-  }
-  else if (this.args.length == 2) {
+  } else if (this.args.length == 2) {
     return {
       event_type: this.event_type,
       from: this.args[0].id,
       to: this.args[1].id
     };
-  }
-  else if (this.args.length == 3) {
+  } else if (this.args.length == 3) {
     return {
       event_type: this.event_type,
       from: this.args[0].id,
@@ -1912,8 +1875,7 @@ Handler.prototype.add_event = function(e) {
 
   if (e.event_type == 'destroyed') {
     this.destroyed_queue.push(e);
-  }
-  else {
+  } else {
     // Insert in front of all other events
     this.queue.splice(0, 0, e);
   }
@@ -1952,8 +1914,7 @@ Handler.prototype.add_phase = function(f, that, args) {
       that: that,
       args: args
     };
-  }
-  else {
+  } else {
     this.add_callback(f, that, args);
   }
 };
@@ -1972,8 +1933,7 @@ Handler.prototype.execute = function() {
       this.exec_lock = false;
       this.execute();
       return;
-    }
-    else {
+    } else {
       // If both destoryed queue and callback queues are empty, then we initiate
       // death creation phase
       this.death_creation();
@@ -2100,6 +2060,10 @@ Handler.prototype.death_creation = function(is_forced) {
       dead.status = 'destroyed'; // Mark it as destroyed
       dead.last_position = dead.owner.field.get_pos(dead); // Mark the last location of the dead
       dead.owner.field.remove_card(dead); // Remove card from the field
+
+      if (dead.card_data.type == 'weapon') {
+        if (dead.owner.weapon == dead) dead.owner.weapon = null;
+      }
     }
   }
   // Since Event queue is already flushed out, we can comfortably
@@ -2118,8 +2082,7 @@ Handler.prototype.death_creation = function(is_forced) {
   // Death Creation step 이 끝나면 end phase 를 실행할 수 있게 된다.
   if (this.next_phase && !is_forced) {
     this.add_callback(this.end_phase, this, []);
-  }
-  else if (this.queue.length == 0 && this.destroyed_queue.length == 0 && this.queue_resolved_callback.length == 0) {
+  } else if (this.queue.length == 0 && this.destroyed_queue.length == 0 && this.queue_resolved_callback.length == 0) {
     console.log('Phase is ended anyway (OUTTER MOST PHASE)! (without next phase to chk) ');
     this.engine.update_aura();
 
@@ -2309,7 +2272,9 @@ Engine.prototype.update_aura = function() {
   // Baron Rivendare, Auchenai Soulpriest, Brann Bronzebeard, Mal'Ganis's Immune effect, Prophet Velen
   // baron_rivendare, auchenai_soulpriest, bran_bronzebeard, prophet_velen
   function chk_aura(p) {
-    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard', 'prophet_velen', 'fandral_staghelm', 'embrace_the_shadow'];
+    var aura_list = ['baron_rivendare', 'auchenai_soulpriest', 'bran_bronzebeard',
+      'prophet_velen', 'fandral_staghelm', 'embrace_the_shadow'
+    ];
     for (var j = 0; j < aura_list.length; j++) {
       for (var i = 0; i < p.g_aura.length; i++) {
         if (p.g_aura[i].state == aura_list[j] && p.g_aura[i].who.is_good() && p.g_aura[i].who.owner == p) {
@@ -2364,7 +2329,7 @@ Engine.prototype.start_match = function() {
   this.p2_socket.emit('choose-starting-cards', {
     cards: this.p2.starting_cards
   });
-  
+
   console.log('Choose starting cards emit done');
 
   function remove_some_cards(p, starting_cards, util, num) {
@@ -2434,8 +2399,8 @@ Engine.prototype.start_match = function() {
   this.p2.selection_fail_timer = setTimeout(fail_client_select(this.p2), 90000);
 };
 Engine.prototype.chk_win_or_lose = function() {
-  if(this.is_game_finished) return ;
-  
+  if (this.is_game_finished) return;
+
   // Draw!
   if (this.p1.hero.current_life <= 0 && this.p2.hero.current_life <= 0) {
     this.is_game_finished = true;
@@ -2448,8 +2413,7 @@ Engine.prototype.chk_win_or_lose = function() {
     this.p2_socket.emit('hearth-game-end', {
       info: 'draw'
     });
-  }
-  else if (this.p1.hero.current_life <= 0) { // p1 lose
+  } else if (this.p1.hero.current_life <= 0) { // p1 lose
     this.is_game_finished = true;
     this.game_result_callback(1, this.p1_info, this.p2_info); // p2 wins!
 
@@ -2460,8 +2424,7 @@ Engine.prototype.chk_win_or_lose = function() {
     this.p2_socket.emit('hearth-game-end', {
       info: 'win'
     });
-  }
-  else if (this.p2.hero.current_life <= 0) { // p2 lose
+  } else if (this.p2.hero.current_life <= 0) { // p2 lose
     this.is_game_finished = true;
     this.game_result_callback(0, this.p1_info, this.p2_info); // p1 wins!
 
@@ -2514,8 +2477,7 @@ Engine.prototype.end_turn = function() {
   // Change the players
   if (this.current_player == this.p1) {
     this.current_player = this.p2;
-  }
-  else this.current_player = this.p1;
+  } else this.current_player = this.p1;
 
   this.current_turn += 1;
 
@@ -2542,6 +2504,50 @@ Engine.prototype.start_turn = function() {
 
   // current player draws 1 card from a deck
   this.current_player.draw_cards(1);
+
+  // Special case for Prince Malchezaar which puts 5 legendary cards
+  // when the game starts if it is in a deck
+  function malchezaar(p) {
+    // There can be maximum 1 legendary card in a deck possible
+    function non_included(c) {
+      for (var i = 0; i < p.deck.num_card(); i++) {
+        if (p.deck.card_list[i].card_data.unique == c.unique) return false;
+      }
+      return true;
+    }
+
+    function rand(arr, n) {
+      if (n == 1 || !n) return arr[Math.floor(arr.length * Math.random())];
+
+      var sel = [];
+      while (arr.length && n > 0) {
+        var lucky = Math.floor(arr.length * Math.random());
+        sel.push(arr[lucky]);
+        arr.splice(lucky, 1);
+
+        n--;
+      }
+      return sel;
+    }
+
+    for (var i = 0; i < p.deck.num_card(); i++) {
+      if (p.deck.card_list[i].card_data.name == 'Prince Malchezaar') {
+        var avail_list = rand(p.engine.find_card_cond(function(c) {
+          if (c.level == 'legendary' &&
+            !c.is_token && non_included(c) &&
+            (c.job == 'neutral' || c.job == p.player_job)) return true;
+        }), 5);
+        for (var j = 0; j < 5; j++) {
+          p.put_card_to_deck(p, avail_list[j].unique);
+        }
+        break;
+      }
+    }
+  }
+  if (this.current_turn == 0) {
+    malchezaar(this.p1);
+    malchezaar(this.p2);
+  }
 };
 Engine.prototype.set_up_listener = function(p) {
   p.socket.on('hearth-user-play-card', function(e) {
@@ -2561,8 +2567,7 @@ Engine.prototype.set_up_listener = function(p) {
               console.log(colors.green('[play card] :: '), c.card_data.name, ' , at ', data.at);
               p.play_minion(c, data.at);
               return;
-            }
-            else if (c.card_data.type == 'spell') {
+            } else if (c.card_data.type == 'spell') {
               p.play_spell(c);
               return;
             }
@@ -2640,8 +2645,7 @@ Engine.prototype.set_up_listener = function(p) {
 
         clearTimeout(p.selection_fail_timer);
         p.engine.do_user_waiting();
-      }
-      else if (p == e.current_player && p.choose_waiting) {
+      } else if (p == e.current_player && p.choose_waiting) {
         p.choose_waiting = false;
 
         if (!(data.id >= 0 && data.id < p.available_list.length)) {
@@ -2700,19 +2704,20 @@ Engine.prototype.send_client_data = function(e) {
 
     return state;
   }
-  
+
   function weapon_info(p) {
-    var weapon_id = "none", weapon_life = 0;
-    if(p.weapon) {
+    var weapon_id = "none",
+      weapon_life = 0;
+    if (p.weapon) {
       weapon_id = p.weapon.card_data.id;
       weapon_life = p.weapon.current_life;
     }
-    
+
     var hero_dmg = p.hero_dmg();
     return {
-      'weapon_id' : weapon_id,
-      'weapon_life' : weapon_life,
-      'hero_dmg' : hero_dmg
+      'weapon_id': weapon_id,
+      'weapon_life': weapon_life,
+      'hero_dmg': hero_dmg
     };
   }
 
@@ -2773,10 +2778,10 @@ Engine.prototype.send_client_data = function(e) {
     event: (e ? e.packer() : null),
     me: hero_info(this.p1),
     enemy: hero_info(this.p2),
-    my_hero_dmg : weapon_info(this.p1),
-    enemy_hero_dmg :  weapon_info(this.p2)
+    my_hero_dmg: weapon_info(this.p1),
+    enemy_hero_dmg: weapon_info(this.p2)
   };
-  
+
   this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
 
   this.p2_last_emit_data = {
@@ -2785,8 +2790,8 @@ Engine.prototype.send_client_data = function(e) {
     event: (e ? e.packer() : null),
     me: hero_info(this.p2),
     enemy: hero_info(this.p1),
-    my_hero_dmg : weapon_info(this.p2),
-    enemy_hero_dmg :  weapon_info(this.p1)
+    my_hero_dmg: weapon_info(this.p2),
+    enemy_hero_dmg: weapon_info(this.p1)
   };
   this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
 };
@@ -2794,28 +2799,26 @@ Engine.prototype.send_client_data = function(e) {
 Engine.prototype.socket = function(p) {
   if (p == this.p1) {
     return this.p1_socket;
-  }
-  else if (p == this.p2) {
+  } else if (p == this.p2) {
     return this.p2_socket;
   }
   throw "SOCKET ERROR";
 };
 Engine.prototype.change_socket = function(who, socket) {
-  if(who == 'p1') {
+  if (who == 'p1') {
     this.p1_socket = socket;
     this.p1.socket = socket;
     this.set_up_listener(this.p1);
 
-    if(this.p1_last_emit_data) {
+    if (this.p1_last_emit_data) {
       this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
     }
-  } 
-  else if(who == 'p2') {
+  } else if (who == 'p2') {
     this.p2_socket = socket;
     this.p2.socket = socket;
     this.set_up_listener(this.p2);
 
-    if(this.p2_last_emit_data) {
+    if (this.p2_last_emit_data) {
       this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
     }
   }
@@ -2867,12 +2870,10 @@ stdin.addListener('data', function(d) {
         break;
       }
     }
-  }
-  else if (args[0] == 'mana') {
+  } else if (args[0] == 'mana') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     to.current_mana = 100;
-  }
-  else if (args[0] == 'show') {
+  } else if (args[0] == 'show') {
     var to = (args[1] == 'p1' ? current_working_engine.p1 : current_working_engine.p2);
     for (var i = 0; i < to.field.num_card(); i++) {
       console.log(to.field.card_list[i].card_data.name, ' ', to.field.card_list[i].mana(), '/', to.field.card_list[i].dmg(), ' Life : ', to.field.card_list[i].current_life, '/', to.field.card_list[i].life());

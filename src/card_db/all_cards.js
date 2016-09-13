@@ -4,6 +4,7 @@ const original_cards2 = require('./original_card2');
 const explorers = require('./explorers');
 const wog = require('./wog.js');
 const tgt = require('./tgt.js');
+const khz = require('./khz.js');
 const card_name = require('../card_api');
 
 (function() {
@@ -20,13 +21,16 @@ const card_name = require('../card_api');
       x = original_cards2.load_card(c); // Rest of the original cards
       if (x) return x;
 
-      x = explorers.load_card(c); // Rest of the original cards
+      x = explorers.load_card(c); // League of Explorers
       if (x) return x;
 
-      x = wog.load_card(c); // Rest of the original cards
+      x = wog.load_card(c); // Whisphers of Old Gods
       if (x) return x;
 
-      x = tgt.load_card(c); // Rest of the original cards
+      x = tgt.load_card(c); // The Grand Tournament
+      if (x) return x;
+
+      x = khz.load_card(c); // Kharazan
       if (x) return x;
 
       // If not found, then chk with the name of the card
@@ -46,6 +50,9 @@ const card_name = require('../card_api');
 
       x = tgt.load_card(id); // Rest of the original cards
       if (x) return x;
+
+      x = khz.load_card(id); // Rest of the original cards
+      if (x) return x;
     },
     // Check whether certain card is implemented or not
     is_implemented: function(name) {
@@ -55,6 +62,7 @@ const card_name = require('../card_api');
         card_names = card_names.concat(explorers.get_card_names());
         card_names = card_names.concat(wog.get_card_names());
         card_names = card_names.concat(tgt.get_card_names());
+        card_names = card_names.concat(khz.get_card_names());
       }
 
       for (var i = 0; i < card_names; i++) {
@@ -70,6 +78,7 @@ const card_name = require('../card_api');
         card_names = card_names.concat(explorers.get_card_names());
         card_names = card_names.concat(wog.get_card_names());
         card_names = card_names.concat(tgt.get_card_names());
+        card_names = card_names.concat(khz.get_card_names());
       }
       return card_names;
     }
