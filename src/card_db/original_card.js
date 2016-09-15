@@ -85,9 +85,7 @@
     'Shapeshift': {
       on_play: function(me) {
         me.owner.play_success(me, -1, function(me, non_bc, bc) {
-          me.owner.turn_dmg.dmg += 1;
-          me.owner.turn_dmg.turn = me.owner.engine.current_turn;
-
+          me.owner.add_hero_dmg(1);
           me.owner.add_armor(1, me);
         });
       }

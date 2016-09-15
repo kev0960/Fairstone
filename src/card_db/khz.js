@@ -805,7 +805,7 @@
         }, 'discard', me);
       }
     },
-    'Medivh\'s Vallet': {
+    'Medivh\'s Valet': {
       on_play: function(me, bc, user_play, at) {
         if (user_play && me.owner.secret_list.length) {
           me.owner.select_one(me,
@@ -815,7 +815,7 @@
             function() {
               me.owner.play_success(me, at, function(me, non_bc, bc) {
                 if (bc && me.target) {
-                  me.owner.deal_dmg(3, me, me, target);
+                  me.owner.deal_dmg(3, me, me.target);
                 }
                 end(me, non_bc, bc);
               });

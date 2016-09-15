@@ -196,6 +196,7 @@ function Hearthstone() {
   this.enemy_job_img = null;
   this.hero_img_scale = this.screen_y / 1560;
 
+  // Hero Atk Img 
   this.my_hero_atk_img = new createjs.Bitmap('/assets/images/hero_attack.png');
   this.enemy_hero_atk_img = new createjs.Bitmap('/assets/images/hero_attack.png');
 
@@ -217,6 +218,42 @@ function Hearthstone() {
   this.my_hero_atk_img.visible = false;
   this.enemy_hero_atk_img.visible = false;
 
+  // Hero Armor
+  this.my_hero_armor_img = new createjs.Bitmap('/assets/images/hero_armor.png');
+  this.enemy_hero_armor_img = new createjs.Bitmap('/assets/images/hero_armor.png');
+
+  this.my_hero_armor_img.x = this.screen_x / 2 - 140 * this.hero_img_scale;
+  this.my_hero_armor_img.y = this.my_hero_y;
+  this.enemy_hero_armor_img.x = this.screen_x / 2 - 140 * this.hero_img_scale;
+  this.enemy_hero_armor_img.y = this.enemy_hero_y;
+
+  this.my_hero_armor_img.scaleX = this.hero_img_scale;
+  this.my_hero_armor_img.scaleY = this.hero_img_scale;
+
+  this.enemy_hero_armor_img.scaleX = this.hero_img_scale;
+  this.enemy_hero_armor_img.scaleY = this.hero_img_scale;
+
+  this.stage.addChild(this.my_hero_armor_img);
+  this.stage.addChild(this.enemy_hero_armor_img);
+
+  this.my_hero_armor_img.visible = false;
+  this.enemy_hero_armor_img.visible = false;
+
+  this.my_hero_armor = new createjs.Text("", "25px Arial", "white");
+  this.enemy_hero_armor = new createjs.Text("", "25px Arial", "white");
+
+  this.stage.addChild(this.my_hero_armor);
+  this.stage.addChild(this.enemy_hero_armor);
+
+  this.my_hero_armor.y = this.my_hero_y + 280 * (this.hero_img_scale - 0.3);
+  this.my_hero_armor.x = this.screen_x / 2 + 140 * (this.hero_img_scale - 0.25);
+
+  this.enemy_hero_armor.y = this.enemy_hero_y + 280 * (this.hero_img_scale - 0.3);
+  this.enemy_hero_armor.x = this.screen_x / 2 + 140 * (this.hero_img_scale - 0.25);
+
+  this.my_hero_armor.visible = false;
+  this.enemy_hero_armor.visible = false;
+
   this.my_hero_atk = null;
   this.enemy_hero_atk = null;
 
@@ -228,6 +265,10 @@ function Hearthstone() {
 
   this.enemy_hero_mana = 0;
   this.enemy_hero_mana_img = [];
+
+  this.my_turn_img = null;
+  this.enemy_turn_img = null;
+  this.end_turn_txt = null;
 
   // UI
   this.selected_card = null;
@@ -382,22 +423,40 @@ Hearthstone.prototype.init = function() {
         h.enemy_hero_atk_img.visible = false;
       }
 
-      function min (a, b) {
-        if(a > b) return b;
+      // Show armor
+      if (data.me.armor) {
+        h.my_hero_armor_img.visible = true;
+        h.my_hero_armor.text = data.me.armor;
+        h.my_hero_armor.visible = true;
+      } else {
+        h.my_hero_armor_img.visible = false;
+        h.my_hero_armor.visible = false;
+      }
+
+      if (data.enemy.armor) {
+        h.enemy_hero_armor_img.visible = true;
+        h.enemy_hero_armor.text = data.enemy.armor;
+        h.enemy_hero_armor.visible = true;
+      } else {
+        h.enemy_hero_armor_img.visible = false;
+        h.enemy_hero_armor.visible = false;
+      }
+
+      function min(a, b) {
+        if (a > b) return b;
         return a;
       }
       // Draw mana crystals
-      if(h.my_hero_mana_img.length > min(10, data.me.mana)) {
+      if (h.my_hero_mana_img.length > min(10, data.me.mana)) {
         // Remove some images
-        for(var i = min(10, data.me.mana); i < h.my_hero_mana_img.length; i ++) {
+        for (var i = min(10, data.me.mana); i < h.my_hero_mana_img.length; i++) {
           h.stage.removeChild(h.my_hero_mana_img[i]);
         }
         h.my_hero_mana_img.splice(min(10, data.me.mana));
-      }
-      else if(h.my_hero_mana_img.length < min(10, data.me.mana)) {
+      } else if (h.my_hero_mana_img.length < min(10, data.me.mana)) {
         // Draw more images
         var mana_distance = h.screen_x / 64; // --> which is 64 = 1920 / 30
-        for(var i = h.my_hero_mana_img.length; i < min(10, data.me.mana); i ++) {
+        for (var i = h.my_hero_mana_img.length; i < min(10, data.me.mana); i++) {
           var mana_crystal = new createjs.Bitmap("/assets/images/mana_crystal.png");
           h.stage.addChildAt(mana_crystal, 0);
           h.my_hero_mana_img.push(mana_crystal);
@@ -408,6 +467,17 @@ Hearthstone.prototype.init = function() {
           mana_crystal.scaleX = mana_distance / 100;
           mana_crystal.scaleY = mana_distance / 100;
         }
+      }
+
+      // Show Turn
+      if (data.turn == 'me') {
+        h.end_turn_txt.text = 'End Turn';
+        h.my_turn_img.visible = true;
+        h.enemy_turn_img.visible = false;
+      } else {
+        h.end_turn_txt.text = 'Enemy Turn';
+        h.my_turn_img.visible = false;
+        h.enemy_turn_img.visible = true;
       }
       h.draw_hand();
       h.draw_field();
@@ -518,11 +588,31 @@ Hearthstone.prototype.init = function() {
   Register Turn End Button 
 
   */
-  var end_turn_btn = new createjs.Shape();
-  end_turn_btn.graphics.beginFill('yellow').drawRect(1300, 400, 150, 50);
-  this.stage.addChild(end_turn_btn);
 
-  end_turn_btn.addEventListener('click', function(h) {
+  this.my_turn_img = new createjs.Bitmap("/assets/images/turn_end_btn.png");
+  this.my_turn_img.x = this.screen_x * 148 / 192;
+  this.my_turn_img.y = this.screen_y * 45 / 104;
+  this.my_turn_img.scaleX = this.screen_x / 3360;
+  this.my_turn_img.scaleY = this.screen_x / 3360;
+
+  this.enemy_turn_img = new createjs.Bitmap("/assets/images/turn_end_btn2.png");
+  this.enemy_turn_img.x = this.screen_x * 148 / 192;
+  this.enemy_turn_img.y = this.screen_y * 45 / 104;
+  this.enemy_turn_img.scaleX = this.screen_x / 3360;
+  this.enemy_turn_img.scaleY = this.screen_x / 3360;
+
+  this.stage.addChild(this.my_turn_img);
+  this.stage.addChild(this.enemy_turn_img);
+
+  this.my_turn_img.visible = false;
+  this.enemy_turn_img.visible = false;
+
+  this.end_turn_txt = new createjs.Text("", "20px Arial", "black");
+  this.end_turn_txt.x = this.screen_x * 150 / 192;
+  this.end_turn_txt.y = this.screen_y * 47 / 104;
+  this.stage.addChild(this.end_turn_txt);
+
+  this.my_turn_img.addEventListener('click', function(h) {
     return function() {
       // Notify the server that the client has ended its turn
       h.socket.emit('hearth-end-turn', {});
@@ -564,6 +654,7 @@ Hearthstone.prototype.init = function() {
       for (var i = 0; i < h.center_cards.num_card(); i++) {
         var res = h.center_cont.removeChild(h.center_cards.card_list[i].bitmap);
         h.center_cards.card_list[i].bitmap.removeAllEventListeners();
+        ``
       }
 
       h.stage.update();
@@ -1140,7 +1231,9 @@ Hearthstone.prototype.draw_hand = function() {
 
         c.display.bitmap.scaleX = 0.8;
         c.display.bitmap.scaleY = 0.8;
-        c.display.bitmap.y -= 150;
+
+        c.display.bitmap.y = -c.display.bitmap.image.height * 0.4;
+        c.display.bitmap.x -= c.display.bitmap.image.width * 0.2;
 
         // move hovered card into the front
         h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset + 1);
@@ -1200,12 +1293,21 @@ Hearthstone.prototype.draw_hand = function() {
     if (c.owner == 'me') mine++;
     else if (c.owner == 'enemy') enemy++;
 
+    function min(a, b) {
+      if (a > b) return b;
+      return a;
+    }
+
+    var card_dist = min(150, this.screen_x * (5 / this.my_hands.length / 16)); // -> 600 (width of the hand card length) / 10 (maximum num cards) / 1920
+
     // Rotate a image a bit. 
     if (c.owner == 'me') {
       display.bitmap.rotation = 0;
       if (num_my_card >= 2) display.bitmap.rotation = -30 + (60 / (num_my_card - 1)) * mine;
 
-      display.bitmap.x = this.screen_x / 2 - Math.floor(num_my_card / 2) * 130 + mine * 130;
+      var card_width = 0;
+      if (display.bitmap.image) card_width = display.bitmap.image.width;
+      display.bitmap.x = this.screen_x / 2 - Math.floor(num_my_card / 2) * card_dist + mine * card_dist - card_width * 0.25;
       display.bitmap.y = 0;
 
       var x = 0;
@@ -1239,7 +1341,7 @@ Hearthstone.prototype.draw_hand = function() {
       display.bitmap.rotation = -30 + (60 / num_enemy_card) * enemy;
       if (num_enemy_card % 2 == 0 && enemy == num_enemy_card / 2) display.bitmap.rotation += (60 / num_enemy_card);
 
-      display.bitmap.x = 700 - Math.floor(num_enemy_card / 2) * 130 + enemy * 130;
+      display.bitmap.x = this.screen_x / 2 - Math.floor(num_enemy_card / 2) * card_dist + enemy * card_dist;
 
       c.offset = enemy;
       display.offset = enemy;

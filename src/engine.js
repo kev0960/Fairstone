@@ -1136,11 +1136,11 @@ Player.prototype.actual_dmg_deal = function(from, to) {
   if (to.current_life <= 0 || to.status == 'destroyed') to.already_destroyed = true;
 
   // Check for the Armor
-  if (to.armor > dmg) {
+  if (to.armor >= dmg) {
     to.armor -= dmg;
   } else {
-    to.armor = 0;
     to.current_life -= (dmg - to.armor);
+    to.armor = 0;
   }
 
 
@@ -2688,6 +2688,7 @@ Engine.prototype.send_client_data = function(e) {
     return {
       life: p.hero.current_life,
       mana: p.current_mana,
+      max_mana: p.max_mana,
       id: p.hero.id,
       armor: p.hero.armor,
       job: p.player_job
@@ -2779,7 +2780,8 @@ Engine.prototype.send_client_data = function(e) {
     me: hero_info(this.p1),
     enemy: hero_info(this.p2),
     my_hero_dmg: weapon_info(this.p1),
-    enemy_hero_dmg: weapon_info(this.p2)
+    enemy_hero_dmg: weapon_info(this.p2),
+    turn : (this.current_player == this.p1 ? 'me' : 'enemy')
   };
 
   this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
@@ -2791,7 +2793,8 @@ Engine.prototype.send_client_data = function(e) {
     me: hero_info(this.p2),
     enemy: hero_info(this.p1),
     my_hero_dmg: weapon_info(this.p2),
-    enemy_hero_dmg: weapon_info(this.p1)
+    enemy_hero_dmg: weapon_info(this.p1),
+    turn : (this.current_player == this.p2 ? 'me' : 'enemy')
   };
   this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
 };
