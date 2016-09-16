@@ -487,6 +487,7 @@
             me.owner.engine.add_aura(function(n, c, me) {
               if (c.owner == me.owner) return 2;
             }, 'hero_power_num', me);
+            me.owner.update_hero_power();
           }
           end(me, non_bc, bc);
         });
@@ -2242,6 +2243,7 @@
               }
               return n;
             }, 'hero_power_num', me);
+            me.owner.update_hero_power();
           }
           end(me, non_bc, bc);
         });

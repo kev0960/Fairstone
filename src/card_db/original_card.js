@@ -78,7 +78,9 @@
               }
             );
           },
-          nothing, // on select failure
+          function select_fail(me) {
+            me.owner.power_used.did --;
+          }, // on select failure
           forced_target); // if forced_target is enabled then we don't make user to choose
       }
     },
@@ -123,7 +125,9 @@
               }
             );
           },
-          nothing, // on select failure
+          function select_fail(me) {
+            me.owner.power_used.did --;
+          }, // on select failure
           forced_target); // if forced_target is enabled then we don't make user to choose
       }
     },

@@ -1458,6 +1458,24 @@ Player.prototype.weapon_dec_durability = function(d, who) {
     this.g_handler.add_event(new Event('destroyed', [this.weapon, who]));
   }
 };
+Player.prototype.update_hero_power = function() {
+  var default_max = 1;
+
+  for (var i = 0; i < this.engine.g_aura.length; i++) {
+    if (this.engine.g_aura[i].state == 'hero_power_num') {
+      default_max = this.engine.g_aura[i].f(default_max, this.hero_power, this.engine.g_aura[i].who);
+    }
+  }
+  if (this.power_used.turn != this.engine.current_turn) {
+    this.power_used.turn = this.engine.current_turn;
+    this.power_used.max = default_max;
+    this.power_used.did = 0;
+  } else if (this.power_used.max < default_max) {
+    // There are some cases the Max hero power availablity 
+    // can be increased during a turn
+    this.power_used.max = default_max;
+  }
+}
 Player.prototype.use_hero_power = function() {
   var default_max = 1;
   for (var i = 0; i < this.engine.g_aura.length; i++) {
@@ -2495,6 +2513,9 @@ Engine.prototype.end_turn = function() {
   this.current_player.next_overload_mana = 0;
   this.current_player.turn_card_play = [];
 
+  // Update Hero Power Usage
+  this.current_player.update_hero_power();
+
   this.g_handler.add_event(new Event('turn_begin', [this.current_player]));
   this.g_handler.add_callback(this.start_turn, this, []);
   this.g_handler.execute();
@@ -2691,7 +2712,13 @@ Engine.prototype.send_client_data = function(e) {
       max_mana: p.max_mana,
       id: p.hero.id,
       armor: p.hero.armor,
-      job: p.player_job
+      job: p.player_job,
+      hero_power : {
+        name : p.hero_power.card_data.name,
+        mana : p.hero_power.mana(),
+        did : p.power_used.did,
+        max : p.power_used.max
+      }
     };
   }
 
@@ -2707,10 +2734,11 @@ Engine.prototype.send_client_data = function(e) {
   }
 
   function weapon_info(p) {
-    var weapon_id = "none",
-      weapon_life = 0;
+    var weapon_id = "none", weapon_life = 0, weapon_img = "", weapon_unique = '';
     if (p.weapon) {
       weapon_id = p.weapon.card_data.id;
+      weapon_unique = p.weapon.card_data.unique;
+      weapon_img = p.weapon.card_data.img_path;
       weapon_life = p.weapon.current_life;
     }
 
@@ -2718,6 +2746,8 @@ Engine.prototype.send_client_data = function(e) {
     return {
       'weapon_id': weapon_id,
       'weapon_life': weapon_life,
+      'weapon_img' : weapon_img,
+      'weapon_unique' : weapon_unique,
       'hero_dmg': hero_dmg
     };
   }
