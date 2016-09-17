@@ -3299,7 +3299,7 @@
             me.owner.deal_dmg_many(dmg, me, target);
 
             for (var i = 0; i < target.length; i++) {
-              target[i].is_frozen.turn = me.owner.engine.current_turn + 1;
+              target[i].is_frozen.until = me.owner.engine.current_turn + 1;
             }
             end_spell(me);
           }

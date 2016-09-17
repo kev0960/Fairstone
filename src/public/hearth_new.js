@@ -1040,7 +1040,13 @@ Hearthstone.prototype.init = function() {
     return function(e) {
       if (e.target == h.field_img) {
         if (!h.need_to_select) {
+          if (h.selected_card.chk_state('attackable')) {
+            h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
+          } else {
+            h.selected_card.display.added_images[2].shadow = null;
+          }
           h.selected_card = null;
+          h.stage.update();
         } else {
           // When the user is on 'Discover', then the user must select card.
           if (h.is_selecting_center && h.center_card.length == 3) {
@@ -1339,8 +1345,16 @@ Hearthstone.prototype.draw_field = function() {
             from_id: h.selected_card.id,
             to_id: c.id
           });
+          if (h.selected_card.chk_state('attackable')) {
+            h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
+          } else {
+            h.selected_card.display.added_images[2].shadow = null;
+          }
           h.selected_card = null;
-        } else h.selected_card = c;
+        } else {
+          h.selected_card = c;
+          h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
+        }
       };
     }(c, this));
   }
@@ -1415,6 +1429,62 @@ Hearthstone.prototype.draw_field = function() {
       var shield_img = new createjs.Bitmap("/assets/images/inplay_minion_divine_shield.png");
       display.added_images.push(shield_img);
       this.stage.addChild(shield_img);
+
+      // Since shield_img covers entire card images, we should put an additional event listener
+      shield_img.removeAllEventListeners();
+      shield_img.addEventListener('mouseover', function(c, h) {
+        return function(e) {
+          // When hovers on the field minion, shows the card info
+          h.current_hover = c;
+
+          h.stage.update();
+        };
+      }(c, this));
+
+      shield_img.addEventListener('mouseout', function(c, h) {
+        return function(e) {
+          if (h.current_hover == c) {
+            h.current_hover = null;
+          }
+
+          h.stage.update();
+        };
+      }(c, this));
+      shield_img.addEventListener('mousedown', function(c, h) {
+        return function(e) {
+          if (h.need_to_select) {
+            h.socket.emit('select-done', {
+              id: c.id
+            });
+            h.selected_card = null;
+            h.need_to_select = false;
+            h.selectable_lists = [];
+
+            // Remove a filter when the selectino is done
+            h.field_img.filters = [];
+            h.field_img.updateCache();
+
+            return;
+          }
+
+          // Cannot attack itself
+          if (h.selected_card && h.selected_card != c) {
+            h.socket.emit('hearth-combat', {
+              from_id: h.selected_card.id,
+              to_id: c.id
+            });
+            if (h.selected_card.chk_state('attackable')) {
+              h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
+            } else {
+              h.selected_card.display.added_images[2].shadow = null;
+            }
+            h.selected_card = null;
+          } else {
+            h.selected_card = c;
+            h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
+          }
+        };
+      }(c, this));
     }
 
     var offset_x = (c.owner == 'me' ? this.my_field_cont.x : this.enemy_field_cont.x);

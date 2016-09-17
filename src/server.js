@@ -518,7 +518,7 @@ function UserManager() {
             name: '얼법',
             job: 'mage',
             cards: ['Babbling Book', 2, 'Frostbolt', 2, 'Medivh\'s Valet', 2, 'Arcane Intellect', 2, 'Forgotten Torch', 2, 'Frost Nova', 2,
-              'Ice Barrier', 2, 'Ice Block', 2, 'Fireball', 2, 'Blizzard', 2, 'Archmage Antonidas', 2, 'Firelands Portal', 2, 'Flamestrike', 1,
+              'Ice Barrier', 2, 'Ice Block', 2, 'Fireball', 2, 'Blizzard', 2, 'Archmage Antonidas', 1, 'Firelands Portal', 2, 'Flamestrike', 1,
               'Bloodmage Thalnos', 1, 'Doomsayer', 2, 'Acolyte of Pain', 2, 'Medivh, the Guardian', 1, 'Alexstrasza', 1
             ]
           }],
