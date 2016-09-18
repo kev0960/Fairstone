@@ -13,15 +13,15 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
 
   img.onload = function(that) {
     return function() {
-      var found = false; 
-      for(var i = 0; i < that.img_list.length; i ++) {
-        if(that.img_list[i].unique == unique) {
-          found = true; 
+      var found = false;
+      for (var i = 0; i < that.img_list.length; i++) {
+        if (that.img_list[i].unique == unique) {
+          found = true;
           break;
         }
       }
-      
-      if(!found) {
+
+      if (!found) {
         that.img_list.push({
           unique: unique,
           src: src,
@@ -53,7 +53,7 @@ function HearthCard(unique, id, owner, name, mana, health, dmg, img_src, state, 
   this.dmg = dmg;
   this.mana = mana;
   this.img_src = img_src;
-  this.state = state;
+  this.state = (state ? state : []);
   this.where = where;
 
   // Location in the field
@@ -664,7 +664,7 @@ Hearthstone.prototype.process_received_data = function(data) {
 Hearthstone.prototype.init = function() {
   this.socket.on('hearth-event', function(h) {
     return function(data) {
-       if (h.stop_processing_received_data) {
+      if (h.stop_processing_received_data) {
         h.received_data_list.push(data);
         return;
       }
@@ -938,7 +938,7 @@ Hearthstone.prototype.init = function() {
         h.need_to_select = false;
         h.selectable_lists = [];
 
-        // Remove a filter when the selectino is done
+        // Remove a filter when the selection is done
         h.field_img.filters = [];
         h.field_img.updateCache();
         return;
@@ -950,8 +950,22 @@ Hearthstone.prototype.init = function() {
           from_id: h.selected_card.id,
           to_id: c.id
         });
+        if(h.selected_card.id == 'me') {
+          h.my_job_img.shadow = new createjs.Shadow("yellow", 0, 0, 20);
+        } 
+        else if(h.selected_card.id != 'enemy') {
+          h.selected_card.display.added_images[2].shadow = null;
+        }
         h.selected_card = null;
-      } else h.selected_card = c;
+        h.stage.update(); 
+      }
+      else {
+        h.selected_card = c;
+        if (c.id == 'me') {
+          h.my_job_img.shadow = new createjs.Shadow("yellow", 0, 0, 20);
+          h.stage.update();
+        }
+      }
     };
   };
 
@@ -1067,8 +1081,12 @@ Hearthstone.prototype.init = function() {
         if (!h.need_to_select) {
           if (h.selected_card && h.selected_card.chk_state('attackable')) {
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
-          } else {
-            h.selected_card.display.added_images[2].shadow = null;
+          } else if (h.selected_card) {
+            if (h.selected_card.id == 'me') {
+              h.my_job_img.shadow = null;
+            } else if (h.selected_card.id != 'enemy') {
+              h.selected_card.display.added_images[2].shadow = null;
+            }
           }
           h.selected_card = null;
           h.stage.update();
@@ -1112,19 +1130,18 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
     this.process_saved_data();
     this.stage.update();
     return;
-  }
-  else if (loaded && this.received_data_list.length) {
+  } else if (loaded && this.received_data_list.length) {
     var data = this.received_data_list[0];
     if (data.event && data.event.event_type == 'play_card') {
       if (data.event.card.unique == loaded.event.card.unique) {
         var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function(h) {
-           return function(u, s, img) {
-             h.show_play_card(data, img);
-           };
-        } (this));
+          return function(u, s, img) {
+            h.show_play_card(data, img);
+          };
+        }(this));
 
-        if(img_downloaded) img = img_downloaded;
-        if(!img) return;
+        if (img_downloaded) img = img_downloaded;
+        if (!img) return;
 
         this.stage.removeChild(this.enemy_play_card);
         this.stage.removeChild(this.enemy_play_card_text);
@@ -1158,8 +1175,7 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
 
     this.enemy_play_card_text.x = 50;
     this.enemy_play_card_text.y = 50;
-  } 
-  else {
+  } else {
     this.enemy_play_card = new createjs.Bitmap(img.img);
     this.stage.addChild(this.enemy_play_card);
   }
@@ -1172,7 +1188,7 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
     return function() {
       h.show_play_card('done');
     };
-  } (this), 2000);
+  }(this), 2000);
 };
 Hearthstone.prototype.process_saved_data = function() {
   while (this.received_data_list.length) {
@@ -1465,7 +1481,11 @@ Hearthstone.prototype.draw_field = function() {
           if (h.selected_card.chk_state('attackable')) {
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
           } else {
-            h.selected_card.display.added_images[2].shadow = null;
+            if (h.selected_card.id == 'me') {
+              h.my_job_img.shadow = null;
+            } else if (h.selected_card.id != 'enemy') {
+              h.selected_card.display.added_images[2].shadow = null;
+            }
           }
           h.selected_card = null;
         } else {
@@ -1592,11 +1612,17 @@ Hearthstone.prototype.draw_field = function() {
             });
             if (h.selected_card.chk_state('attackable')) {
               h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
-            } else {
-              h.selected_card.display.added_images[2].shadow = null;
+            } 
+            else {
+              if (h.selected_card.id == 'me') {
+                h.my_job_img.shadow = null;
+              } else if (h.selected_card.id != 'enemy') {
+                h.selected_card.display.added_images[2].shadow = null;
+              }
             }
             h.selected_card = null;
-          } else {
+          }
+          else {
             h.selected_card = c;
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
           }

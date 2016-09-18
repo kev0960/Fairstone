@@ -908,8 +908,8 @@ Player.prototype.chk_invincible = function(target) {
   return false;
 };
 Player.prototype.hero_combat = function(target) {
+  if(this.hero_dmg() <= 0) return false; 
   // check the target condition
-
   if (!this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
     || target.owner == this // chks whether the attacker is not attacker our own teammates
     || this.chk_invincible(target) || target.stealth()) return false;
