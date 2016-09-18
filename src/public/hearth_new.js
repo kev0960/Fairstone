@@ -13,15 +13,15 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
 
   img.onload = function(that) {
     return function() {
-      if (!dup) {
-        // If it is already stored
-        for (var i = 0; i < that.img_list.length; i++) {
-          if (that.img_list[i].unique == unique) {
-            if (call_back) call_back(unique, src, img);
-            return;
-          }
+      var found = false; 
+      for(var i = 0; i < that.img_list.length; i ++) {
+        if(that.img_list[i].unique == unique) {
+          found = true; 
+          break;
         }
-
+      }
+      
+      if(!found) {
         that.img_list.push({
           unique: unique,
           src: src,
@@ -86,7 +86,7 @@ HearthCard.prototype.chk_state = function(state) {
     if (this.state[i] == state) return true;
   }
   return false;
-}
+};
 
 function Deck() {
   this.card_list = [];
@@ -200,6 +200,10 @@ function Hearthstone() {
   // Hero Info
   this.my_job = "";
   this.enemy_job = "";
+
+  this.my_hero_id = -1;
+  this.enemy_hero_id = -1;
+
   this.my_job_img = null;
   this.enemy_job_img = null;
   this.hero_img_scale = this.screen_y / 1560;
@@ -329,332 +333,353 @@ function Hearthstone() {
   // Need to select field card 
   this.need_to_select = false;
 
+  // Received sockets 
+  this.received_data_list = [];
+  this.stop_processing_received_data = false;
+  this.enemy_play_card = null;
+  this.enemy_play_card_text = null;
+
   this.init();
 }
+Hearthstone.prototype.process_received_data = function(data) {
+  this.cards.card_list = []; // Change the entire card list with newly received ones
+  console.log('Data is received!', data.card_info);
+
+  for (var i = 0; i < data.card_info.length; i++) {
+    var c = data.card_info[i];
+    this.cards.add_card(new HearthCard(
+      c.unique,
+      c.id,
+      c.owner,
+      c.name,
+      c.mana,
+      c.life,
+      c.dmg,
+      c.img_path,
+      c.state,
+      c.where
+    ));
+
+    hearth_resource.reg_img(c.unique, c.img_path);
+  }
+
+  this.my_hero_id = data.me.id;
+  this.enemy_hero_id = data.enemy.id;
+
+  if (data.my_hero_dmg.weapon_id != 'none') {
+    this.my_hero_weapon_template.visible = true;
+    this.my_hero_weapon_life.visible = true;
+    this.my_hero_weapon_life.text = data.my_hero_dmg.weapon_life;
+
+    hearth_resource.reg_img(data.my_hero_dmg.weapon_unique, data.my_hero_dmg.weapon_img);
+    this.draw_weapon(new HearthCard(
+      data.my_hero_dmg.weapon_unique,
+      data.my_hero_dmg.weapon_id,
+      'me',
+      '',
+      '',
+      '',
+      '',
+      data.my_hero_dmg.weapon_img,
+      '',
+      ''));
+
+  } else {
+    this.my_hero_weapon_template.visible = false;
+    this.my_hero_weapon_life.visible = false;
+    if (this.my_hero_weapon) {
+      this.stage.removeChild(this.my_hero_weapon.image);
+    }
+  }
+
+  if (data.enemy_hero_dmg.weapon_id != 'none') {
+    this.enemy_hero_weapon_template.visible = true;
+    this.enemy_hero_weapon_life.visible = true;
+    this.enemy_hero_weapon_life.text = data.enemy_hero_dmg.weapon_life;
+
+    hearth_resource.reg_img(data.enemy_hero_dmg.weapon_unique, data.enemy_hero_dmg.weapon_img);
+    this.draw_weapon(new HearthCard(
+      data.enemy_hero_dmg.weapon_unique,
+      data.enemy_hero_dmg.weapon_id,
+      'enemy',
+      '',
+      '',
+      '',
+      '',
+      data.enemy_hero_dmg.weapon_img,
+      '',
+      ''));
+  } else {
+    this.enemy_hero_weapon_template.visible = false;
+    this.enemy_hero_weapon_life.visible = false;
+    if (this.enemy_hero_weapon) {
+      this.stage.removeChild(this.enemy_hero_weapon.image);
+    }
+  }
+
+  // Get Hero Power
+  function get_hero_power_name(name) {
+    switch (name) {
+      case "Armor Up!":
+        return "armor up!.png";
+      case "Fireblast":
+        return "fireblast.png";
+      case "Shapeshift":
+        return "shapeshift.png";
+      case "Life Tap":
+        return "life tap.png";
+      case "Totemic Call":
+        return "totemic call.png";
+      case "Dagger Mastery":
+        return "dagger mastery.png";
+      case "Steady Shot":
+        return "steady shot.png";
+      case "Lesser Heal":
+        return "lesser heal.png";
+      case "Reinforce":
+        return "reinforce.png";
+    }
+  }
+
+  if (data.me.hero_power.name != this.my_hero_power_name) {
+    if (this.my_hero_power) {
+      this.stage.removeChild(this.my_hero_power);
+    }
+
+    this.my_hero_power_name = data.me.hero_power.name;
+    this.my_hero_power = new createjs.Bitmap("/assets/images/" + get_hero_power_name(this.my_hero_power_name));
+
+    this.my_hero_power.x = this.screen_x * 109 / 192;
+    this.my_hero_power.y = this.screen_y * 77 / 104;
+
+    this.my_hero_power.scaleX = 130 * this.screen_x / (1920 * 121);
+    this.my_hero_power.scaleY = 130 * this.screen_x / (1920 * 121);
+
+    this.stage.addChildAt(this.my_hero_power, 1);
+
+    this.my_hero_power.addEventListener('mousedown', function(h) {
+      return function() {
+        h.socket.emit('hero_power');
+      };
+    }(this));
+  }
+
+  if (data.me.hero_power.did == data.me.hero_power.max) {
+    this.my_hero_power_exhausted.visible = true;
+    this.my_hero_power_cost.text = '';
+    this.my_hero_power_template.visible = false;
+  } else {
+    this.my_hero_power_exhausted.visible = false;
+    this.my_hero_power_cost.text = data.me.hero_power.mana;
+    this.my_hero_power_template.visible = true;
+  }
+
+  if (data.enemy.hero_power.name != this.enemy_hero_power_name) {
+    if (this.my_hero_power) {
+      this.stage.removeChild(this.enemy_hero_power);
+    }
+    this.enemy_hero_power_name = data.enemy.hero_power.name;
+    this.enemy_hero_power = new createjs.Bitmap("/assets/images/" + get_hero_power_name(this.enemy_hero_power_name));
+
+    this.enemy_hero_power.x = this.screen_x * 109 / 192;
+    this.enemy_hero_power.y = this.screen_y * 17 / 104;
+
+    this.enemy_hero_power.scaleX = 130 * this.screen_x / (1920 * 121);
+    this.enemy_hero_power.scaleY = 130 * this.screen_x / (1920 * 121);
+
+    this.stage.addChildAt(this.enemy_hero_power, 1);
+  }
+
+  if (data.enemy.hero_power.did == data.enemy.hero_power.max) {
+    this.enemy_hero_power_exhausted.visible = true;
+    this.enemy_hero_power_cost.text = '';
+    this.enemy_hero_power_template.visible = false;
+  } else {
+    this.enemy_hero_power_exhausted.visible = false;
+    this.enemy_hero_power_cost.text = data.enemy.hero_power.mana;
+    this.enemy_hero_power_template.visible = true;
+  }
+
+  // Display hero's image
+  function get_hero_img_name(job) {
+    switch (job) {
+      case "warrior":
+        return "hero_garrosthis.png";
+      case "mage":
+        return "hero_jaina.png";
+      case "druid":
+        return "hero_malfurion.png";
+      case "warlock":
+        return "hero_guldan.png";
+      case "shaman":
+        return "hero_thrall.png";
+      case "rogue":
+        return "hero_valeera.png";
+      case "hunter":
+        return "hero_rexxar.png";
+      case "priest":
+        return "hero_anduin.png";
+      case "paladin":
+        return "hero_uther.png";
+    }
+  }
+  if (data.me.job != this.my_job) {
+    if (this.my_job_img) {
+      this.stage.removeChild(this.my_job_img);
+    }
+    this.my_job_img = new createjs.Bitmap("/assets/images/" + get_hero_img_name(data.me.job));
+    this.my_job_img.x = this.screen_x / 2 - 140 * this.hero_img_scale;
+    this.my_job_img.y = this.my_hero_y;
+    this.my_job_img.scaleX = this.hero_img_scale;
+    this.my_job_img.scaleY = this.hero_img_scale;
+    this.my_job = data.me.job;
+
+    this.stage.addChildAt(this.my_job_img, 1); // must draw first
+  }
+  if (data.enemy.job != this.enemy_job) {
+    if (this.enemy_job_img) {
+      this.stage.removeChild();
+    }
+    this.enemy_job_img = new createjs.Bitmap("/assets/images/" + get_hero_img_name(data.enemy.job));
+    this.enemy_job_img.x = this.screen_x / 2 - 140 * this.hero_img_scale;
+    this.enemy_job_img.y = this.enemy_hero_y;
+    this.enemy_job_img.scaleX = this.hero_img_scale;
+    this.enemy_job_img.scaleY = this.hero_img_scale;
+
+    this.stage.addChildAt(this.enemy_job_img, 1);
+  }
+
+  // Display hero's current remaining hp
+  if (this.my_hero_life) {
+    this.my_hero_life.text = data.me.life;
+  } else {
+    this.my_hero_life = new createjs.Text(data.me.life, "25px Arial", "white");
+    this.stage.addChild(this.my_hero_life);
+
+    this.my_hero_life.y = this.my_hero_y + 280 * (this.hero_img_scale - 0.12);
+    this.my_hero_life.x = this.screen_x / 2 + 140 * (this.hero_img_scale - 0.3);
+  }
+
+  if (this.enemy_hero_life) {
+    this.enemy_hero_life.text = data.enemy.life;
+  } else {
+    this.enemy_hero_life = new createjs.Text(data.enemy.life, "25px Arial", "white");
+    this.stage.addChild(this.enemy_hero_life);
+
+    this.enemy_hero_life.y = this.enemy_hero_y + 280 * (this.hero_img_scale - 0.12);
+    this.enemy_hero_life.x = this.screen_x / 2 + 140 * (this.hero_img_scale - 0.3);
+  }
+
+  // Display hero's current attack damage
+  if (this.my_hero_atk) {
+    this.stage.removeChild(this.my_hero_atk);
+  }
+
+  if (data.my_hero_dmg.hero_dmg > 0) {
+    this.my_hero_atk_img.visible = true;
+    this.my_hero_atk = new createjs.Text(data.my_hero_dmg.hero_dmg, "25px Arial", "white");
+    this.stage.addChild(this.my_hero_atk);
+
+    this.my_hero_atk.y = this.my_hero_y + 280 * (this.hero_img_scale - 0.12);
+    this.my_hero_atk.x = this.screen_x / 2 - 140 * (this.hero_img_scale - 0.15);
+  } else {
+    this.my_hero_atk_img.visible = false;
+
+  }
+
+  if (this.enemy_hero_atk) {
+    this.stage.removeChild(this.enemy_hero_atk);
+  }
+
+  if (data.enemy_hero_dmg.hero_dmg > 0) {
+    this.enemy_hero_atk_img.visible = true;
+    this.enemy_hero_atk = new createjs.Text(data.enemy_hero_dmg.hero_dmg, "25px Arial", "white");
+    this.stage.addChild(this.enemy_hero_atk);
+
+    this.enemy_hero_atk.y = this.enemy_hero_y + 280 * (this.hero_img_scale - 0.12);
+    this.enemy_hero_atk.x = this.screen_x / 2 - 140 * (this.hero_img_scale - 0.15);
+  } else {
+    this.enemy_hero_atk_img.visible = false;
+  }
+
+  // Show armor
+  if (data.me.armor) {
+    this.my_hero_armor_img.visible = true;
+    this.my_hero_armor.text = data.me.armor;
+    this.my_hero_armor.visible = true;
+  } else {
+    this.my_hero_armor_img.visible = false;
+    this.my_hero_armor.visible = false;
+  }
+
+  if (data.enemy.armor) {
+    this.enemy_hero_armor_img.visible = true;
+    this.enemy_hero_armor.text = data.enemy.armor;
+    this.enemy_hero_armor.visible = true;
+  } else {
+    this.enemy_hero_armor_img.visible = false;
+    this.enemy_hero_armor.visible = false;
+  }
+
+  function min(a, b) {
+    if (a > b) return b;
+    return a;
+  }
+  // Draw mana crystals
+  if (this.my_hero_mana_img.length > min(10, data.me.mana)) {
+    // Remove some images
+    for (var i = min(10, data.me.mana); i < this.my_hero_mana_img.length; i++) {
+      this.stage.removeChild(this.my_hero_mana_img[i]);
+    }
+    this.my_hero_mana_img.splice(min(10, data.me.mana));
+  } else if (this.my_hero_mana_img.length < min(10, data.me.mana)) {
+    // Draw more images
+    var mana_distance = this.screen_x / 64; // --> which is 64 = 1920 / 30
+    for (var i = this.my_hero_mana_img.length; i < min(10, data.me.mana); i++) {
+      var mana_crystal = new createjs.Bitmap("/assets/images/mana_crystal.png");
+      this.stage.addChildAt(mana_crystal, 1);
+      this.my_hero_mana_img.push(mana_crystal);
+
+      mana_crystal.x = mana_distance * i + 1300 / 1920 * this.screen_x;
+      mana_crystal.y = this.screen_y * 12 / 13;
+
+      mana_crystal.scaleX = mana_distance / 100;
+      mana_crystal.scaleY = mana_distance / 100;
+    }
+  }
+
+  // Show Turn
+  if (data.turn == 'me') {
+    this.end_turn_txt.text = 'End Turn';
+    this.my_turn_img.visible = true;
+    this.enemy_turn_img.visible = false;
+  } else {
+    this.end_turn_txt.text = 'Enemy Turn';
+    this.my_turn_img.visible = false;
+    this.enemy_turn_img.visible = true;
+  }
+  this.draw_hand();
+  this.draw_field();
+};
 Hearthstone.prototype.init = function() {
   this.socket.on('hearth-event', function(h) {
     return function(data) {
+       if (h.stop_processing_received_data) {
+        h.received_data_list.push(data);
+        return;
+      }
       if (data.event) {
         console.log('Event :: ', data.event);
-      }
-
-      h.cards.card_list = []; // Change the entire card list with newly received ones
-
-      console.log('Data is received!', data.card_info);
-
-      for (var i = 0; i < data.card_info.length; i++) {
-        var c = data.card_info[i];
-        h.cards.add_card(new HearthCard(
-          c.unique,
-          c.id,
-          c.owner,
-          c.name,
-          c.mana,
-          c.life,
-          c.dmg,
-          c.img_path,
-          c.state,
-          c.where
-        ));
-
-        hearth_resource.reg_img(c.unique, c.img_path);
-      }
-
-
-      if (data.my_hero_dmg.weapon_id != 'none') {
-        h.my_hero_weapon_template.visible = true;
-        h.my_hero_weapon_life.visible = true;
-        h.my_hero_weapon_life.text = data.my_hero_dmg.weapon_life;
-
-        hearth_resource.reg_img(data.my_hero_dmg.weapon_unique, data.my_hero_dmg.weapon_img);
-        h.draw_weapon(new HearthCard(
-          data.my_hero_dmg.weapon_unique,
-          data.my_hero_dmg.weapon_id,
-          'me',
-          '',
-          '',
-          '',
-          '',
-          data.my_hero_dmg.weapon_img,
-          '',
-          ''));
-
-      } else {
-        h.my_hero_weapon_template.visible = false;
-        h.my_hero_weapon_life.visible = false;
-        if (h.my_hero_weapon) {
-          h.stage.removeChild(h.my_hero_weapon.image);
+        if (data.event.event_type == 'play_card' && data.event.who == h.enemy_hero_id) {
+          h.stop_processing_received_data = true;
+          hearth_resource.reg_img(data.event.card.unique, data.event.card.img_src);
+          h.received_data_list.push(data);
+          h.show_play_card();
+          return;
         }
       }
 
-      if (data.enemy_hero_dmg.weapon_id != 'none') {
-        h.enemy_hero_weapon_template.visible = true;
-        h.enemy_hero_weapon_life.visible = true;
-        h.enemy_hero_weapon_life.text = data.enemy_hero_dmg.weapon_life;
-
-        hearth_resource.reg_img(data.enemy_hero_dmg.weapon_unique, data.enemy_hero_dmg.weapon_img);
-        h.draw_weapon(new HearthCard(
-          data.enemy_hero_dmg.weapon_unique,
-          data.enemy_hero_dmg.weapon_id,
-          'enemy',
-          '',
-          '',
-          '',
-          '',
-          data.enemy_hero_dmg.weapon_img,
-          '',
-          ''));
-      } else {
-        h.enemy_hero_weapon_template.visible = false;
-        h.enemy_hero_weapon_life.visible = false;
-        if (h.enemy_hero_weapon) {
-          h.stage.removeChild(h.enemy_hero_weapon.image);
-        }
-      }
-
-      // Get Hero Power
-      function get_hero_power_name(name) {
-        switch (name) {
-          case "Armor Up!":
-            return "armor up!.png";
-          case "Fireblast":
-            return "fireblast.png";
-          case "Shapeshift":
-            return "shapeshift.png";
-          case "Life Tap":
-            return "life tap.png";
-          case "Totemic Call":
-            return "totemic call.png";
-          case "Dagger Mastery":
-            return "dagger mastery.png";
-          case "Steady Shot":
-            return "steady shot.png";
-          case "Lesser Heal":
-            return "lesser heal.png";
-          case "Reinforce":
-            return "reinforce.png";
-        }
-      }
-
-      if (data.me.hero_power.name != h.my_hero_power_name) {
-        if (h.my_hero_power) {
-          h.stage.removeChild(h.my_hero_power);
-        }
-
-        h.my_hero_power_name = data.me.hero_power.name;
-        h.my_hero_power = new createjs.Bitmap("/assets/images/" + get_hero_power_name(h.my_hero_power_name));
-
-        h.my_hero_power.x = h.screen_x * 109 / 192;
-        h.my_hero_power.y = h.screen_y * 77 / 104;
-
-        h.my_hero_power.scaleX = 130 * h.screen_x / (1920 * 121);
-        h.my_hero_power.scaleY = 130 * h.screen_x / (1920 * 121);
-
-        h.stage.addChildAt(h.my_hero_power, 1);
-
-        h.my_hero_power.addEventListener('mousedown', function(h) {
-          return function() {
-            h.socket.emit('hero_power');
-          };
-        }(h));
-      }
-
-      if (data.me.hero_power.did == data.me.hero_power.max) {
-        h.my_hero_power_exhausted.visible = true;
-        h.my_hero_power_cost.text = '';
-        h.my_hero_power_template.visible = false;
-      } else {
-        h.my_hero_power_exhausted.visible = false;
-        h.my_hero_power_cost.text = data.me.hero_power.mana;
-        h.my_hero_power_template.visible = true;
-      }
-
-      if (data.enemy.hero_power.name != h.enemy_hero_power_name) {
-        if (h.my_hero_power) {
-          h.stage.removeChild(h.enemy_hero_power);
-        }
-        h.enemy_hero_power_name = data.enemy.hero_power.name;
-        h.enemy_hero_power = new createjs.Bitmap("/assets/images/" + get_hero_power_name(h.enemy_hero_power_name));
-
-        h.enemy_hero_power.x = h.screen_x * 109 / 192;
-        h.enemy_hero_power.y = h.screen_y * 17 / 104;
-
-        h.enemy_hero_power.scaleX = 130 * h.screen_x / (1920 * 121);
-        h.enemy_hero_power.scaleY = 130 * h.screen_x / (1920 * 121);
-
-        h.stage.addChildAt(h.enemy_hero_power, 1);
-      }
-
-      if (data.enemy.hero_power.did == data.enemy.hero_power.max) {
-        h.enemy_hero_power_exhausted.visible = true;
-        h.enemy_hero_power_cost.text = '';
-        h.enemy_hero_power_template.visible = false;
-      } else {
-        h.enemy_hero_power_exhausted.visible = false;
-        h.enemy_hero_power_cost.text = data.enemy.hero_power.mana;
-        h.enemy_hero_power_template.visible = true;
-      }
-
-      // Display hero's image
-      function get_hero_img_name(job) {
-        switch (job) {
-          case "warrior":
-            return "hero_garrosh.png";
-          case "mage":
-            return "hero_jaina.png";
-          case "druid":
-            return "hero_malfurion.png";
-          case "warlock":
-            return "hero_guldan.png";
-          case "shaman":
-            return "hero_thrall.png";
-          case "rogue":
-            return "hero_valeera.png";
-          case "hunter":
-            return "hero_rexxar.png";
-          case "priest":
-            return "hero_anduin.png";
-          case "paladin":
-            return "hero_uther.png";
-        }
-      }
-      if (data.me.job != h.my_job) {
-        if (h.my_job_img) {
-          h.stage.removeChild(h.my_job_img);
-        }
-        h.my_job_img = new createjs.Bitmap("/assets/images/" + get_hero_img_name(data.me.job));
-        h.my_job_img.x = h.screen_x / 2 - 140 * h.hero_img_scale;
-        h.my_job_img.y = h.my_hero_y;
-        h.my_job_img.scaleX = h.hero_img_scale;
-        h.my_job_img.scaleY = h.hero_img_scale;
-        h.my_job = data.me.job;
-
-        h.stage.addChildAt(h.my_job_img, 1); // must draw first
-      }
-      if (data.enemy.job != h.enemy_job) {
-        if (h.enemy_job_img) {
-          h.stage.removeChild();
-        }
-        h.enemy_job_img = new createjs.Bitmap("/assets/images/" + get_hero_img_name(data.enemy.job));
-        h.enemy_job_img.x = h.screen_x / 2 - 140 * h.hero_img_scale;
-        h.enemy_job_img.y = h.enemy_hero_y;
-        h.enemy_job_img.scaleX = h.hero_img_scale;
-        h.enemy_job_img.scaleY = h.hero_img_scale;
-
-        h.stage.addChildAt(h.enemy_job_img, 1);
-      }
-
-      // Display hero's current remaining hp
-      if (h.my_hero_life) {
-        h.my_hero_life.text = data.me.life;
-      } else {
-        h.my_hero_life = new createjs.Text(data.me.life, "25px Arial", "white");
-        h.stage.addChild(h.my_hero_life);
-
-        h.my_hero_life.y = h.my_hero_y + 280 * (h.hero_img_scale - 0.12);
-        h.my_hero_life.x = h.screen_x / 2 + 140 * (h.hero_img_scale - 0.3);
-      }
-
-      if (h.enemy_hero_life) {
-        h.enemy_hero_life.text = data.enemy.life;
-      } else {
-        h.enemy_hero_life = new createjs.Text(data.enemy.life, "25px Arial", "white");
-        h.stage.addChild(h.enemy_hero_life);
-
-        h.enemy_hero_life.y = h.enemy_hero_y + 280 * (h.hero_img_scale - 0.12);
-        h.enemy_hero_life.x = h.screen_x / 2 + 140 * (h.hero_img_scale - 0.3);
-      }
-
-      // Display hero's current attack damage
-      if (h.my_hero_atk) {
-        h.stage.removeChild(h.my_hero_atk);
-      }
-
-      if (data.my_hero_dmg.hero_dmg > 0) {
-        h.my_hero_atk_img.visible = true;
-        h.my_hero_atk = new createjs.Text(data.my_hero_dmg.hero_dmg, "25px Arial", "white");
-        h.stage.addChild(h.my_hero_atk);
-
-        h.my_hero_atk.y = h.my_hero_y + 280 * (h.hero_img_scale - 0.12);
-        h.my_hero_atk.x = h.screen_x / 2 - 140 * (h.hero_img_scale - 0.15);
-      } else {
-        h.my_hero_atk_img.visible = false;
-
-      }
-
-      if (h.enemy_hero_atk) {
-        h.stage.removeChild(h.enemy_hero_atk);
-      }
-
-      if (data.enemy_hero_dmg.hero_dmg > 0) {
-        h.enemy_hero_atk_img.visible = true;
-        h.enemy_hero_atk = new createjs.Text(data.enemy_hero_dmg.hero_dmg, "25px Arial", "white");
-        h.stage.addChild(h.enemy_hero_atk);
-
-        h.enemy_hero_atk.y = h.enemy_hero_y + 280 * (h.hero_img_scale - 0.12);
-        h.enemy_hero_atk.x = h.screen_x / 2 - 140 * (h.hero_img_scale - 0.15);
-      } else {
-        h.enemy_hero_atk_img.visible = false;
-      }
-
-      // Show armor
-      if (data.me.armor) {
-        h.my_hero_armor_img.visible = true;
-        h.my_hero_armor.text = data.me.armor;
-        h.my_hero_armor.visible = true;
-      } else {
-        h.my_hero_armor_img.visible = false;
-        h.my_hero_armor.visible = false;
-      }
-
-      if (data.enemy.armor) {
-        h.enemy_hero_armor_img.visible = true;
-        h.enemy_hero_armor.text = data.enemy.armor;
-        h.enemy_hero_armor.visible = true;
-      } else {
-        h.enemy_hero_armor_img.visible = false;
-        h.enemy_hero_armor.visible = false;
-      }
-
-      function min(a, b) {
-        if (a > b) return b;
-        return a;
-      }
-      // Draw mana crystals
-      if (h.my_hero_mana_img.length > min(10, data.me.mana)) {
-        // Remove some images
-        for (var i = min(10, data.me.mana); i < h.my_hero_mana_img.length; i++) {
-          h.stage.removeChild(h.my_hero_mana_img[i]);
-        }
-        h.my_hero_mana_img.splice(min(10, data.me.mana));
-      } else if (h.my_hero_mana_img.length < min(10, data.me.mana)) {
-        // Draw more images
-        var mana_distance = h.screen_x / 64; // --> which is 64 = 1920 / 30
-        for (var i = h.my_hero_mana_img.length; i < min(10, data.me.mana); i++) {
-          var mana_crystal = new createjs.Bitmap("/assets/images/mana_crystal.png");
-          h.stage.addChildAt(mana_crystal, 1);
-          h.my_hero_mana_img.push(mana_crystal);
-
-          mana_crystal.x = mana_distance * i + 1300 / 1920 * h.screen_x;
-          mana_crystal.y = h.screen_y * 12 / 13;
-
-          mana_crystal.scaleX = mana_distance / 100;
-          mana_crystal.scaleY = mana_distance / 100;
-        }
-      }
-
-      // Show Turn
-      if (data.turn == 'me') {
-        h.end_turn_txt.text = 'End Turn';
-        h.my_turn_img.visible = true;
-        h.enemy_turn_img.visible = false;
-      } else {
-        h.end_turn_txt.text = 'Enemy Turn';
-        h.my_turn_img.visible = false;
-        h.enemy_turn_img.visible = true;
-      }
-      h.draw_hand();
-      h.draw_field();
+      h.process_received_data(data);
     };
   }(this));
 
@@ -1040,7 +1065,7 @@ Hearthstone.prototype.init = function() {
     return function(e) {
       if (e.target == h.field_img) {
         if (!h.need_to_select) {
-          if (h.selected_card.chk_state('attackable')) {
+          if (h.selected_card && h.selected_card.chk_state('attackable')) {
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
           } else {
             h.selected_card.display.added_images[2].shadow = null;
@@ -1075,6 +1100,98 @@ Hearthstone.prototype.init = function() {
       }
     };
   }(this));
+};
+
+// Tell the user what card that the enemy has played
+Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
+  if (loaded == 'done') {
+    this.stage.removeChild(this.enemy_play_card);
+    this.stage.removeChild(this.enemy_play_card_text);
+
+    this.received_data_list.splice(0, 1);
+    this.process_saved_data();
+    this.stage.update();
+    return;
+  }
+  else if (loaded && this.received_data_list.length) {
+    var data = this.received_data_list[0];
+    if (data.event && data.event.event_type == 'play_card') {
+      if (data.event.card.unique == loaded.event.card.unique) {
+        var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function(h) {
+           return function(u, s, img) {
+             h.show_play_card(data, img);
+           };
+        } (this));
+
+        if(img_downloaded) img = img_downloaded;
+        if(!img) return;
+
+        this.stage.removeChild(this.enemy_play_card);
+        this.stage.removeChild(this.enemy_play_card_text);
+
+        this.enemy_play_card = new createjs.Bitmap(img.img);
+        this.stage.addChild(this.enemy_play_card);
+      }
+    }
+    this.stage.update();
+    return;
+  }
+
+  // Blocking processing the received datas until
+  // the summon-card-showing animation finishes.
+  this.stop_processing_received_data = true;
+
+  var data = this.received_data_list[0];
+
+  var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function(h) {
+    return function() {
+      h.show_play_card(data);
+    };
+  }(this));
+
+  if (!img) {
+    this.enemy_play_card = new createjs.Shape(new createjs.Graphics().f("green").drawRect(0, 0, 250, 370));
+    this.enemy_play_card_text = new createjs.Text(data.event.card.name, '20px Arial', 'white');
+
+    this.stage.addChild(this.enemy_play_card);
+    this.stage.addChild(this.enemy_play_card_text);
+
+    this.enemy_play_card_text.x = 50;
+    this.enemy_play_card_text.y = 50;
+  } 
+  else {
+    this.enemy_play_card = new createjs.Bitmap(img.img);
+    this.stage.addChild(this.enemy_play_card);
+  }
+
+  this.enemy_play_card.x = 30;
+  this.enemy_play_card.y = 30;
+  this.stage.update();
+
+  setTimeout(function(h) {
+    return function() {
+      h.show_play_card('done');
+    };
+  } (this), 2000);
+};
+Hearthstone.prototype.process_saved_data = function() {
+  while (this.received_data_list.length) {
+    var data = this.received_data_list[0];
+    if (data.event) {
+      if (this.received_data_list[0].event.event_type == 'play_card') {
+        this.show_play_card();
+
+        // 'play card' data will be erased only after when the show_play_card is done.
+        return;
+      }
+    }
+    this.process_received_data(data);
+    this.received_data_list.splice(0, 1);
+  }
+
+  if (this.received_data_list.length == 0) {
+    this.stop_processing_received_data = false;
+  }
 };
 
 /*

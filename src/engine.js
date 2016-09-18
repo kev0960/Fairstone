@@ -26,7 +26,7 @@ CardData.prototype.to_array = function() {
 
 // card_data 는 여기서 CardData 객체의 Array 표현이다!
 function Card(card_data, id, owner) {
-  this.id = 0;
+  this.id = id;
 
   this.card_data = new CardData(card_data);
 
@@ -1475,7 +1475,7 @@ Player.prototype.update_hero_power = function() {
     // can be increased during a turn
     this.power_used.max = default_max;
   }
-}
+};
 Player.prototype.use_hero_power = function() {
   var default_max = 1;
   for (var i = 0; i < this.engine.g_aura.length; i++) {
@@ -1819,6 +1819,17 @@ Event.prototype.packer = function() {
       from: this.args[0].id
     };
   } else if (this.args.length == 2) {
+    if(this.event_type == 'play_card') {
+      return {
+        card : {
+          unique : this.card.card_data.unique,
+          name : this.card.card_data.name,
+          img_src : this.card.card_data.img_path
+        },
+        who : this.who.id,
+        event_type : this.event_type
+      };
+    }
     return {
       event_type: this.event_type,
       from: this.args[0].id,
