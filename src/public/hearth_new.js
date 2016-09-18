@@ -950,16 +950,14 @@ Hearthstone.prototype.init = function() {
           from_id: h.selected_card.id,
           to_id: c.id
         });
-        if(h.selected_card.id == 'me') {
+        if (h.selected_card.id == 'me') {
           h.my_job_img.shadow = new createjs.Shadow("yellow", 0, 0, 20);
-        } 
-        else if(h.selected_card.id != 'enemy') {
+        } else if (h.selected_card.id != 'enemy') {
           h.selected_card.display.added_images[2].shadow = null;
         }
         h.selected_card = null;
-        h.stage.update(); 
-      }
-      else {
+        h.stage.update();
+      } else {
         h.selected_card = c;
         if (c.id == 'me') {
           h.my_job_img.shadow = new createjs.Shadow("yellow", 0, 0, 20);
@@ -1079,13 +1077,14 @@ Hearthstone.prototype.init = function() {
     return function(e) {
       if (e.target == h.field_img) {
         if (!h.need_to_select) {
-          if (h.selected_card && h.selected_card.chk_state('attackable')) {
-            h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
-          } else if (h.selected_card) {
+          if (h.selected_card) {
             if (h.selected_card.id == 'me') {
               h.my_job_img.shadow = null;
             } else if (h.selected_card.id != 'enemy') {
               h.selected_card.display.added_images[2].shadow = null;
+              if (h.selected_card.chk_state('attackable')) {
+                h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
+              }
             }
           }
           h.selected_card = null;
@@ -1612,8 +1611,7 @@ Hearthstone.prototype.draw_field = function() {
             });
             if (h.selected_card.chk_state('attackable')) {
               h.selected_card.display.added_images[2].shadow = new createjs.Shadow("green", 0, 0, 20);
-            } 
-            else {
+            } else {
               if (h.selected_card.id == 'me') {
                 h.my_job_img.shadow = null;
               } else if (h.selected_card.id != 'enemy') {
@@ -1621,8 +1619,7 @@ Hearthstone.prototype.draw_field = function() {
               }
             }
             h.selected_card = null;
-          }
-          else {
+          } else {
             h.selected_card = c;
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
           }
