@@ -2719,7 +2719,7 @@
             me.owner.g_handler.add_handler(function(e, me) {
               if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
                 me.owner.engine.current_player != me.owner) {
-                me.owner.deal_dmg(me.spell_dmg(4), me, me.target);
+                me.owner.deal_dmg(me.spell_dmg(4), me, e.card);
                 me.status = 'destroyed';
               }
             }, 'after_play', me, true);

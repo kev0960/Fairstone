@@ -853,6 +853,7 @@ Player.prototype.summon_phase = function(c) {
 Player.prototype.summon_card = function(unique, at, transformed, after_summon) {
   if (!transformed) transformed = false;
 
+  // If the field is full, it cannot summon more minions. 
   var c = create_card(unique);
 
   c.field_summon_turn = this.engine.current_turn;
@@ -865,7 +866,10 @@ Player.prototype.summon_card = function(unique, at, transformed, after_summon) {
 
   var card = card_manager.load_card(c.card_data.unique);
 
-  if (c.card_data.type == 'minion') this.field.put_card(c, at);
+  // Cannot exceed 7 minions on field.
+  if (c.card_data.type == 'minion' && this.field.num_card() >= 7) return;
+
+  if (c.card_data.type == 'minion' && this.field.num_card() < 7) this.field.put_card(c, at);
   else if (c.card_data.type == 'weapon') {
     this.load_weapon(c);
   }
@@ -908,11 +912,14 @@ Player.prototype.chk_invincible = function(target) {
   return false;
 };
 Player.prototype.hero_combat = function(target) {
-  if(this.hero_dmg() <= 0) return false; 
+  if (this.hero_dmg() <= 0) return false;
+
   // check the target condition
   if (!this.chk_enemy_taunt(target) // chks whether the attacker is attacking proper taunt minions
-    || target.owner == this // chks whether the attacker is not attacker our own teammates
-    || this.chk_invincible(target) || target.stealth()) return false;
+    ||
+    target.owner == this // chks whether the attacker is not attacker our own teammates
+    ||
+    this.chk_invincible(target) || target.stealth()) return false;
 
   // Check whether I can attack  
   if (this.hero.is_frozen.until >= this.engine.current_turn) return false;
@@ -1819,15 +1826,15 @@ Event.prototype.packer = function() {
       from: this.args[0].id
     };
   } else if (this.args.length == 2) {
-    if(this.event_type == 'play_card') {
+    if (this.event_type == 'play_card') {
       return {
-        card : {
-          unique : this.card.card_data.unique,
-          name : this.card.card_data.name,
-          img_src : this.card.card_data.img_path
+        card: {
+          unique: this.card.card_data.unique,
+          name: this.card.card_data.name,
+          img_src: this.card.card_data.img_path
         },
-        who : this.who.id,
-        event_type : this.event_type
+        who: this.who.id,
+        event_type: this.event_type
       };
     }
     return {
@@ -2716,6 +2723,26 @@ Engine.prototype.send_client_minion_action = function(c, action) {
 };
 // e : the event that we just handled
 Engine.prototype.send_client_data = function(e) {
+  function secret(p, who) {
+    var secret_list = [];
+    if (p == who) {
+      for (var i = 0; i < p.secret_list.length; i++) {
+        secret_list.push({
+          unique: p.secret_list[i].card_data.unique,
+          name: p.secret_list[i].card_data.name,
+          job: p.secret_list[i].card_data.job
+        });
+      }
+    } else {
+      for (var i = 0; i < p.secret_list.length; i++) {
+        secret_list.push({
+          job: p.secret_list[i].card_data.job
+        });
+      }
+    }
+    return secret_list;
+  }
+
   function hero_info(p) {
     return {
       life: p.hero.current_life,
@@ -2724,11 +2751,11 @@ Engine.prototype.send_client_data = function(e) {
       id: p.hero.id,
       armor: p.hero.armor,
       job: p.player_job,
-      hero_power : {
-        name : p.hero_power.card_data.name,
-        mana : p.hero_power.mana(),
-        did : p.power_used.did,
-        max : p.power_used.max
+      hero_power: {
+        name: p.hero_power.card_data.name,
+        mana: p.hero_power.mana(),
+        did: p.power_used.did,
+        max: p.power_used.max
       }
     };
   }
@@ -2745,7 +2772,10 @@ Engine.prototype.send_client_data = function(e) {
   }
 
   function weapon_info(p) {
-    var weapon_id = "none", weapon_life = 0, weapon_img = "", weapon_unique = '';
+    var weapon_id = "none",
+      weapon_life = 0,
+      weapon_img = "",
+      weapon_unique = '';
     if (p.weapon) {
       weapon_id = p.weapon.card_data.id;
       weapon_unique = p.weapon.card_data.unique;
@@ -2757,8 +2787,8 @@ Engine.prototype.send_client_data = function(e) {
     return {
       'weapon_id': weapon_id,
       'weapon_life': weapon_life,
-      'weapon_img' : weapon_img,
-      'weapon_unique' : weapon_unique,
+      'weapon_img': weapon_img,
+      'weapon_unique': weapon_unique,
       'hero_dmg': hero_dmg
     };
   }
@@ -2822,7 +2852,9 @@ Engine.prototype.send_client_data = function(e) {
     enemy: hero_info(this.p2),
     my_hero_dmg: weapon_info(this.p1),
     enemy_hero_dmg: weapon_info(this.p2),
-    turn : (this.current_player == this.p1 ? 'me' : 'enemy')
+    turn: (this.current_player == this.p1 ? 'me' : 'enemy'),
+    my_secret : secret(this.p1, this.p1),
+    enemy_secret : secret(this.p2, this.p1)
   };
 
   this.p1_socket.emit('hearth-event', this.p1_last_emit_data);
@@ -2835,7 +2867,9 @@ Engine.prototype.send_client_data = function(e) {
     enemy: hero_info(this.p1),
     my_hero_dmg: weapon_info(this.p2),
     enemy_hero_dmg: weapon_info(this.p1),
-    turn : (this.current_player == this.p2 ? 'me' : 'enemy')
+    turn: (this.current_player == this.p2 ? 'me' : 'enemy'),
+    my_secret : secret(this.p2, this.p2),
+    enemy_secret : secret(this.p1, this.p2)
   };
   this.p2_socket.emit('hearth-event', this.p2_last_emit_data);
 };

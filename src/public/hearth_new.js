@@ -4,15 +4,15 @@ function HearthResource() {
 
 // Register Image when ready 
 // dup 이 활성화 되있다면 이미 존재하는 이미지 이기 때문에 list 에 추가하지 않는다.
-HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
+HearthResource.prototype.reg_img = function (unique, src, dup, call_back) {
   var img = new Image();
   // Convert source to server loading version
   var arr = src.split('/');
   src = '/card-image/' + arr[arr.length - 2] + '/' + arr[arr.length - 1];
   img.src = src;
 
-  img.onload = function(that) {
-    return function() {
+  img.onload = function (that) {
+    return function () {
       var found = false;
       for (var i = 0; i < that.img_list.length; i++) {
         if (that.img_list[i].unique == unique) {
@@ -30,9 +30,9 @@ HearthResource.prototype.reg_img = function(unique, src, dup, call_back) {
       }
       if (call_back) call_back(unique, src, img);
     };
-  }(this);
+  } (this);
 };
-HearthResource.prototype.get_img = function(unique, src, callback) {
+HearthResource.prototype.get_img = function (unique, src, callback) {
   for (var i = 0; i < this.img_list.length; i++) {
     if (this.img_list[i].unique == unique) return this.img_list[i];
   }
@@ -81,7 +81,7 @@ function HearthCard(unique, id, owner, name, mana, health, dmg, img_src, state, 
   this.added_images = [];
 }
 
-HearthCard.prototype.chk_state = function(state) {
+HearthCard.prototype.chk_state = function (state) {
   for (var i = 0; i < this.state.length; i++) {
     if (this.state[i] == state) return true;
   }
@@ -91,10 +91,10 @@ HearthCard.prototype.chk_state = function(state) {
 function Deck() {
   this.card_list = [];
 }
-Deck.prototype.add_card = function(c) {
+Deck.prototype.add_card = function (c) {
   this.card_list.push(c);
 };
-Deck.prototype.num_card = function() {
+Deck.prototype.num_card = function () {
   return this.card_list.length;
 };
 
@@ -122,8 +122,8 @@ function Hearthstone() {
       'token': server_token
     },
     type: 'POST'
-  }).success(function(socket, match_token) {
-    return function(data) {
+  }).success(function (socket, match_token) {
+    return function (data) {
       var d = JSON.parse(data);
       if (d.id) {
         // Send my Inforamation through socket
@@ -134,7 +134,7 @@ function Hearthstone() {
         });
       }
     };
-  }(this.socket, this.match_token));
+  } (this.socket, this.match_token));
 
   // List of the cards
   this.cards = new Deck();
@@ -333,6 +333,10 @@ function Hearthstone() {
   // Need to select field card 
   this.need_to_select = false;
 
+  // Secrets
+  this.my_secret_list = [];
+  this.enemy_secret_list = [];
+
   // Received sockets 
   this.received_data_list = [];
   this.stop_processing_received_data = false;
@@ -341,7 +345,7 @@ function Hearthstone() {
 
   this.init();
 }
-Hearthstone.prototype.process_received_data = function(data) {
+Hearthstone.prototype.process_received_data = function (data) {
   this.cards.card_list = []; // Change the entire card list with newly received ones
   console.log('Data is received!', data.card_info);
 
@@ -388,7 +392,7 @@ Hearthstone.prototype.process_received_data = function(data) {
     this.my_hero_weapon_template.visible = false;
     this.my_hero_weapon_life.visible = false;
     if (this.my_hero_weapon) {
-      this.stage.removeChild(this.my_hero_weapon.image);
+      this.stage.removeChild(this.my_hero_weapon.bitmap);
     }
   }
 
@@ -413,7 +417,7 @@ Hearthstone.prototype.process_received_data = function(data) {
     this.enemy_hero_weapon_template.visible = false;
     this.enemy_hero_weapon_life.visible = false;
     if (this.enemy_hero_weapon) {
-      this.stage.removeChild(this.enemy_hero_weapon.image);
+      this.stage.removeChild(this.enemy_hero_weapon.bitmap);
     }
   }
 
@@ -457,11 +461,11 @@ Hearthstone.prototype.process_received_data = function(data) {
 
     this.stage.addChildAt(this.my_hero_power, 1);
 
-    this.my_hero_power.addEventListener('mousedown', function(h) {
-      return function() {
+    this.my_hero_power.addEventListener('mousedown', function (h) {
+      return function () {
         h.socket.emit('hero_power');
       };
-    }(this));
+    } (this));
   }
 
   if (data.me.hero_power.did == data.me.hero_power.max) {
@@ -621,6 +625,9 @@ Hearthstone.prototype.process_received_data = function(data) {
     this.enemy_hero_armor.visible = false;
   }
 
+  // Draw Hero Secrets
+  this.draw_secret(data);
+
   function min(a, b) {
     if (a > b) return b;
     return a;
@@ -661,9 +668,9 @@ Hearthstone.prototype.process_received_data = function(data) {
   this.draw_hand();
   this.draw_field();
 };
-Hearthstone.prototype.init = function() {
-  this.socket.on('hearth-event', function(h) {
-    return function(data) {
+Hearthstone.prototype.init = function () {
+  this.socket.on('hearth-event', function (h) {
+    return function (data) {
       if (h.stop_processing_received_data) {
         h.received_data_list.push(data);
         return;
@@ -681,13 +688,13 @@ Hearthstone.prototype.init = function() {
 
       h.process_received_data(data);
     };
-  }(this));
+  } (this));
 
   /*
       Registring Handler for Mulligun
   */
-  this.socket.on('choose-starting-cards', function(h) {
-    return function(data) {
+  this.socket.on('choose-starting-cards', function (h) {
+    return function (data) {
       console.log('Received Data :: ', data.cards);
       for (var i = 0; i < data.cards.length; i++) {
         var c = data.cards[i];
@@ -712,7 +719,7 @@ Hearthstone.prototype.init = function() {
       button.graphics.beginFill('blue').drawRect(0, 0, 150, 200);
       h.stage.addChild(button);
 
-      button.addEventListener('click', function() {
+      button.addEventListener('click', function () {
         h.socket.emit('remove-some-cards', {
           removed: h.remove_candidate
         });
@@ -729,14 +736,14 @@ Hearthstone.prototype.init = function() {
       h.is_selecting_center = true;
       h.mulligun();
     };
-  }(this));
+  } (this));
 
   /*
     Registing for Choose one Event
   */
 
-  this.socket.on('choose-one', function(h) {
-    return function(data) {
+  this.socket.on('choose-one', function (h) {
+    return function (data) {
       var card_list = data.list;
 
       h.center_cards.card_list = [];
@@ -770,10 +777,10 @@ Hearthstone.prototype.init = function() {
       h.stage.update();
       console.log('Choose one ::', card_list);
     };
-  }(this));
+  } (this));
 
-  this.socket.on('select-one', function(h) {
-    return function(data) {
+  this.socket.on('select-one', function (h) {
+    return function (data) {
       h.selectable_lists = data.list;
       h.need_to_select = true;
 
@@ -785,7 +792,7 @@ Hearthstone.prototype.init = function() {
       h.draw_hand();
       h.draw_field();
     };
-  }(this));
+  } (this));
 
 
   /*
@@ -817,15 +824,15 @@ Hearthstone.prototype.init = function() {
   this.end_turn_txt.y = this.screen_y * 47 / 104;
   this.stage.addChild(this.end_turn_txt);
 
-  this.my_turn_img.addEventListener('click', function(h) {
-    return function() {
+  this.my_turn_img.addEventListener('click', function (h) {
+    return function () {
       // Notify the server that the client has ended its turn
       h.socket.emit('hearth-end-turn', {});
     };
-  }(this));
+  } (this));
 
-  this.socket.on('new-starting-cards', function(h) {
-    return function(data) {
+  this.socket.on('new-starting-cards', function (h) {
+    return function (data) {
       for (var i = 0; i < h.remove_candidate.length; i++) {
         var c = data.cards[i];
         h.center_cards.card_list[h.remove_candidate[i]] = new HearthCard(
@@ -848,10 +855,10 @@ Hearthstone.prototype.init = function() {
       h.remove_candidate = [];
       h.mulligun(true);
     };
-  }(this));
+  } (this));
 
-  this.socket.on('begin-match', function(h) {
-    return function(data) {
+  this.socket.on('begin-match', function (h) {
+    return function (data) {
       console.log('Game has started!');
       h.is_selecting_center = false;
 
@@ -863,7 +870,7 @@ Hearthstone.prototype.init = function() {
 
       h.stage.update();
     };
-  }(this));
+  } (this));
 
   /*
 
@@ -928,8 +935,8 @@ Hearthstone.prototype.init = function() {
   var my_hero = new HearthCard('me', 'me');
   var enemy_hero = new HearthCard('enemy', 'enemy');
 
-  var on_mouse_down = function(c, h) {
-    return function(e) {
+  var on_mouse_down = function (c, h) {
+    return function (e) {
       if (h.need_to_select) {
         h.socket.emit('select-done', {
           id: c.id
@@ -951,7 +958,7 @@ Hearthstone.prototype.init = function() {
           to_id: c.id
         });
         if (h.selected_card.id == 'me') {
-          h.my_job_img.shadow = new createjs.Shadow("yellow", 0, 0, 20);
+          h.my_job_img.shadow = null;
         } else if (h.selected_card.id != 'enemy') {
           h.selected_card.display.added_images[2].shadow = null;
         }
@@ -1037,8 +1044,8 @@ Hearthstone.prototype.init = function() {
   this.stage.addChild(this.enemy_hero_power_cost);
 
   // Initialize UI
-  this.stage.addEventListener('pressmove', function(h) {
-    return function(e) {
+  this.stage.addEventListener('pressmove', function (h) {
+    return function (e) {
       if (h.selected_card && h.selected_card.where === 'hand') {
         h.selected_card.display.bitmap.x = e.stageX - h.selected_card.sel_x;
         h.selected_card.display.bitmap.y = e.stageY - h.selected_card.sel_y;
@@ -1046,10 +1053,10 @@ Hearthstone.prototype.init = function() {
         h.stage.update();
       }
     };
-  }(this));
+  } (this));
 
-  this.stage.addEventListener('pressup', function(h) {
-    return function(e) {
+  this.stage.addEventListener('pressup', function (h) {
+    return function (e) {
       if (h.selected_card && h.selected_card.where == 'hand') {
         console.log('Card Dropped AT :: ', e.stageY);
         h.draw_hand();
@@ -1071,10 +1078,10 @@ Hearthstone.prototype.init = function() {
         h.selected_card = null;
       }
     };
-  }(this));
+  } (this));
 
-  this.stage.addEventListener('mousedown', function(h) {
-    return function(e) {
+  this.stage.addEventListener('mousedown', function (h) {
+    return function (e) {
       if (e.target == h.field_img) {
         if (!h.need_to_select) {
           if (h.selected_card) {
@@ -1116,11 +1123,11 @@ Hearthstone.prototype.init = function() {
         }
       }
     };
-  }(this));
+  } (this));
 };
 
 // Tell the user what card that the enemy has played
-Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
+Hearthstone.prototype.show_play_card = function (loaded, img_downloaded) {
   if (loaded == 'done') {
     this.stage.removeChild(this.enemy_play_card);
     this.stage.removeChild(this.enemy_play_card_text);
@@ -1133,11 +1140,11 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
     var data = this.received_data_list[0];
     if (data.event && data.event.event_type == 'play_card') {
       if (data.event.card.unique == loaded.event.card.unique) {
-        var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function(h) {
-          return function(u, s, img) {
+        var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function (h) {
+          return function (u, s, img) {
             h.show_play_card(data, img);
           };
-        }(this));
+        } (this));
 
         if (img_downloaded) img = img_downloaded;
         if (!img) return;
@@ -1159,11 +1166,11 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
 
   var data = this.received_data_list[0];
 
-  var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function(h) {
-    return function() {
+  var img = hearth_resource.get_img(data.event.card.unique, data.event.card.img_src, function (h) {
+    return function () {
       h.show_play_card(data);
     };
-  }(this));
+  } (this));
 
   if (!img) {
     this.enemy_play_card = new createjs.Shape(new createjs.Graphics().f("green").drawRect(0, 0, 250, 370));
@@ -1183,13 +1190,13 @@ Hearthstone.prototype.show_play_card = function(loaded, img_downloaded) {
   this.enemy_play_card.y = 30;
   this.stage.update();
 
-  setTimeout(function(h) {
-    return function() {
+  setTimeout(function (h) {
+    return function () {
       h.show_play_card('done');
     };
-  }(this), 2000);
+  } (this), 2000);
 };
-Hearthstone.prototype.process_saved_data = function() {
+Hearthstone.prototype.process_saved_data = function () {
   while (this.received_data_list.length) {
     var data = this.received_data_list[0];
     if (data.event) {
@@ -1211,15 +1218,94 @@ Hearthstone.prototype.process_saved_data = function() {
 
 /*
  *
+ * Draw Secrets
+ * 
+ */
+Hearthstone.prototype.draw_secret = function (data) {
+  // relative position to the top center of hero image
+  var positions = [
+    { x: 0, y: 0 },
+    { x: -this.screen_x / 15, y: this.screen_y * 7 / 104 },
+    { x: this.screen_x / 15, y: this.screen_y * 7 / 104 },
+    { x: -this.screen_x * 4 / 96, y: this.screen_y * 15 / 104 },
+    { x: this.screen_x * 4 / 96, y: this.screen_y * 15 / 104 }
+  ];
+
+  if (this.my_secret_list.length > data.my_secret.length) {
+    var i = data.my_secret.length;
+    while (data.my_secret.length != this.my_secret_list.length) {
+      this.stage.removeChild(this.my_secret_list[i].img);
+      this.my_secret_list.splice(i, 1);
+    }
+  }
+
+  for (var i = 0; i < this.my_secret_list.length; i++) {
+    if (this.my_secret_list[i].job != data.my_secret[i].job) {
+      this.stage.removeChild(this.my_secret_list[i].img);
+
+      this.my_secret_list[i].img = new createjs.Bitmap('/assets/images/secret_' + data.my_secret[i].job + '.png');
+      this.stage.addChild(this.my_secret_list[i].img);
+      this.my_secret_list[i].job = data.my_secret[i].job;
+    }
+  }
+  for (j = this.my_secret_list.length; j < data.my_secret.length; j++) {
+    this.my_secret_list.push({
+      img: new createjs.Bitmap('/assets/images/secret_' + data.my_secret[j].job + '.png'),
+      job: data.my_secret[j].job
+    });
+    this.stage.addChild(this.my_secret_list[j].img);
+  }
+
+  for(var i = 0; i < this.my_secret_list.length; i ++) {
+    this.my_secret_list[i].img.x =  this.screen_x / 2 - 140 + positions[i].x;
+    this.my_secret_list[i].img.y = this.my_hero_y + positions[i].y - 40;
+  }
+
+  // Enemy Hero Secrets
+
+  if (this.enemy_secret_list.length > data.enemy_secret.length) {
+    var i = data.enemy_secret.length;
+    while (data.enemy_secret.length != this.enemy_secret_list.length) {
+      this.stage.removeChild(this.enemy_secret_list[i].img);
+      this.enemy_secret_list.splice(i, 1);
+    }
+  }
+
+  for (var i = 0; i < this.enemy_secret_list.length; i++) {
+    if (this.enemy_secret_list[i].job != data.enemy_secret[i].job) {
+      this.stage.removeChild(this.enemy_secret_list[i].img);
+
+      this.enemy_secret_list[i].img = new createjs.Bitmap('/assets/images/secret_' + data.enemy_secret[i].job + '.png');
+      this.stage.addChild(this.enemy_secret_list[i].img);
+      this.enemy_secret_list[i].job = data.enemy_secret[i].job;
+    }
+  }
+  for (j = this.enemy_secret_list.length; j < data.enemy_secret.length; j++) {
+    this.enemy_secret_list.push({
+      img: new createjs.Bitmap('/assets/images/secret_' + data.enemy_secret[j].job + '.png'),
+      job: data.enemy_secret[j].job
+    });
+    this.stage.addChild(this.enemy_secret_list[j].img);
+  }
+
+  for(var i = 0; i < this.enemy_secret_list.length; i ++) {
+    this.enemy_secret_list[i].img.x =  this.screen_x / 2 - 140 + positions[i].x;
+    this.enemy_secret_list[i].img.y = this.enemy_hero_y + positions[i].y - 40;
+  }
+
+};
+
+/*
+ *
  * Draw Weapon
  *
  */
-Hearthstone.prototype.draw_weapon = function(c) {
-  var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
-    return function() {
+Hearthstone.prototype.draw_weapon = function (c) {
+  var img = hearth_resource.get_img(c.unique, c.img_src, function (h) {
+    return function () {
       h.draw_weapon(c);
     };
-  }(this));
+  } (this));
 
   if (c.owner == 'me') {
     // If new weapon image is added
@@ -1311,7 +1397,7 @@ Hearthstone.prototype.draw_weapon = function(c) {
  * Draw Field
  *
  */
-Hearthstone.prototype.is_selectable = function(c) {
+Hearthstone.prototype.is_selectable = function (c) {
   if (!this.need_to_select) return false;
 
   for (var i = 0; i < this.selectable_lists.length; i++) {
@@ -1319,7 +1405,7 @@ Hearthstone.prototype.is_selectable = function(c) {
   }
   return false;
 };
-Hearthstone.prototype.draw_field = function() {
+Hearthstone.prototype.draw_field = function () {
   var num_my_card = 0;
   var num_enemy_card = 0;
   for (var i = 0; i < this.cards.num_card(); i++) {
@@ -1345,11 +1431,11 @@ Hearthstone.prototype.draw_field = function() {
     else if (c.owner == 'enemy') enemy++;
 
     var deg = 0;
-    var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
-      return function() {
+    var img = hearth_resource.get_img(c.unique, c.img_src, function (h) {
+      return function () {
         h.draw_field();
       };
-    }(this));
+    } (this));
 
     var display = null;
     var new_display = false;
@@ -1436,26 +1522,26 @@ Hearthstone.prototype.draw_field = function() {
     }
 
     display.bitmap.removeAllEventListeners();
-    display.bitmap.addEventListener('mouseover', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mouseover', function (c, h) {
+      return function (e) {
         // When hovers on the field minion, shows the card info
         h.current_hover = c;
 
         h.stage.update();
       };
-    }(c, this));
+    } (c, this));
 
-    display.bitmap.addEventListener('mouseout', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mouseout', function (c, h) {
+      return function (e) {
         if (h.current_hover == c) {
           h.current_hover = null;
         }
 
         h.stage.update();
       };
-    }(c, this));
-    display.bitmap.addEventListener('mousedown', function(c, h) {
-      return function(e) {
+    } (c, this));
+    display.bitmap.addEventListener('mousedown', function (c, h) {
+      return function (e) {
         if (h.need_to_select) {
           h.socket.emit('select-done', {
             id: c.id
@@ -1492,7 +1578,7 @@ Hearthstone.prototype.draw_field = function() {
           h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
         }
       };
-    }(c, this));
+    } (c, this));
   }
 
   mine = -1, enemy = -1;
@@ -1568,26 +1654,26 @@ Hearthstone.prototype.draw_field = function() {
 
       // Since shield_img covers entire card images, we should put an additional event listener
       shield_img.removeAllEventListeners();
-      shield_img.addEventListener('mouseover', function(c, h) {
-        return function(e) {
+      shield_img.addEventListener('mouseover', function (c, h) {
+        return function (e) {
           // When hovers on the field minion, shows the card info
           h.current_hover = c;
 
           h.stage.update();
         };
-      }(c, this));
+      } (c, this));
 
-      shield_img.addEventListener('mouseout', function(c, h) {
-        return function(e) {
+      shield_img.addEventListener('mouseout', function (c, h) {
+        return function (e) {
           if (h.current_hover == c) {
             h.current_hover = null;
           }
 
           h.stage.update();
         };
-      }(c, this));
-      shield_img.addEventListener('mousedown', function(c, h) {
-        return function(e) {
+      } (c, this));
+      shield_img.addEventListener('mousedown', function (c, h) {
+        return function (e) {
           if (h.need_to_select) {
             h.socket.emit('select-done', {
               id: c.id
@@ -1624,7 +1710,7 @@ Hearthstone.prototype.draw_field = function() {
             h.selected_card.display.added_images[2].shadow = new createjs.Shadow("yellow", 0, 0, 20);
           }
         };
-      }(c, this));
+      } (c, this));
     }
 
     var offset_x = (c.owner == 'me' ? this.my_field_cont.x : this.enemy_field_cont.x);
@@ -1692,7 +1778,7 @@ Hearthstone.prototype.draw_field = function() {
  * 
  */
 
-Hearthstone.prototype.draw_hand = function() {
+Hearthstone.prototype.draw_hand = function () {
   var num_my_card = 0;
   var num_enemy_card = 0;
   for (var i = 0; i < this.cards.num_card(); i++) {
@@ -1716,11 +1802,11 @@ Hearthstone.prototype.draw_hand = function() {
     else if (c.owner == 'enemy') enemy++;
 
     var deg = 0;
-    var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
-      return function() {
+    var img = hearth_resource.get_img(c.unique, c.img_src, function (h) {
+      return function () {
         h.draw_hand();
       };
-    }(this));
+    } (this));
 
     var display = null;
     var new_display = false;
@@ -1798,8 +1884,8 @@ Hearthstone.prototype.draw_hand = function() {
     display.bitmap.removeAllEventListeners();
 
     c.prev_rot = display.bitmap.rotation;
-    display.bitmap.addEventListener('mouseover', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mouseover', function (c, h) {
+      return function (e) {
         if (h.current_hover) {
           // If two cards overlaps, select the one that has higher offset
           if (h.current_hover.offset < c.offset) {
@@ -1850,10 +1936,10 @@ Hearthstone.prototype.draw_hand = function() {
         }
         h.stage.update();
       };
-    }(c, this));
+    } (c, this));
 
-    display.bitmap.addEventListener('mouseout', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mouseout', function (c, h) {
+      return function (e) {
         if (h.current_hover == c) {
           // unhover hovered card
           h.my_hand_cont.setChildIndex(h.current_hover.display.bitmap, h.current_hover.offset);
@@ -1870,10 +1956,10 @@ Hearthstone.prototype.draw_hand = function() {
 
         h.draw_hand();
       };
-    }(c, this));
+    } (c, this));
 
-    display.bitmap.addEventListener('mousedown', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mousedown', function (c, h) {
+      return function (e) {
         console.log('HAnd mouse click!');
         // Click is only available for a current hovering object
         if (h.current_hover && h.current_hover == c) {
@@ -1882,13 +1968,13 @@ Hearthstone.prototype.draw_hand = function() {
           h.selected_card.sel_y = e.stageY - h.selected_card.display.bitmap.y;
         }
       };
-    }(c, this));
+    } (c, this));
 
-    display.bitmap.addEventListener('mousedown', function(c, h) {
-      return function(e) {
+    display.bitmap.addEventListener('mousedown', function (c, h) {
+      return function (e) {
         console.log('HAnd mouse click! true');
       };
-    }(c, this), true);
+    } (c, this), true);
   }
 
   mine = -1;
@@ -1974,21 +2060,21 @@ Hearthstone.prototype.draw_hand = function() {
 
   this.stage.update();
 };
-Hearthstone.prototype.begin_match = function() {
+Hearthstone.prototype.begin_match = function () {
 
 };
 // Mulligun (choosing the cards to start)
 // 카드들의 offset 꼭 설정할것!!
-Hearthstone.prototype.mulligun = function(no_card_remove) {
+Hearthstone.prototype.mulligun = function (no_card_remove) {
   if (!this.is_selecting_center) return;
 
   for (var i = 0; i < this.center_cards.num_card(); i++) {
     var c = this.center_cards.card_list[i];
-    var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
-      return function() {
+    var img = hearth_resource.get_img(c.unique, c.img_src, function (h) {
+      return function () {
         h.mulligun();
       };
-    }(this));
+    } (this));
 
     // Choose Image to display. 
     var new_bitmap = false;
@@ -2014,7 +2100,7 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
       } else continue; // when the blank image is already registered
     }
 
-    var on_mouse_down = function(c) {
+    var on_mouse_down = function (c) {
       for (var i = 0; i < this.remove_candidate.length; i++) {
         if (this.remove_candidate[i] == c.offset) {
           // Off 
@@ -2039,9 +2125,9 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
     };
 
     if (!no_card_remove) {
-      c.bitmap.addEventListener('mousedown', function(c, h) {
+      c.bitmap.addEventListener('mousedown', function (c, h) {
         return on_mouse_down.bind(h, c);
-      }(c, this));
+      } (c, this));
     }
 
     c.bitmap.x = 100 + 400 * i;
@@ -2052,18 +2138,18 @@ Hearthstone.prototype.mulligun = function(no_card_remove) {
   this.stage.update();
 };
 // 발견 혹은 선택 시에 화면 정 가운데 카드들 보여주는거
-Hearthstone.prototype.show_cards = function() {
+Hearthstone.prototype.show_cards = function () {
   if (!this.is_selecting_center) return;
 
   console.log("Show cards :: ", this.center_cards.card_list);
 
   for (var i = 0; i < this.center_cards.num_card(); i++) {
     var c = this.center_cards.card_list[i];
-    var img = hearth_resource.get_img(c.unique, c.img_src, function(h) {
-      return function() {
+    var img = hearth_resource.get_img(c.unique, c.img_src, function (h) {
+      return function () {
         h.show_cards();
       };
-    }(this));
+    } (this));
 
     // Choose Image to display. 
     var new_bitmap = false;
@@ -2092,8 +2178,8 @@ Hearthstone.prototype.show_cards = function() {
       } else continue; // when the blank image is already registered
     }
 
-    c.bitmap.addEventListener('mousedown', function(c, h, i) {
-      return function(e) {
+    c.bitmap.addEventListener('mousedown', function (c, h, i) {
+      return function (e) {
         // Click is only available for a current hovering object
         h.is_selecting_center = false;
         h.socket.emit('select-done', {
@@ -2108,7 +2194,7 @@ Hearthstone.prototype.show_cards = function() {
         h.center_cont.removeAllChildren();
         h.stage.update();
       };
-    }(c, this, i));
+    } (c, this, i));
 
     c.bitmap.x = 100 + 400 * i;
     c.bitmap.y = 100;
@@ -2121,7 +2207,7 @@ Hearthstone.prototype.show_cards = function() {
 var hearthstone = new Hearthstone();
 
 // Whenever the window resizes, we should adjust the size of the canvas too
-$(window).on('resize', function() {
+$(window).on('resize', function () {
   // $('#field').width($(window).width());
   // $('#field').height($(window).height());
 });

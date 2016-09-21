@@ -3240,9 +3240,10 @@
         me.owner.play_success(me, -1,
           function(me) {
             me.owner.g_handler.add_handler(function(e, me) {
-              if (e.card.owner == me.owner.enemy && e.card.card_data.type == 'minion' &&
-                me.owner.engine.current_player != me.owner) {
-                me.owner.instant_kill(me, e.card);
+              if (e.who.owner == me.owner.enemy && e.who.card_data.type == 'minion' &&
+                me.owner.engine.current_player != me.owner && e.target == me.owner.hero) {
+                me.owner.instant_kill(me, e.who);
+                me.status = 'destroyed';
               }
             }, 'propose_attack', me, true);
             end_spell(me);
